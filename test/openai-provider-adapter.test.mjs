@@ -20,7 +20,10 @@ async function withServer(handler, fn) {
   try {
     return await fn(baseURL);
   } finally {
-    await new Promise(resolve => server.close(resolve));
+    await new Promise(resolve => {
+      server.close(resolve);
+      server.closeAllConnections();
+    });
   }
 }
 
@@ -61,9 +64,9 @@ function inference(baseURL, options = {}) {
 }
 
 test('adapter returns normalized non-streaming content and observed transport metadata', async () => {
+  let observedRequest;
   await withServer((req, res) => {
-    assert.equal(req.method, 'POST');
-    assert.equal(req.url, '/v1/chat/completions');
+    observedRequest = { method: req.method, url: req.url };
     res.setHeader('content-type', 'application/json');
     res.end(JSON.stringify({
       id: 'chatcmpl-1',
@@ -99,6 +102,9 @@ test('adapter returns normalized non-streaming content and observed transport me
       cachedInputTokens: 4,
     });
   });
+
+  assert.equal(observedRequest.method, 'POST');
+  assert.equal(observedRequest.url, '/v1/chat/completions');
 });
 
 test('successful SSE response without a body fails as typed STREAM_ERROR', async () => {
@@ -217,17 +223,29 @@ test('429 preserves Retry-After without retrying implicitly', async () => {
 });
 
 test('timeout preserves unknown provider execution state', async () => {
-  await withServer((_req, _res) => {
-    // Deliberately never respond within the adapter timeout.
-  }, async baseURL => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, init) =>
+    new Promise((_resolve, reject) => {
+      const guard = setTimeout(() => reject(new Error('timeout contract was not honored promptly')), 150);
+      const rejectOnAbort = () => {
+        clearTimeout(guard);
+        reject(init.signal.reason);
+      };
+      if (init.signal.aborted) rejectOnAbort();
+      else init.signal.addEventListener('abort', rejectOnAbort, { once: true });
+    });
+
+  try {
     await assert.rejects(
-      () => inference(baseURL, { timeoutMs: 40 })(request, correlation),
+      () => inference('http://provider.invalid', { timeoutMs: 40 })(request, correlation),
       error =>
         error instanceof ProviderAdapterError &&
         error.code === 'TIMEOUT' &&
         error.providerState === 'UNKNOWN',
     );
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('HTTP 200 with stop and empty content is not a usable artifact', async () => {
@@ -436,8 +454,9 @@ test('adapter sends configured model, stream flag, task, packet and correlation 
     let body = '';
     for await (const chunk of req) body += chunk;
     captured = {
+      method: req.method,
       contentType: req.headers['content-type'],
-      body: JSON.parse(body),
+      rawBody: body,
     };
 
     res.setHeader('content-type', 'application/json');
@@ -459,15 +478,17 @@ test('adapter sends configured model, stream flag, task, packet and correlation 
     })(request, correlation);
   });
 
+  assert.equal(captured.method, 'POST');
   assert.equal(captured.contentType, 'application/json');
-  assert.equal(captured.body.model, 'configured/model-v1');
-  assert.equal(captured.body.stream, false);
-  assert.equal(captured.body.messages.length, 2);
-  assert.equal(captured.body.messages[0].role, 'system');
-  assert.match(captured.body.messages[0].content, /typed proposal artifact/);
-  assert.equal(captured.body.messages[1].role, 'user');
+  const capturedBody = JSON.parse(captured.rawBody);
+  assert.equal(capturedBody.model, 'configured/model-v1');
+  assert.equal(capturedBody.stream, false);
+  assert.equal(capturedBody.messages.length, 2);
+  assert.equal(capturedBody.messages[0].role, 'system');
+  assert.match(capturedBody.messages[0].content, /typed proposal artifact/);
+  assert.equal(capturedBody.messages[1].role, 'user');
 
-  const userPayload = JSON.parse(captured.body.messages[1].content);
+  const userPayload = JSON.parse(capturedBody.messages[1].content);
   assert.equal(userPayload.task, request.task);
   assert.equal(userPayload.packet.packetId, request.packet.packetId);
   assert.equal(userPayload.correlation.requestFingerprint, correlation.requestFingerprint);
@@ -642,6 +663,76 @@ test('SSE ignores comment-only and blank data events before usable content', asy
   });
 });
 
+test('SSE accepts DONE with trailing whitespace and ignores later invalid bytes', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.write('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n');
+    res.write('data: [DONE]   \n\n');
+    res.end('data: {"choices":[INVALID]}\n\n');
+  }, async baseURL => {
+    const result = await inference(baseURL, { stream: true })(request, correlation);
+    assert.equal(result.text, 'ok');
+    assert.equal(result.finishReason, 'stop');
+  });
+});
+
+test('SSE leading empty frame cannot merge later data events', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.end(
+      '\n\n' +
+      'data: {"choices":[{"delta":{"content":"first"},"finish_reason":null}]}\n\n' +
+      'data: {"choices":[{"delta":{"content":"second"},"finish_reason":"stop"}]}\n\n' +
+      'data: [DONE]\n\n',
+    );
+  }, async baseURL => {
+    const result = await inference(baseURL, { stream: true })(request, correlation);
+    assert.equal(result.text, 'firstsecond');
+    assert.equal(result.finishReason, 'stop');
+  });
+});
+
+test('SSE data lines preserve newline boundaries instead of repairing split JSON tokens', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.end(
+      'data: {"choi\n' +
+      'data: ces":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n',
+    );
+  }, async baseURL => {
+    await assert.rejects(
+      () => inference(baseURL, { stream: true })(request, correlation),
+      error =>
+        error instanceof ProviderAdapterError &&
+        error.code === 'MALFORMED_RESPONSE' &&
+        error.providerState === 'RESPONDED',
+    );
+  });
+});
+
+test('SSE reader lock is released after parsing completes', async () => {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(
+        encoder.encode('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n'),
+      );
+      controller.close();
+    },
+  });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+
+  try {
+    const result = await inference('http://provider.invalid', { stream: true })(request, correlation);
+    assert.equal(result.text, 'ok');
+    assert.equal(stream.locked, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('SSE preserves split multi-byte UTF-8 content across transport chunks', async () => {
   await withServer((_req, res) => {
     res.writeHead(200, { 'content-type': 'text/event-stream' });
@@ -788,16 +879,15 @@ test('non-string finish reason and invalid message content are normalized safely
 
 test('stream selection works independently by explicit stream flag or SSE content type', async () => {
   for (const mode of ['explicit', 'content-type']) {
+    let observedRequest;
     await withServer(async (req, res) => {
       let body = '';
       for await (const chunk of req) body += chunk;
-      const parsed = JSON.parse(body);
+      observedRequest = { method: req.method, rawBody: body };
 
       if (mode === 'explicit') {
-        assert.equal(parsed.stream, true);
         res.writeHead(200, { 'content-type': 'application/octet-stream' });
       } else {
-        assert.equal(parsed.stream, false);
         res.writeHead(200, { 'content-type': 'text/event-stream' });
       }
 
@@ -807,6 +897,10 @@ test('stream selection works independently by explicit stream flag or SSE conten
       assert.equal(result.text, 'ok');
       assert.equal(result.runId, 'route-mode');
     });
+
+    assert.equal(observedRequest.method, 'POST');
+    const parsed = JSON.parse(observedRequest.rawBody);
+    assert.equal(parsed.stream, mode === 'explicit');
   }
 });
 
