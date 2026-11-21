@@ -94,11 +94,21 @@ pilot1 revised: 38 killed / 0 survived / mutation score 100.00%
 
 The three survivors exposed missing guarantees for `PUBLICATION_SAFE`, missing-task handling, and request-fingerprint sensitivity. After those promises were tested, the Pilot 1 scope reached 100% for testable mutants.
 
+The typed proposal validator was then baselined separately:
+
+```text
+proposal-schema initial: 31 killed / 6 survived / mutation score 83.78%
+proposal-schema revised: 37 killed / 0 survived / mutation score 100.00%
+```
+
+The six survivors exposed missing tests for whitespace-only semantic fields, LOW uncertainty, multi-source provenance, non-empty INFERENCE assumptions, and non-empty required_evidence for HYPOTHESIS and UNKNOWN.
+
 The combined blocking scope is now:
 
 ```text
 src/dreaming/dry-run.ts
 src/dreaming/pilot1-runner.ts
+src/dreaming/proposal-schema.ts
 ```
 
 This still does **not** establish a project-wide 100% mutation requirement. New mutation scopes must earn their own baseline and classification before becoming blocking.
@@ -124,7 +134,7 @@ Possible states include:
 The current Pilot 1 map includes scope/privacy boundaries, NO_DATA zero-call
 behavior, one-inference/no-tool/no-memory execution, deterministic receipt
 authority, Git-owned agent configuration, model-adapter compatibility,
-provenance/fingerprints, and the public-code/private-evidence boundary.
+provenance/fingerprints, typed proposal/provenance validation, and the public-code/private-evidence boundary.
 
 This mechanism is adapted from the Session Search reverse-tracing baseline in
 Theseus Research #130 / PR #131. It is an advisory conformance layer, not a

@@ -36,7 +36,9 @@ test('targeted mutation workflow runs the repository mutation endpoint', () => {
   assert.match(workflow, /npm run mutation/);
   assert.match(workflow, /src\/dreaming\/dry-run\.ts/);
   assert.match(workflow, /src\/dreaming\/pilot1-runner\.ts/);
+  assert.match(workflow, /src\/dreaming\/proposal-schema\.ts/);
   assert.match(workflow, /test\/dry-run\.test\.mjs/);
   assert.match(workflow, /test\/pilot1-runner\.test\.mjs/);
+  assert.match(workflow, /test\/proposal-schema\.test\.mjs/);
   assert.match(workflow, /persist-credentials:\s*false/);
 });

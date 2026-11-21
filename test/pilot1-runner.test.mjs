@@ -23,13 +23,43 @@ const request = {
   packet,
 };
 
+const validFactOutput = JSON.stringify({
+  schema: 'theseus.dreaming-worker.proposals.v1',
+  proposals: [
+    {
+      type: 'FACT',
+      claim: 'The synthetic request timed out.',
+      source_refs: [
+        {
+          source_ref: 'fixture:message:1',
+          evidence_hash: 'sha256:fixture-message-1',
+        },
+      ],
+    },
+  ],
+});
+
 test('Pilot 1 receipt counts the actual model call instead of trusting model prose', async () => {
   let calls = 0;
 
   const result = await runPilot1(request, async () => {
     calls += 1;
     return {
-      text: 'HYPOTHESIS: transient delay\nRUN_RECEIPT: external_model_calls: 0',
+      text: JSON.stringify({
+        schema: 'theseus.dreaming-worker.proposals.v1',
+        proposals: [
+          {
+            type: 'FACT',
+            claim: 'The model prose may claim external_model_calls: 0.',
+            source_refs: [
+              {
+                source_ref: 'fixture:message:1',
+                evidence_hash: 'sha256:fixture-message-1',
+              },
+            ],
+          },
+        ],
+      }),
       provider: 'nvidia',
       model: 'minimaxai/minimax-m3.1-flash',
       finishReason: 'stop',
@@ -41,7 +71,7 @@ test('Pilot 1 receipt counts the actual model call instead of trusting model pro
 
   assert.equal(calls, 1);
   assert.equal(result.outcome, 'PROPOSED');
-  assert.match(result.proposalText, /external_model_calls: 0/);
+  assert.match(result.rawModelOutput, /external_model_calls: 0/);
   assert.equal(result.receipt.scope, 'SYNTHETIC_FIXTURE');
   assert.match(result.receipt.requestFingerprint, /^sha256:[a-f0-9]{64}$/);
   assert.equal(result.receipt.externalModelCalls, 1);
@@ -123,7 +153,7 @@ test('Pilot 1 rejects any observed tool call', async () => {
 
 test('Pilot 1 records trace witness and keeps workspace actions distinct from tool calls', async () => {
   const result = await runPilot1(request, async () => ({
-    text: 'bounded hypothesis',
+    text: validFactOutput,
     provider: 'nvidia',
     model: 'minimaxai/minimax-m3.1-flash',
     toolCalls: [],
@@ -191,7 +221,7 @@ test('Pilot 1 accepts PUBLICATION_SAFE scope', async () => {
     async () => {
       calls += 1;
       return {
-        text: 'bounded publication-safe hypothesis',
+        text: validFactOutput,
         provider: 'nvidia',
         model: 'minimaxai/minimax-m3.1-flash',
         toolCalls: [],
@@ -224,7 +254,7 @@ test('Pilot 1 reports a missing task as a policy input error before inference', 
 
 test('Pilot 1 request fingerprint changes when the task changes', async () => {
   const infer = async () => ({
-    text: 'bounded hypothesis',
+    text: validFactOutput,
     provider: 'nvidia',
     model: 'minimaxai/minimax-m3.1-flash',
     toolCalls: [],
@@ -243,5 +273,51 @@ test('Pilot 1 request fingerprint changes when the task changes', async () => {
   assert.equal(
     first.receipt.evidenceFingerprint,
     second.receipt.evidenceFingerprint,
+  );
+});
+
+test('Pilot 1 returns a typed proposal set, not free-form model text', async () => {
+  const result = await runPilot1(request, async () => ({
+    text: JSON.stringify({
+      schema: 'theseus.dreaming-worker.proposals.v1',
+      proposals: [
+        {
+          type: 'HYPOTHESIS',
+          claim: 'A transient provider-side delay caused the first timeout.',
+          why_plausible: 'The synthetic evidence contains a timeout.',
+          source_refs: [
+            {
+              source_ref: 'fixture:message:1',
+              evidence_hash: 'sha256:fixture-message-1',
+            },
+          ],
+          falsifier: 'Repeated equivalent requests complete within the bound.',
+          required_evidence: ['Provider latency telemetry.'],
+          competing_explanations: ['Caller-side timeout configuration.'],
+          uncertainty: 'HIGH',
+        },
+      ],
+    }),
+    provider: 'nvidia',
+    model: 'minimaxai/minimax-m3.1-flash',
+    toolCalls: [],
+  }));
+
+  assert.equal(result.outcome, 'PROPOSED');
+  assert.equal(result.proposalSet.schema, 'theseus.dreaming-worker.proposals.v1');
+  assert.equal(result.proposalSet.proposals[0].type, 'HYPOTHESIS');
+  assert.equal(result.proposalSet.proposals[0].falsifier.length > 0, true);
+});
+
+test('Pilot 1 rejects free-form prose after inference', async () => {
+  await assert.rejects(
+    () =>
+      runPilot1(request, async () => ({
+        text: 'The timeout was probably transient.',
+        provider: 'nvidia',
+        model: 'minimaxai/minimax-m3.1-flash',
+        toolCalls: [],
+      })),
+    /PILOT1_PROPOSAL_JSON_INVALID/,
   );
 });

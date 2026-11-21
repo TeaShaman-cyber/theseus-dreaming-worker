@@ -6,8 +6,10 @@ on:
     paths:
       - 'src/dreaming/dry-run.ts'
       - 'src/dreaming/pilot1-runner.ts'
+      - 'src/dreaming/proposal-schema.ts'
       - 'test/dry-run.test.mjs'
       - 'test/pilot1-runner.test.mjs'
+      - 'test/proposal-schema.test.mjs'
       - 'tools/ci/mutation-test'
       - 'stryker.config.mjs'
       - 'package.json'
@@ -17,8 +19,10 @@ on:
     paths:
       - 'src/dreaming/dry-run.ts'
       - 'src/dreaming/pilot1-runner.ts'
+      - 'src/dreaming/proposal-schema.ts'
       - 'test/dry-run.test.mjs'
       - 'test/pilot1-runner.test.mjs'
+      - 'test/proposal-schema.test.mjs'
       - 'tools/ci/mutation-test'
       - 'stryker.config.mjs'
       - 'package.json'

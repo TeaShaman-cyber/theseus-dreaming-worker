@@ -27,3 +27,19 @@ test('Pilot 1 Git config permits only synthetic/publication-safe inference', () 
   assert.equal(desired.metadata.canonicalWrites, 'DISABLED');
   assert.match(desired.instructions, /SYNTHETIC_FIXTURE or PUBLICATION_SAFE/);
 });
+
+test('Pilot 1 agent is instructed to emit only the typed proposal JSON contract', () => {
+  const instructions = config.desired.instructions;
+
+  assert.match(instructions, /theseus\.dreaming-worker\.proposals\.v1/);
+  assert.match(instructions, /FACT/);
+  assert.match(instructions, /INFERENCE/);
+  assert.match(instructions, /HYPOTHESIS/);
+  assert.match(instructions, /UNKNOWN/);
+  assert.match(instructions, /source_ref/);
+  assert.match(instructions, /evidence_hash/);
+  assert.match(instructions, /falsifier/);
+  assert.match(instructions, /required_evidence/);
+  assert.match(instructions, /JSON only/i);
+  assert.match(instructions, /no markdown/i);
+});
