@@ -9,7 +9,7 @@ from typing import Any
 
 MARKER_PREFIX = "<!-- codex-review-state:v1 "
 MARKER_SUFFIX = " -->"
-CODEX_LOGIN_PREFIX = "chatgpt-codex-connector"
+CODEX_TRUSTED_LOGINS = {"chatgpt-codex-connector[bot]"}
 
 
 def _extract_state(body: str) -> dict[str, Any] | None:
@@ -48,7 +48,7 @@ def classify_codex_review(comments: list[dict[str, Any]], head_sha: str) -> dict
     observations = []
     for comment in comments:
         login = str((comment.get("user") or {}).get("login") or "")
-        if not login.startswith(CODEX_LOGIN_PREFIX):
+        if login not in CODEX_TRUSTED_LOGINS:
             continue
         state = _extract_state(str(comment.get("body") or ""))
         if state is None:
