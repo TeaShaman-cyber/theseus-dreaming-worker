@@ -45,3 +45,25 @@ The Builder's own model is selected by `BUILDER_MODEL`; the current development 
 ## Safety boundary
 
 Bootstrap verification performs model discovery only. It does not send Session Search evidence, make inference calls, promote hypotheses to truth, or write canonical memory/user preferences.
+
+## Pilot 0 dry run
+
+Before any external model is allowed to analyze evidence, the repository has a deterministic dry-run gate.
+
+In plain terms: it checks that each evidence item has a source identity, records exactly what packet was seen, refuses absence claims when coverage/currentness is incomplete, and proves that the dry run made zero external model calls.
+
+Run the synthetic fixture:
+
+```bash
+npm run pilot0 -- fixtures/pilot0-partial.json
+```
+
+Expected properties of the result:
+
+- `FACT` only describes what the accepted packet itself proves;
+- `UNKNOWN` is emitted when incomplete coverage makes stronger claims unsafe;
+- `receipt.inputFingerprint` uniquely fingerprints the input packet;
+- `receipt.externalModelCalls` is `0`.
+
+Implementation: `src/dreaming/dry-run.ts`.
+Tests: `test/dry-run.test.mjs`.

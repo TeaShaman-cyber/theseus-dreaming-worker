@@ -9,7 +9,8 @@
     "start": "mastra start",
     "test": "node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
-    "check": "npm run test && npm run typecheck && python3 tools/check_goal_contract.py"
+    "check": "npm run test && npm run typecheck && python3 tools/check_goal_contract.py",
+    "pilot0": "node tools/run-pilot0.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.84",

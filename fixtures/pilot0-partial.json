@@ -1,0 +1,16 @@
+{
+  "schema": "theseus-evidence-packet-v1",
+  "packetId": "fixture-partial-001",
+  "acceptedNewEvidence": true,
+  "coverage": {
+    "state": "PARTIAL",
+    "currentness": "UNKNOWN"
+  },
+  "evidence": [
+    {
+      "sourceRef": "fixture:message:1",
+      "evidenceHash": "sha256:fixture-message-1",
+      "text": "Synthetic evidence: a worker timed out after a provider request."
+    }
+  ]
+}
