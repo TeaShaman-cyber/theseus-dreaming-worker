@@ -1,0 +1,32 @@
+{
+  "name": "theseus-dreaming-worker",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "mastra dev",
+    "build": "mastra build",
+    "start": "mastra start",
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run test && npm run typecheck && python3 tools/check_goal_contract.py"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "3.0.84",
+    "@mastra/core": "latest",
+    "@mastra/editor": "latest",
+    "@mastra/libsql": "latest",
+    "@mastra/mcp": "^2.10.0",
+    "@mastra/observability": "latest",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "mastra": "latest",
+    "typescript": "latest"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "packageManager": "pnpm@11.3.0"
+}
