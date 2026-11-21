@@ -449,6 +449,76 @@
         ".env",
         "reports"
       ]
+    },
+    {
+      "id": "OBS-01",
+      "title": "External observability is opt-in, scope-gated, minimized, and non-authoritative",
+      "human_promise": "External telemetry is selected only for explicitly safe Pilot 1 runs; Grafana receives operational spans without model input/output, Langfuse is enabled only with explicit credentials, and missing external telemetry never changes the deterministic runtime receipt.",
+      "why": "Observability must improve debugging without becoming a new privacy boundary, execution dependency, or source of truth.",
+      "status": "STRONG",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "src/mastra/observability-routing.ts",
+          "supports": "Defaults to local storage, gates external exporters on requestContext, disables exporters without env, and strips input/output from Grafana spans."
+        },
+        {
+          "kind": "code",
+          "ref": "src/mastra/pilot1-tracing.ts",
+          "supports": "Carries only non-sensitive correlation identifiers into requestContext/tracing metadata."
+        },
+        {
+          "kind": "test",
+          "ref": "test/observability-routing.test.mjs",
+          "supports": "Covers local default, explicit external-safe routing, optional exporter configuration, OTLP header parsing, and Grafana payload minimization."
+        },
+        {
+          "kind": "test",
+          "ref": "test/pilot1-tracing.test.mjs",
+          "supports": "Checks that tracing metadata excludes task and evidence payload."
+        },
+        {
+          "kind": "runtime_readback",
+          "ref": "Mastra trace c3587244264161d80c7da05a6c829685",
+          "supports": "Synthetic Pilot 1 completed with external exporters unconfigured while correlation metadata remained present in the local Mastra trace."
+        }
+      ],
+      "watch_paths": [
+        "src/mastra/observability-routing.ts",
+        "src/mastra/pilot1-tracing.ts",
+        "tools/agent/run-pilot1.mjs",
+        "test/observability-routing.test.mjs",
+        "test/pilot1-tracing.test.mjs",
+        ".env.example",
+        "pnpm-workspace.yaml"
+      ],
+      "watch_terms": [
+        "external-safe",
+        "MastraStorageExporter",
+        "OtelExporter",
+        "LangfuseExporter",
+        "operationalSpanFormatter",
+        "requestFingerprint",
+        "SensitiveDataFilter"
+      ],
+      "proof_checks": [
+        {
+          "ref": "test/observability-routing.test.mjs",
+          "contains_all": [
+            "observability defaults to local-only config",
+            "only explicit external-safe request context selects external exporters",
+            "missing external configuration keeps both exporters disabled",
+            "Grafana operational formatter removes model input/output"
+          ]
+        },
+        {
+          "ref": "test/pilot1-tracing.test.mjs",
+          "contains_all": [
+            "selects external-safe exporters",
+            "carries only non-sensitive correlation metadata"
+          ]
+        }
+      ]
     }
   ]
 }

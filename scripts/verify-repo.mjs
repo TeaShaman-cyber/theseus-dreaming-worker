@@ -9,6 +9,7 @@ const required = [
   'contracts/dreaming-worker.yaml',
   'contracts/dreaming-worker-invariants.json',
   'docs/qa.md',
+  'docs/observability.md',
   'docs/exe-dev-remote-mcp.md',
   'tools/dev/check',
   'tools/ci/build-check',
@@ -19,6 +20,7 @@ const required = [
   '.github/workflows/mutation.yml',
   'package.json',
   'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
   'biome.json',
   'stryker.config.mjs'
 ];

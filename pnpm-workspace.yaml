@@ -1,14 +1,9 @@
 packages:
   - .
 
+overrides:
+  '@opentelemetry/api': 1.9.0
+
 allowBuilds:
-  '@google/genai': true
-  bufferutil: true
   esbuild: true
   protobufjs: true
-
-onlyBuiltDependencies:
-  - '@google/genai'
-  - bufferutil
-  - esbuild
-  - protobufjs

@@ -1,10 +1,10 @@
 export default {
   plugins: ['@stryker-mutator/typescript-checker'],
-  mutate: ['src/dreaming/dry-run.ts', 'src/dreaming/pilot1-runner.ts', 'src/dreaming/proposal-schema.ts'],
+  mutate: ['src/dreaming/dry-run.ts', 'src/dreaming/pilot1-runner.ts', 'src/dreaming/proposal-schema.ts', 'src/mastra/observability-routing.ts', 'src/mastra/pilot1-tracing.ts'],
   ignorePatterns: ['.claude/**', '.agents/**', '.mastra/**', 'reports/**'],
   testRunner: 'command',
   commandRunner: {
-    command: 'node --test test/dry-run.test.mjs test/pilot1-runner.test.mjs test/proposal-schema.test.mjs'
+    command: 'node --test test/dry-run.test.mjs test/pilot1-runner.test.mjs test/proposal-schema.test.mjs test/observability-routing.test.mjs test/pilot1-tracing.test.mjs'
   },
   checkers: ['typescript'],
   tsconfigFile: 'tsconfig.json',

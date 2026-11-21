@@ -2,11 +2,11 @@ import { Mastra } from '@mastra/core/mastra';
 import { MastraEditor } from '@mastra/editor';
 import { createBuilderAgent } from '@mastra/editor/ee';
 import { LibSQLStore } from '@mastra/libsql';
-import { Observability, DefaultExporter, SensitiveDataFilter } from '@mastra/observability';
 
 import { getEnv } from './env';
 import { exeGateway } from './gateways/exe-gateway';
 import { workspace } from './workspace';
+import { createObservability } from './observability-routing';
 
 const storage = new LibSQLStore({
   id: 'mastra-storage',
@@ -44,14 +44,6 @@ export const mastra = new Mastra({
     port: Number(process.env.MASTRA_PORT ?? 8000),
     build: { swaggerUI: true },
   },
-  observability: new Observability({
-    configs: {
-      default: {
-        serviceName: 'theseus-dreaming-builder',
-        exporters: [new DefaultExporter()],
-        spanOutputProcessors: [new SensitiveDataFilter()],
-      },
-    },
-  }),
+  observability: createObservability(),
   editor,
 });

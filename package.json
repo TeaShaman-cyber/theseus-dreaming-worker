@@ -22,9 +22,12 @@
     "@ai-sdk/openai-compatible": "1.0.63",
     "@mastra/core": "latest",
     "@mastra/editor": "latest",
+    "@mastra/langfuse": "1.7.1",
     "@mastra/libsql": "latest",
     "@mastra/mcp": "^2.10.0",
     "@mastra/observability": "latest",
+    "@mastra/otel-exporter": "1.6.1",
+    "@opentelemetry/api": "1.9.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

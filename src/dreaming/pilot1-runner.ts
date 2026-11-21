@@ -35,7 +35,18 @@ export type Pilot1InferenceResult = {
   };
 };
 
-export type Pilot1Inference = (request: Pilot1Request) => Promise<Pilot1InferenceResult>;
+export type Pilot1Correlation = {
+  scope: Pilot1Scope;
+  phase: 'PILOT_1_SYNTHETIC_INFERENCE';
+  proposalSchema: 'theseus.dreaming-worker.proposals.v1';
+  requestFingerprint: string;
+  evidenceFingerprint: string;
+};
+
+export type Pilot1Inference = (
+  request: Pilot1Request,
+  correlation: Pilot1Correlation,
+) => Promise<Pilot1InferenceResult>;
 
 type Pilot1Receipt = {
   schema: 'theseus.dreaming-worker.pilot1-receipt.v1';
@@ -108,6 +119,14 @@ export async function runPilot1(
     gate.receipt.inputFingerprint,
   );
 
+  const correlation: Pilot1Correlation = {
+    scope: request.scope,
+    phase: 'PILOT_1_SYNTHETIC_INFERENCE',
+    proposalSchema: 'theseus.dreaming-worker.proposals.v1',
+    requestFingerprint: fullRequestFingerprint,
+    evidenceFingerprint: gate.receipt.inputFingerprint,
+  };
+
   const baseReceipt = {
     schema: 'theseus.dreaming-worker.pilot1-receipt.v1' as const,
     scope: request.scope,
@@ -134,7 +153,7 @@ export async function runPilot1(
     };
   }
 
-  const inference = await infer(request);
+  const inference = await infer(request, correlation);
   const callerToolCalls = inference.toolCalls?.length ?? 0;
   const witness = inference.runtimeWitness;
   const witnessedToolCalls = witness?.toolCalls ?? 0;

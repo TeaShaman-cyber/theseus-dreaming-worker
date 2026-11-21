@@ -321,3 +321,38 @@ test('Pilot 1 rejects free-form prose after inference', async () => {
     /PILOT1_PROPOSAL_JSON_INVALID/,
   );
 });
+
+test('Pilot 1 passes only non-sensitive correlation metadata to inference', async () => {
+  let observedCorrelation;
+
+  await runPilot1(request, async (_input, correlation) => {
+    observedCorrelation = correlation;
+    return {
+      text: validFactOutput,
+      provider: 'nvidia',
+      model: 'minimaxai/minimax-m3.1-flash',
+      toolCalls: [],
+    };
+  });
+
+  assert.equal(observedCorrelation.scope, 'SYNTHETIC_FIXTURE');
+  assert.equal(observedCorrelation.phase, 'PILOT_1_SYNTHETIC_INFERENCE');
+  assert.equal(
+    observedCorrelation.proposalSchema,
+    'theseus.dreaming-worker.proposals.v1',
+  );
+  assert.match(
+    observedCorrelation.requestFingerprint,
+    /^sha256:[a-f0-9]{64}$/,
+  );
+  assert.match(
+    observedCorrelation.evidenceFingerprint,
+    /^sha256:[a-f0-9]{64}$/,
+  );
+  assert.equal('task' in observedCorrelation, false);
+  assert.equal('packet' in observedCorrelation, false);
+  assert.equal(
+    JSON.stringify(observedCorrelation).includes('Synthetic evidence'),
+    false,
+  );
+});
