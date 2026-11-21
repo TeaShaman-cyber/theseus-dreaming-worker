@@ -41,7 +41,7 @@ export const mastra = new Mastra({
   },
   server: {
     host: '0.0.0.0',
-    port: 8000,
+    port: Number(process.env.MASTRA_PORT ?? 8000),
     build: { swaggerUI: true },
   },
   observability: new Observability({
