@@ -497,6 +497,16 @@ test('usage normalization keeps only finite numeric fields and otherwise stays a
   });
 });
 
+test('usage overflow numeric literals never become finite token counts', async () => {
+  await withServer((_req, res) => {
+    res.setHeader('content-type', 'application/json');
+    res.end('{"choices":[{"finish_reason":"stop","message":{"content":"ok"}}],"usage":{"prompt_tokens":1e309,"completion_tokens":-1e309}}');
+  }, async baseURL => {
+    const result = await inference(baseURL)(request, correlation);
+    assert.equal(result.usage, undefined);
+  });
+});
+
 test('missing or invalid choices are MALFORMED_RESPONSE', async () => {
   for (const choices of [undefined, null, [], [null], ['wrong-type']]) {
     await withServer((_req, res) => {
@@ -515,10 +525,10 @@ test('missing or invalid choices are MALFORMED_RESPONSE', async () => {
 });
 
 test('Retry-After invalid value stays unknown and zero seconds remains valid', async () => {
-  for (const [header, expected] of [['not-a-date', undefined], ['0', 0]]) {
+  for (const [header, expected] of [[null, undefined], ['not-a-date', undefined], ['0', 0]]) {
     await withServer((_req, res) => {
       res.statusCode = 429;
-      res.setHeader('retry-after', header);
+      if (header !== null) res.setHeader('retry-after', header);
       res.end('rate limited');
     }, async baseURL => {
       await assert.rejects(
@@ -668,7 +678,7 @@ test('negative Retry-After is rejected while HTTP-date is converted to a bounded
 });
 
 test('usage arrays and primitive values never become token counts', async () => {
-  for (const usage of [[], 12, '12', true]) {
+  for (const usage of [null, [], 12, '12', true]) {
     await withServer((_req, res) => {
       res.setHeader('content-type', 'application/json');
       res.end(JSON.stringify({
@@ -687,20 +697,35 @@ test('usage arrays and primitive values never become token counts', async () => 
   }
 });
 
-test('non-string finish reason and missing message content are normalized safely', async () => {
+test('non-string finish reason and invalid message content are normalized safely', async () => {
   await withServer((_req, res) => {
     res.setHeader('content-type', 'application/json');
     res.end(JSON.stringify({
-      choices: [{ finish_reason: 123, message: {} }],
+      choices: [{ finish_reason: 123, message: { content: 'ok' } }],
     }));
   }, async baseURL => {
-    await assert.rejects(
-      () => inference(baseURL)(request, correlation),
-      error =>
-        error instanceof ProviderAdapterError &&
-        error.code === 'EMPTY_FINAL_CONTENT',
-    );
+    const result = await inference(baseURL)(request, correlation);
+    assert.equal(result.text, 'ok');
+    assert.equal(result.finishReason, undefined);
   });
+
+  for (const choice of [
+    { finish_reason: 'stop', message: { content: 123 } },
+    { finish_reason: 'stop' },
+  ]) {
+    await withServer((_req, res) => {
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ choices: [choice] }));
+    }, async baseURL => {
+      await assert.rejects(
+        () => inference(baseURL)(request, correlation),
+        error =>
+          error instanceof ProviderAdapterError &&
+          error.code === 'EMPTY_FINAL_CONTENT' &&
+          error.providerState === 'RESPONDED',
+      );
+    });
+  }
 });
 
 test('stream selection works independently by explicit stream flag or SSE content type', async () => {
