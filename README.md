@@ -10,8 +10,10 @@ Architecture coordination: `TeaShaman-cyber/theseus-research#127`. Bootstrap imp
 
 Mastra Agent Builder runs in development mode on the existing governed exe.dev VM `theseus-exe-shell-probe`.
 
-- Studio / Agent Builder: private exe.dev HTTPS proxy on port 8000.
-- Built-in Mastra MCP: `/api/mcp`.
+- Mastra Studio / Agent Builder runs internally on port 8001 under `theseus-dreaming-builder.service`.
+- Built-in Mastra MCP is `/api/mcp` internally.
+- ChatGPT reaches the Builder through exe.dev's official `mcp-gate` on port 8000 at `https://theseus-exe-shell-probe.exe.xyz/mcp`; the gate supplies OAuth and forwards `/mcp` to Mastra `/api/mcp`.
+- Setup, verification, security boundary, and troubleshooting: [`docs/exe-dev-remote-mcp.md`](docs/exe-dev-remote-mcp.md).
 - Local Builder state: ignored LibSQL files and `.mastra/` workspace; Git remains code/contract authority.
 - Production runtime is deliberately undecided and separate from this development surface.
 
