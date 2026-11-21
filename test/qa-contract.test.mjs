@@ -11,6 +11,7 @@ test('repository exposes one canonical development QA gate', () => {
     'npm run test',
     'npm run typecheck',
     'npm run build:check',
+    'python3 tools/reverse_trace/check_current.py',
     'git diff --check',
   ]) {
     assert.ok(gate.includes(required), 'missing canonical QA command: ' + required);
@@ -34,6 +35,8 @@ test('targeted mutation workflow runs the repository mutation endpoint', () => {
   const workflow = readFileSync('.github/workflows/mutation.yml', 'utf8');
   assert.match(workflow, /npm run mutation/);
   assert.match(workflow, /src\/dreaming\/dry-run\.ts/);
+  assert.match(workflow, /src\/dreaming\/pilot1-runner\.ts/);
   assert.match(workflow, /test\/dry-run\.test\.mjs/);
+  assert.match(workflow, /test\/pilot1-runner\.test\.mjs/);
   assert.match(workflow, /persist-credentials:\s*false/);
 });

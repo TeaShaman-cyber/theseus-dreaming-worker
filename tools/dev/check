@@ -25,6 +25,9 @@ npm run build:check
 printf '%s\n' '== goal contract =='
 python3 tools/check_goal_contract.py
 
+printf '%s\n' '== reverse trace promises =='
+python3 tools/reverse_trace/check_current.py
+
 printf '%s\n' '== shell syntax =='
 sh -n tools/dev/check tools/ci/build-check tools/ci/mutation-test
 

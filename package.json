@@ -13,7 +13,10 @@
     "pilot0": "node tools/run-pilot0.mjs",
     "lint": "biome lint src test tools scripts package.json biome.json --diagnostic-level=error",
     "mutation": "./tools/ci/mutation-test",
-    "build:check": "./tools/ci/build-check"
+    "build:check": "./tools/ci/build-check",
+    "pilot1": "node tools/agent/run-pilot1.mjs",
+    "agent:check": "node tools/agent/sync-pilot1.mjs --check",
+    "agent:apply": "node tools/agent/sync-pilot1.mjs --apply"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "1.0.63",
