@@ -47,7 +47,7 @@ jobs:
 
           python3 /tmp/review_gate_required.py < changed.txt > decision.json
           cat decision.json
-          required=$(python3 -c 'import json; print(str(json.load(open("decision.json"))["required"]).lower())')
+          required=$(python3 -I -c 'import json; print(str(json.load(open("decision.json"))["required"]).lower())')
           echo "required=$required" >> "$GITHUB_OUTPUT"
 
   review-gate:

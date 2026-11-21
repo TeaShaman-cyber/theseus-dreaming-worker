@@ -9,6 +9,7 @@ test('repository exposes one canonical development QA gate', () => {
     'scripts/verify-repo.mjs',
     'npm run lint',
     'npm run test',
+    "python3 -m unittest discover -s test_py -p 'test_*.py'",
     'npm run typecheck',
     'npm run build:check',
     'python3 tools/reverse_trace/check_current.py',

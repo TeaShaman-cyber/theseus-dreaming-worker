@@ -16,6 +16,9 @@ npm run lint
 printf '%s\n' '== unit and regression tests =='
 npm run test
 
+printf '%s\n' '== review gate contract tests =='
+python3 -m unittest discover -s test_py -p 'test_*.py'
+
 printf '%s\n' '== typecheck =='
 npm run typecheck
 

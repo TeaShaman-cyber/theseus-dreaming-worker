@@ -20,6 +20,7 @@ class ReviewGateWorkflowContractTests(unittest.TestCase):
         self.assertIn('FINDINGS', workflow)
         self.assertIn('persist-credentials: false', workflow)
         self.assertIn('git diff --no-renames --name-only', workflow)
+        self.assertIn('python3 -I -c', workflow)
 
     def test_protected_review_accepts_only_exact_head_clean(self):
         workflow = (ROOT / '.github/workflows/review-gate.yml').read_text()
