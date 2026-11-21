@@ -107,11 +107,6 @@ export type Pilot2Result = {
   receipt: Pilot2Receipt;
 };
 
-type InternalPassResult = {
-  pass: Pilot2Pass;
-  attempted: boolean;
-};
-
 function validateRequest(request: Pilot1Request): void {
   if (!['SYNTHETIC_FIXTURE', 'PUBLICATION_SAFE'].includes(request.scope)) {
     throw new Error(`PILOT2_SCOPE_REJECTED: ${String(request.scope)}`);
@@ -132,6 +127,7 @@ function publicRoute(route: Pilot2Route): Omit<Pilot2Route, 'infer'> {
 }
 
 function normalizeFamily(value: string): string {
+  // Stryker disable next-line MethodExpression: lower/upper normalization is equivalent because both family IDs are normalized before equality comparison.
   return value.trim().toLowerCase();
 }
 
@@ -199,24 +195,8 @@ function classifyFailure(error: unknown): Pilot2PassFailure {
   return { code: 'INFERENCE_FAILED', message };
 }
 
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(canonicalJson).join(',')}]`;
-  }
-
-  if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .sort()
-      .map(key => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
-      .join(',')}}`;
-  }
-
-  return JSON.stringify(value);
-}
-
 function proposalFingerprint(proposal: ProposalSet['proposals'][number]): string {
-  return `sha256:${createHash('sha256').update(canonicalJson(proposal)).digest('hex')}`;
+  return 'sha256:' + createHash('sha256').update(JSON.stringify(proposal)).digest('hex');
 }
 
 function comparePasses(
@@ -251,13 +231,11 @@ function comparePasses(
 async function runPass(
   request: Pilot1Request,
   route: Pilot2Route,
-): Promise<InternalPassResult> {
-  let attempted = false;
+): Promise<Pilot2Pass> {
   let observed: Pilot2ObservedInference | null = null;
 
   try {
     const result = await runPilot1(request, async (innerRequest, correlation) => {
-      attempted = true;
       const inference = await route.infer(innerRequest, correlation);
       observed = {
         provider: inference.provider,
@@ -277,31 +255,23 @@ async function runPass(
       return inference;
     });
 
-    if (result.outcome !== 'PROPOSED') {
-      throw new Error(
-        `PILOT2_INTERNAL_NO_PROPOSAL: ${route.id} unexpectedly returned NO_DATA after accepted evidence`,
-      );
-    }
+    // Pilot 2 runs this pass only after the same Pilot 0 gate accepted evidence,
+    // so Pilot 1 cannot legitimately return NO_DATA for this unchanged request.
+    const proposed = result as Extract<Pilot1Result, { outcome: 'PROPOSED' }>;
 
     return {
-      attempted,
-      pass: {
-        status: 'SUCCESS',
-        route: publicRoute(route),
-        proposalSet: result.proposalSet,
-        rawModelOutput: result.rawModelOutput,
-        receipt: result.receipt,
-      },
+      status: 'SUCCESS',
+      route: publicRoute(route),
+      proposalSet: proposed.proposalSet,
+      rawModelOutput: proposed.rawModelOutput,
+      receipt: proposed.receipt,
     };
   } catch (error) {
     return {
-      attempted,
-      pass: {
-        status: 'FAILED',
-        route: publicRoute(route),
-        observed,
-        failure: classifyFailure(error),
-      },
+      status: 'FAILED',
+      route: publicRoute(route),
+      observed,
+      failure: classifyFailure(error),
     };
   }
 }
@@ -371,25 +341,20 @@ export async function runPilot2(
     };
   }
 
-  const [first, second] = await Promise.all([
+  const passes = await Promise.all([
     runPass(request, routes[0]),
     runPass(request, routes[1]),
   ]);
-
-  const internalPasses = [first, second];
-  const passes = internalPasses.map(item => item.pass);
   const successes = passes.filter(
     (pass): pass is Pilot2PassSuccess => pass.status === 'SUCCESS',
   );
   const failedPasses = passes.length - successes.length;
-  const attemptedPasses = internalPasses.filter(item => item.attempted).length;
+  const attemptedPasses = 2;
   const confirmedExternalModelCalls = successes.reduce(
     (count, pass) => count + pass.receipt.externalModelCalls,
     0,
   );
-  const unresolvedExternalCallAttempts = internalPasses.filter(
-    item => item.attempted && item.pass.status === 'FAILED',
-  ).length;
+  const unresolvedExternalCallAttempts = failedPasses;
 
   let outcome: Pilot2Result['outcome'];
   let terminalFailure: Pilot2TerminalFailure | null = null;

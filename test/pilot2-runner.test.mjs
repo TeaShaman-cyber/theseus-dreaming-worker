@@ -95,6 +95,7 @@ test('Pilot 2 short-circuits NO_DATA before either model pass', async () => {
   assert.equal(result.receipt.confirmedExternalModelCalls, 0);
   assert.equal(result.receipt.validPasses, 0);
   assert.equal(result.receipt.failedPasses, 0);
+  assert.equal(result.receipt.independence, 'NOT_EVALUATED');
 });
 
 test('Pilot 2 gives both blind first passes the same request and evidence fingerprints', async () => {
@@ -209,6 +210,8 @@ test('Pilot 2 returns FAIL_CLOSED rather than NO_DATA when both accepted-evidenc
   assert.equal(result.receipt.unresolvedExternalCallAttempts, 2);
   assert.equal(result.passes[0].failure.code, 'TIMEOUT_UNKNOWN_PROVIDER_STATE');
   assert.equal(result.passes[1].failure.code, 'OUTPUT_BUDGET_EXHAUSTED');
+  assert.equal(result.terminalFailure.code, 'NO_VALID_PERSPECTIVES');
+  assert.ok(result.terminalFailure.message.length > 0);
 });
 
 test('Pilot 2 normalizes invalid JSON as a typed pass failure without discarding the valid perspective', async () => {
@@ -336,6 +339,13 @@ test('Pilot 2 comparison is deterministic and preserves exact agreement plus pas
   assert.equal(result.comparison.passAOnlyProposalFingerprints.length, 1);
   assert.equal(result.comparison.passBOnlyProposalFingerprints.length, 1);
   assert.equal(result.comparison.semanticRelation, 'UNRESOLVED_WITHOUT_CRITIQUE');
+  for (const fingerprint of [
+    ...result.comparison.sharedProposalFingerprints,
+    ...result.comparison.passAOnlyProposalFingerprints,
+    ...result.comparison.passBOnlyProposalFingerprints,
+  ]) {
+    assert.match(fingerprint, /^sha256:[a-f0-9]{64}$/);
+  }
 });
 
 
@@ -417,6 +427,8 @@ test('Pilot 2 fails closed when route count is not exactly two', async () => {
   assert.equal(calls, 0);
   assert.equal(result.outcome, 'FAIL_CLOSED');
   assert.equal(result.terminalFailure.code, 'ROUTE_PLAN_INVALID');
+  assert.deepEqual(result.passes, []);
+  assert.ok(result.terminalFailure.message.length > 0);
   assert.equal(result.receipt.attemptedPasses, 0);
   assert.equal(result.receipt.confirmedExternalModelCalls, 0);
   assert.equal(result.receipt.unresolvedExternalCallAttempts, 0);
@@ -444,6 +456,8 @@ test('Pilot 2 fails closed on incomplete route identity', async () => {
   assert.equal(calls, 0);
   assert.equal(result.outcome, 'FAIL_CLOSED');
   assert.equal(result.terminalFailure.code, 'ROUTE_PLAN_INVALID');
+  assert.deepEqual(result.passes, []);
+  assert.ok(result.terminalFailure.message.length > 0);
 });
 
 test('Pilot 2 normalizes model family identity before independence comparison', async () => {
@@ -468,6 +482,8 @@ test('Pilot 2 normalizes model family identity before independence comparison', 
   assert.equal(calls, 0);
   assert.equal(result.outcome, 'FAIL_CLOSED');
   assert.equal(result.terminalFailure.code, 'INDEPENDENCE_NOT_ESTABLISHED');
+  assert.deepEqual(result.passes, []);
+  assert.ok(result.terminalFailure.message.length > 0);
 });
 
 test('Pilot 2 normalizes schema rejection as a typed pass failure', async () => {
@@ -609,4 +625,181 @@ test('Pilot 2 preserves observed provider metadata when returned output later fa
   assert.equal(result.passes[1].observed.finishReason, 'stop');
   assert.equal(result.receipt.confirmedExternalModelCalls, 1);
   assert.equal(result.receipt.unresolvedExternalCallAttempts, 1);
+});
+
+
+test('Pilot 2 accepts PUBLICATION_SAFE scope for both independent passes', async () => {
+  let calls = 0;
+  const result = await runPilot2(
+    { ...request, scope: 'PUBLICATION_SAFE' },
+    [
+      qwenRoute(async () => {
+        calls += 1;
+        return {
+          text: factOutput('Publication-safe perspective A.'),
+          provider: 'groq',
+          model: 'qwen/qwen3.8-27b',
+          toolCalls: [],
+        };
+      }),
+      mistralRoute(async () => {
+        calls += 1;
+        return {
+          text: factOutput('Publication-safe perspective B.'),
+          provider: 'openrouter',
+          model: 'mistralai/mistral-small-3.2-24b-instruct',
+          toolCalls: [],
+        };
+      }),
+    ],
+  );
+
+  assert.equal(calls, 2);
+  assert.equal(result.outcome, 'COMPLETE');
+  assert.equal(result.receipt.scope, 'PUBLICATION_SAFE');
+});
+
+test('Pilot 2 reports a missing task as its typed policy error', async () => {
+  const { task: _task, ...withoutTask } = request;
+
+  await assert.rejects(
+    () =>
+      runPilot2(withoutTask, [
+        qwenRoute(async () => {
+          throw new Error('must not run');
+        }),
+        mistralRoute(async () => {
+          throw new Error('must not run');
+        }),
+      ]),
+    /PILOT2_TASK_REQUIRED/,
+  );
+});
+
+test('Pilot 2 rejects whitespace-only and missing values for every route identity field', async () => {
+  for (const field of ['id', 'provider', 'model', 'modelFamily']) {
+    for (const invalid of ['   ', undefined]) {
+      let calls = 0;
+      const broken = {
+        id: 'openrouter-mistral',
+        provider: 'openrouter',
+        model: 'mistralai/mistral-small-3.2-24b-instruct',
+        modelFamily: 'mistral',
+        infer: async () => {
+          calls += 1;
+          throw new Error('must not run');
+        },
+      };
+      broken[field] = invalid;
+
+      const result = await runPilot2(request, [
+        qwenRoute(async () => {
+          calls += 1;
+          throw new Error('must not run');
+        }),
+        broken,
+      ]);
+
+      assert.equal(calls, 0, field + ' must fail before inference');
+      assert.equal(result.outcome, 'FAIL_CLOSED');
+      assert.equal(result.terminalFailure.code, 'ROUTE_PLAN_INVALID');
+      assert.ok(result.terminalFailure.message.length > 0);
+      assert.equal(result.receipt.independence, 'NOT_EVALUATED');
+    }
+  }
+});
+
+test('Pilot 2 route-count failure keeps a non-empty diagnostic and no independence claim', async () => {
+  const result = await runPilot2(request, [
+    qwenRoute(async () => {
+      throw new Error('must not run');
+    }),
+  ]);
+
+  assert.equal(result.outcome, 'FAIL_CLOSED');
+  assert.equal(result.terminalFailure.code, 'ROUTE_PLAN_INVALID');
+  assert.ok(result.terminalFailure.message.length > 0);
+  assert.equal(result.receipt.independence, 'NOT_EVALUATED');
+});
+
+test('Pilot 2 same-family failure keeps a non-empty diagnostic', async () => {
+  const result = await runPilot2(request, [
+    qwenRoute(async () => {
+      throw new Error('must not run');
+    }),
+    route({
+      id: 'other-qwen',
+      provider: 'openrouter',
+      model: 'qwen/qwen3.8-27b',
+      modelFamily: 'QWEN',
+      infer: async () => {
+        throw new Error('must not run');
+      },
+    }),
+  ]);
+
+  assert.equal(result.outcome, 'FAIL_CLOSED');
+  assert.equal(result.terminalFailure.code, 'INDEPENDENCE_NOT_ESTABLISHED');
+  assert.ok(result.terminalFailure.message.length > 0);
+});
+
+test('Pilot 2 treats missing final text as EMPTY_FINAL_CONTENT instead of crashing', async () => {
+  const result = await runPilot2(request, [
+    qwenRoute(async () => ({
+      text: factOutput('The valid perspective survives.'),
+      provider: 'groq',
+      model: 'qwen/qwen3.8-27b',
+      toolCalls: [],
+    })),
+    mistralRoute(async () => ({
+      text: undefined,
+      provider: 'openrouter',
+      model: 'mistralai/mistral-small-3.2-24b-instruct',
+      finishReason: 'stop',
+      toolCalls: [],
+    })),
+  ]);
+
+  assert.equal(result.outcome, 'PARTIAL');
+  assert.equal(result.passes[1].failure.code, 'EMPTY_FINAL_CONTENT');
+});
+
+test('Pilot 2 exact comparison puts one identical proposal only in the shared set', async () => {
+  const shared = factOutput('Exactly the same structured proposal.');
+
+  const result = await runPilot2(request, [
+    qwenRoute(async () => ({
+      text: shared,
+      provider: 'groq',
+      model: 'qwen/qwen3.8-27b',
+      toolCalls: [],
+    })),
+    mistralRoute(async () => ({
+      text: shared,
+      provider: 'openrouter',
+      model: 'mistralai/mistral-small-3.2-24b-instruct',
+      toolCalls: [],
+    })),
+  ]);
+
+  assert.equal(result.outcome, 'COMPLETE');
+  assert.equal(result.comparison.sharedProposalFingerprints.length, 1);
+  assert.equal(result.comparison.passAOnlyProposalFingerprints.length, 0);
+  assert.equal(result.comparison.passBOnlyProposalFingerprints.length, 0);
+  assert.match(result.comparison.sharedProposalFingerprints[0], /^sha256:[a-f0-9]{64}$/);
+});
+
+test('Pilot 2 records two attempted passes and a non-empty terminal diagnostic when both fail', async () => {
+  const result = await runPilot2(request, [
+    qwenRoute(async () => {
+      throw new Error('provider timeout');
+    }),
+    mistralRoute(async () => {
+      throw new Error('provider connection reset');
+    }),
+  ]);
+
+  assert.equal(result.outcome, 'FAIL_CLOSED');
+  assert.equal(result.receipt.attemptedPasses, 2);
+  assert.ok(result.terminalFailure.message.length > 0);
 });
