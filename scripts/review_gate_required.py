@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 
 
@@ -37,8 +38,14 @@ PROTECTED_EXACT = {
 
 
 
+def parse_paths(raw: bytes, *, nul_delimited: bool) -> list[str]:
+    if nul_delimited:
+        return [os.fsdecode(part) for part in raw.split(b"\0") if part]
+    return [os.fsdecode(line) for line in raw.splitlines()]
+
+
 def _normalize(path: str) -> str:
-    return str(path).strip().replace('\\', '/')
+    return str(path).replace('\\', '/')
 
 
 def _reason(path: str) -> str | None:
@@ -65,7 +72,12 @@ def classify_paths(paths: list[str]) -> dict[str, object]:
 
 
 def main() -> int:
-    paths = [line.rstrip('\n') for line in sys.stdin]
+    nul_delimited = '--nul' in sys.argv[1:]
+    unknown = [arg for arg in sys.argv[1:] if arg != '--nul']
+    if unknown:
+        print('usage: review_gate_required.py [--nul]', file=sys.stderr)
+        return 2
+    paths = parse_paths(sys.stdin.buffer.read(), nul_delimited=nul_delimited)
     print(json.dumps(classify_paths(paths), sort_keys=True))
     return 0
 

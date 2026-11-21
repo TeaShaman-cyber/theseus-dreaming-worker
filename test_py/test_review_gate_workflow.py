@@ -19,13 +19,15 @@ class ReviewGateWorkflowContractTests(unittest.TestCase):
         self.assertIn('BOOTSTRAP: base branch has no review helpers yet', workflow)
         self.assertIn('FINDINGS', workflow)
         self.assertIn('persist-credentials: false', workflow)
-        self.assertIn('git diff --no-renames --name-only', workflow)
+        self.assertIn('git diff --no-renames --name-only -z', workflow)
         self.assertIn('python3 -I -c', workflow)
         self.assertIn('WORK=$(mktemp -d)', workflow)
-        self.assertIn('> "$WORK/changed.txt"', workflow)
+        self.assertIn('> "$WORK/changed.bin"', workflow)
+        self.assertIn('review_gate_required.py" --nul', workflow)
         self.assertIn('> "$WORK/review_gate_required.py"', workflow)
         self.assertIn('> "$WORK/decision.json"', workflow)
         self.assertNotIn('> changed.txt', workflow)
+        self.assertNotIn('> changed.bin', workflow)
         self.assertNotIn('> decision.json', workflow)
 
     def test_protected_review_accepts_only_exact_head_clean(self):

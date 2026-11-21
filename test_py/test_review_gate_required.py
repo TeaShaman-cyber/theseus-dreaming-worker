@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.review_gate_required import classify_paths
+from scripts.review_gate_required import classify_paths, parse_paths
 
 
 class ReviewGateRequiredTests(unittest.TestCase):
@@ -63,6 +63,32 @@ class ReviewGateRequiredTests(unittest.TestCase):
         ])
         self.assertTrue(result['required'])
         self.assertEqual(len(result['matches']), 1)
+
+
+    def test_nul_delimited_paths_preserve_literal_protected_names(self):
+        raw = (
+            'src/dreaming/café.ts'.encode()
+            + b'\0'
+            + 'src/dreaming/tab\tname.ts'.encode()
+            + b'\0'
+            + 'src/dreaming/"quote".ts'.encode()
+            + b'\0'
+            + 'src/dreaming/trailing-space.ts '.encode()
+            + b'\0'
+        )
+        paths = parse_paths(raw, nul_delimited=True)
+        self.assertEqual(
+            paths,
+            [
+                'src/dreaming/café.ts',
+                'src/dreaming/tab\tname.ts',
+                'src/dreaming/"quote".ts',
+                'src/dreaming/trailing-space.ts ',
+            ],
+        )
+        result = classify_paths(paths)
+        self.assertTrue(result['required'])
+        self.assertEqual(len(result['matches']), 4)
 
     def test_empty_diff_does_not_require_review(self):
         self.assertEqual(classify_paths([]), {'required': False, 'matches': []})

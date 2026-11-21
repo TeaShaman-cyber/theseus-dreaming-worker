@@ -30,7 +30,7 @@ jobs:
           set -euo pipefail
           WORK=$(mktemp -d)
           trap 'rm -rf "$WORK"' EXIT
-          git diff --no-renames --name-only "$BASE_SHA...$HEAD_SHA" > "$WORK/changed.txt"
+          git diff --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" > "$WORK/changed.bin"
 
           # Once this classifier exists on the base branch, a PR cannot weaken
           # its own gate by editing the classifier in the same head. The fallback
@@ -47,7 +47,7 @@ jobs:
             echo "base_has_gate=false" >> "$GITHUB_OUTPUT"
           fi
 
-          python3 "$WORK/review_gate_required.py" < "$WORK/changed.txt" > "$WORK/decision.json"
+          python3 "$WORK/review_gate_required.py" --nul < "$WORK/changed.bin" > "$WORK/decision.json"
           cat "$WORK/decision.json"
           required=$(python3 -I -c 'import json,sys; print(str(json.load(open(sys.argv[1]))["required"]).lower())' "$WORK/decision.json")
           echo "required=$required" >> "$GITHUB_OUTPUT"
