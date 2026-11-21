@@ -245,9 +245,9 @@ async function parseSse(
     if (!data) return false;
     if (data === '[DONE]') return true;
 
-    let payload: OpenAIResponse;
+    let payload: unknown;
     try {
-      payload = JSON.parse(data) as OpenAIResponse;
+      payload = JSON.parse(data);
     } catch (error) {
       throw new ProviderAdapterError('MALFORMED_RESPONSE', 'Provider SSE event is not valid JSON', {
         status: response.status,
@@ -255,15 +255,22 @@ async function parseSse(
         cause: error,
       });
     }
-
-    if (typeof payload.model === 'string' && payload.model.length > 0) model = payload.model;
-    if (typeof payload.provider === 'string' && payload.provider.length > 0) {
-      provider = payload.provider;
+    if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new ProviderAdapterError('MALFORMED_RESPONSE', 'Provider SSE event is not a JSON object', {
+        status: response.status,
+        providerState: 'RESPONDED',
+      });
     }
-    if (typeof payload.id === 'string') runId = payload.id;
-    usage = normalizeUsage(payload.usage) ?? usage;
+    const responsePayload = payload as OpenAIResponse;
 
-    if (Array.isArray(payload.choices) && payload.choices.length === 0 && payload.usage !== undefined) {
+    if (typeof responsePayload.model === 'string' && responsePayload.model.length > 0) model = responsePayload.model;
+    if (typeof responsePayload.provider === 'string' && responsePayload.provider.length > 0) {
+      provider = responsePayload.provider;
+    }
+    if (typeof responsePayload.id === 'string') runId = responsePayload.id;
+    usage = normalizeUsage(responsePayload.usage) ?? usage;
+
+    if (Array.isArray(responsePayload.choices) && responsePayload.choices.length === 0 && responsePayload.usage !== undefined) {
       return false;
     }
 
@@ -301,7 +308,14 @@ async function parseSse(
         if (done) break;
       }
 
-      if (buffer.trim()) consumeEvent(buffer);
+      const trailingDone = buffer.trim() ? consumeEvent(buffer) : false;
+      if (!trailingDone && finishReason === undefined) {
+        throw new ProviderAdapterError('STREAM_ERROR', 'Provider stream ended without completion evidence', {
+          status: response.status,
+          providerState: 'RESPONDED',
+          usage,
+        });
+      }
 
       return {
         text: ensureUsableContent(text, finishReason, response.status, usage),
@@ -418,9 +432,9 @@ export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): 
           timeoutSignal,
         );
       } else {
-        let payload: OpenAIResponse;
+        let payload: unknown;
         try {
-          payload = (await response.json()) as OpenAIResponse;
+          payload = await response.json();
         } catch (error) {
           if (timeoutSignal.aborted) {
             throw new ProviderAdapterError('TIMEOUT', 'Provider response body timed out', {
@@ -435,9 +449,15 @@ export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): 
             cause: error,
           });
         }
+        if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+          throw new ProviderAdapterError('MALFORMED_RESPONSE', 'Provider response is not a JSON object', {
+            status: response.status,
+            providerState: 'RESPONDED',
+          });
+        }
 
         result = normalizeJsonResponse(
-          payload,
+          payload as OpenAIResponse,
           response.status,
           options.configuredProvider,
           options.configuredModel,

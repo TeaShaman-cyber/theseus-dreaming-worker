@@ -152,6 +152,24 @@ test('adapter assembles split SSE chunks into one final artifact', async () => {
   });
 });
 
+test('non-object JSON response is MALFORMED_RESPONSE with responded state', async () => {
+  for (const rawPayload of ['null', '42', '[]']) {
+    await withServer((_req, res) => {
+      res.setHeader('content-type', 'application/json');
+      res.end(rawPayload);
+    }, async baseURL => {
+      await assert.rejects(
+        () => inference(baseURL)(request, correlation),
+        error =>
+          error instanceof ProviderAdapterError &&
+          error.code === 'MALFORMED_RESPONSE' &&
+          error.status === 200 &&
+          error.providerState === 'RESPONDED',
+      );
+    });
+  }
+});
+
 test('adapter reports malformed provider JSON as a typed failure', async () => {
   await withServer((_req, res) => {
     res.setHeader('content-type', 'application/json');
@@ -760,6 +778,22 @@ test('SSE usage-only final chunk preserves assembled content and usage', async (
   });
 });
 
+test('SSE clean EOF without completion evidence is STREAM_ERROR', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.end('data: {"choices":[{"delta":{"content":"partial"},"finish_reason":null}]}\n\n');
+  }, async baseURL => {
+    await assert.rejects(
+      () => inference(baseURL, { stream: true })(request, correlation),
+      error =>
+        error instanceof ProviderAdapterError &&
+        error.code === 'STREAM_ERROR' &&
+        error.status === 200 &&
+        error.providerState === 'RESPONDED',
+    );
+  });
+});
+
 test('SSE may finish on clean EOF without DONE and preserves final usage metadata', async () => {
   await withServer((_req, res) => {
     res.writeHead(200, { 'content-type': 'text/event-stream' });
@@ -911,6 +945,24 @@ test('SSE empty later identity fields cannot erase observed transport identity',
   });
 });
 
+test('SSE non-object payload is MALFORMED_RESPONSE with responded state', async () => {
+  for (const rawPayload of ['null', '42', '[]']) {
+    await withServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.end(`data: ${rawPayload}\n\n`);
+    }, async baseURL => {
+      await assert.rejects(
+        () => inference(baseURL, { stream: true })(request, correlation),
+        error =>
+          error instanceof ProviderAdapterError &&
+          error.code === 'MALFORMED_RESPONSE' &&
+          error.status === 200 &&
+          error.providerState === 'RESPONDED',
+      );
+    });
+  }
+});
+
 test('malformed SSE JSON becomes typed MALFORMED_RESPONSE', async () => {
   await withServer((_req, res) => {
     res.writeHead(200, { 'content-type': 'text/event-stream' });
@@ -921,7 +973,8 @@ test('malformed SSE JSON becomes typed MALFORMED_RESPONSE', async () => {
       error =>
         error instanceof ProviderAdapterError &&
         error.code === 'MALFORMED_RESPONSE' &&
-        error.providerState === 'RESPONDED',
+        error.providerState === 'RESPONDED' &&
+        error.cause instanceof SyntaxError,
     );
   });
 });
