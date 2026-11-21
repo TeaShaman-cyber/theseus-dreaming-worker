@@ -364,13 +364,26 @@ ss -ltnp | grep -E ':8000|:8001'
 journalctl -u <your-service>.service -n 50 --no-pager
 ```
 
-Also verify the `UPSTREAM`	prefix. For example:
+Also verify the routing mode.
+
+For an MCP-only upstream, a prefix may be enough:
 
 ```text
 incoming /mcp
 UPSTREAM=http://127.0.0.1:8001/api
 result=http://127.0.0.1:8001/api/mcp
 ```
+
+For Mastra Agent Builder, where the same server also serves the GUI, use the root upstream plus the MCP-only rewrite:
+
+```text
+UPSTREAM=http://127.0.0.1:8001
+MCP_UPSTREAM_PATH=/api/mcp
+/mcp           -> /api/mcp
+/agent-builder -> /agent-builder
+```
+
+If `/mcp` works but the GUI returns 404, check that `UPSTREAM` was not incorrectly set to `.../api`.
 
 ### systemd shows `203/EXEC`
 
