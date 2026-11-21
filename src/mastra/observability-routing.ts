@@ -52,7 +52,7 @@ const defaultFactories: ObservabilityFactories = {
 };
 
 export function parseOtelHeaders(raw: string | undefined): Record<string, string> {
-  if (!raw?.trim()) return {};
+  if (!raw) return {};
 
   const headers: Record<string, string> = {};
 
