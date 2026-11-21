@@ -20,3 +20,18 @@ test('gateway model IDs resolve to known provider IDs', async () => {
   assert.equal(providerIdFromGatewayModelId('other/nvidia/model'), undefined);
   assert.equal(providerIdFromGatewayModelId('exe/missing/model'), undefined);
 });
+
+test('OpenAI-compatible adapter matches Mastra AI SDK 5 model contract', async () => {
+  const { createOpenAICompatible } = await import('@ai-sdk/openai-compatible');
+  const provider = createOpenAICompatible({
+    name: 'exe-nvidia-contract-test',
+    baseURL: providerConfigs.nvidia.baseURL,
+  });
+  const model = provider.chatModel('minimaxai/minimax-m3.1-flash');
+
+  assert.equal(
+    model.specificationVersion,
+    'v2',
+    'Mastra uses AI SDK 5, so custom gateway models must implement LanguageModelV2',
+  );
+});
