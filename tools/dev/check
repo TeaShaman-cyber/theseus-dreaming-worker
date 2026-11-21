@@ -1,0 +1,35 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
+  printf '%s\n' 'dev-check: not inside a Git worktree' >&2
+  exit 2
+}
+cd "$ROOT"
+
+printf '%s\n' '== repository contract =='
+node scripts/verify-repo.mjs
+
+printf '%s\n' '== lint =='
+npm run lint
+
+printf '%s\n' '== unit and regression tests =='
+npm run test
+
+printf '%s\n' '== typecheck =='
+npm run typecheck
+
+printf '%s\n' '== build =='
+npm run build:check
+
+printf '%s\n' '== goal contract =='
+python3 tools/check_goal_contract.py
+
+printf '%s\n' '== shell syntax =='
+sh -n tools/dev/check tools/ci/build-check tools/ci/mutation-test
+
+printf '%s\n' '== whitespace =='
+git diff --check
+git diff --cached --check
+
+printf '%s\n' 'DEV_CHECK_PASS'

@@ -83,7 +83,7 @@ function validatePacket(packet: EvidencePacket): void {
   }
 
   for (const [index, item] of packet.evidence.entries()) {
-    if (!item?.sourceRef || !item?.evidenceHash) {
+    if (!item || !item.sourceRef || !item.evidenceHash) {
       throw new Error(
         `evidence[${index}] requires both sourceRef and evidenceHash so provenance cannot be lost`,
       );
