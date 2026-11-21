@@ -1,0 +1,34 @@
+schema: theseus-dreaming-worker-goal-v1
+purpose: >
+  Periodically consume bounded, explicitly permitted Session Search evidence and use
+  independently routed model analysis to produce evidence-linked candidate hypotheses,
+  observations, disagreements, and run receipts for later human/independent evaluation.
+
+inputs:
+  - accepted evidence packets with exact Session Search provenance
+  - explicit coverage/currentness state
+  - bounded scheduler/run trigger
+
+outputs:
+  - typed proposals: [HYPOTHESIS, INFERENCE, FACT, UNKNOWN]
+  - exact source references and evidence hashes
+  - model/provider provenance and unresolved disagreement
+  - falsifiers/counterevidence when available
+  - durable run receipts and checkpoints
+
+non_goals:
+  - replace or redefine Session Search
+  - treat retrieval, model output, or model agreement as truth
+  - automatically write canonical memory or user preferences
+  - become a general-purpose autonomous agent or coding harness
+  - publish externally or change authority without explicit authorization
+  - couple correctness to Mastra, one model provider, or one production runtime
+
+invariants:
+  - no accepted new evidence => zero external model calls
+  - partial or stale coverage cannot justify absence claims
+  - independent model passes remain independent before optional critique/synthesis
+  - generator capability is not acceptance authority
+  - exact source provenance survives every derived proposal
+  - retries, spend, batch size, and external data egress are bounded and explicit
+  - Mastra is a development surface; Git contracts and verified runtime state remain authoritative
