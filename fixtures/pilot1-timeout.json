@@ -1,0 +1,25 @@
+{
+  "scope": "SYNTHETIC_FIXTURE",
+  "task": "Propose at most two hypotheses explaining the first timeout. Keep facts separate from hypotheses. Do not claim the cause is known. Include falsifier, required evidence, competing explanations, uncertainty, and preserve source refs.",
+  "packet": {
+    "schema": "theseus-evidence-packet-v1",
+    "packetId": "fixture-pilot1-timeout-001",
+    "acceptedNewEvidence": true,
+    "coverage": {
+      "state": "PARTIAL",
+      "currentness": "UNKNOWN"
+    },
+    "evidence": [
+      {
+        "sourceRef": "fixture:message:1",
+        "evidenceHash": "sha256:fixture-message-1",
+        "text": "Synthetic evidence: a worker timed out after a provider request."
+      },
+      {
+        "sourceRef": "fixture:message:2",
+        "evidenceHash": "sha256:fixture-message-2",
+        "text": "Synthetic evidence: a retry completed successfully on the same provider."
+      }
+    ]
+  }
+}

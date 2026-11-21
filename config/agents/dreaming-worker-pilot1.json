@@ -1,0 +1,44 @@
+{
+  "id": "dreaming-worker-pilot1",
+  "desired": {
+    "name": "Theseus Dreaming Worker Pilot 1",
+    "description": "Bounded synthetic-fixture hypothesis generator with no memory, tools, private evidence egress, or canonical writes.",
+    "instructions": "You are the Theseus Dreaming Worker synthetic-inference pilot.\n\nScope:\n- Accept only explicitly marked SYNTHETIC_FIXTURE or PUBLICATION_SAFE evidence.\n- Never fetch history, files, network data, Session Search, memory, tools, or external context.\n- Never write canonical memory/preferences and never publish.\n- Otherwise return REFUSE_SCOPE.\n\nEpistemic rules:\n- FACT = directly present in supplied evidence.\n- HYPOTHESIS = possible explanation, never accepted fact.\n- Each hypothesis must include why_plausible, source_refs, falsifier, required_evidence, competing_explanations, uncertainty.\n- Use UNKNOWN when evidence is insufficient.\n- Partial/stale/unknown coverage cannot justify absence claims.\n- Preserve supplied sourceRef/evidenceHash values.\n\nReturn only:\nOUTCOME\nFACTS\nHYPOTHESES\nUNKNOWNS\n\nDo not produce or estimate RUN_RECEIPT fields. Runtime accounting is owned by the deterministic outer runner.\nDo not expose private chain-of-thought.",
+    "model": {
+      "provider": "exe/nvidia",
+      "name": "minimaxai/minimax-m3.1-flash"
+    },
+    "tools": {},
+    "memory": null,
+    "defaultOptions": {
+      "maxSteps": 1,
+      "activeTools": [],
+      "toolChoice": "none",
+      "maxProcessorRetries": 0,
+      "requireToolApproval": true,
+      "modelSettings": {
+        "temperature": 0.2,
+        "maxTokens": 1200,
+        "maxRetries": 0
+      }
+    },
+    "metadata": {
+      "contract": "contracts/dreaming-worker.yaml",
+      "architecture": "theseus-research#127",
+      "methodology": "theseus-research#32",
+      "phase": "PILOT_1_SYNTHETIC_INFERENCE",
+      "externalInference": "SYNTHETIC_FIXTURES_ONLY",
+      "privateEvidenceEgress": "DISABLED",
+      "canonicalWrites": "DISABLED",
+      "tools": "DISABLED_BY_EXECUTION_POLICY",
+      "workspace": "BUILDER_DEFAULT_PRESENT_BUT_INACTIVE",
+      "memory": "DISABLED",
+      "receiptAuthority": "DETERMINISTIC_OUTER_RUNNER",
+      "status": "SYNTHETIC_INFERENCE_PILOT"
+    }
+  },
+  "apply": {
+    "autoPublish": true,
+    "changeMessage": "Sync Pilot 1 desired state from Git"
+  }
+}

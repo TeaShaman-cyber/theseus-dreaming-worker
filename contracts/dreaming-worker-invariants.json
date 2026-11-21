@@ -1,0 +1,142 @@
+{
+  "schema_version": "theseus.reverse-trace-invariants.v1",
+  "target_repository": "TeaShaman-cyber/theseus-dreaming-worker",
+  "invariants": [
+    {
+      "id": "SCOPE-01",
+      "title": "Only explicitly safe evidence may reach external inference",
+      "human_promise": "Pilot 1 may call an external model only for evidence explicitly scoped SYNTHETIC_FIXTURE or PUBLICATION_SAFE; private or unclassified evidence must fail before inference.",
+      "why": "Prompt instructions alone are not a sufficient privacy boundary.",
+      "status": "STRONG",
+      "evidence": [
+        {"kind": "code", "ref": "src/dreaming/pilot1-runner.ts", "supports": "Validates the request scope before Pilot 0 and before inference."},
+        {"kind": "test", "ref": "test/pilot1-runner.test.mjs", "supports": "Checks rejection of unapproved scope and acceptance of PUBLICATION_SAFE."}
+      ],
+      "watch_paths": ["src/dreaming/*", "test/pilot1-runner.test.mjs", "config/agents/*", "tools/agent/*"],
+      "watch_terms": ["SYNTHETIC_FIXTURE", "PUBLICATION_SAFE", "PILOT1_SCOPE_REJECTED", "private"],
+      "proof_checks": [
+        {"ref": "src/dreaming/pilot1-runner.ts", "contains_all": ["SYNTHETIC_FIXTURE", "PUBLICATION_SAFE", "PILOT1_SCOPE_REJECTED"]},
+        {"ref": "test/pilot1-runner.test.mjs", "contains_all": ["rejects unapproved evidence scope before inference", "accepts PUBLICATION_SAFE scope"]}
+      ]
+    },
+    {
+      "id": "NODATA-01",
+      "title": "No accepted evidence means no model call",
+      "human_promise": "If Pilot 0 reports NO_DATA, Pilot 1 must return without any external inference.",
+      "why": "The model must not be called merely because a workflow ran.",
+      "status": "STRONG",
+      "evidence": [
+        {"kind": "code", "ref": "src/dreaming/pilot1-runner.ts", "supports": "Returns NO_DATA before calling the inference callback."},
+        {"kind": "test", "ref": "test/pilot1-runner.test.mjs", "supports": "Proves the inference callback remains at zero calls."}
+      ],
+      "watch_paths": ["src/dreaming/*", "test/pilot1-runner.test.mjs"],
+      "watch_terms": ["NO_DATA", "externalModelCalls", "acceptedNewEvidence"],
+      "proof_checks": [
+        {"ref": "src/dreaming/pilot1-runner.ts", "contains_all": ["gate.outcome === 'NO_DATA'", "externalModelCalls: 0"]},
+        {"ref": "test/pilot1-runner.test.mjs", "contains_all": ["skips inference when Pilot 0 says NO_DATA", "assert.equal(calls, 0)"]}
+      ]
+    },
+    {
+      "id": "EXEC-01",
+      "title": "Pilot 1 is one inference with zero tool and memory operations",
+      "human_promise": "A valid Pilot 1 run must contain exactly one model inference, zero real tool calls, and zero memory operations; workspace actions are reported separately rather than hidden.",
+      "why": "A bounded inference pilot must not silently become an agentic workflow with extra authority.",
+      "status": "STRONG",
+      "evidence": [
+        {"kind": "code", "ref": "src/dreaming/pilot1-runner.ts", "supports": "Fails closed on unexpected model, tool, or memory counts and records workspace actions separately."},
+        {"kind": "test", "ref": "test/pilot1-runner.test.mjs", "supports": "Covers tool, memory, multi-inference, and workspace-action distinctions."},
+        {"kind": "runtime_readback", "ref": "Mastra trace trajectory", "supports": "Live pilot trace can independently witness model/tool/memory/workspace spans."}
+      ],
+      "watch_paths": ["src/dreaming/pilot1-runner.ts", "test/pilot1-runner.test.mjs", "tools/agent/run-pilot1.mjs", "config/agents/*"],
+      "watch_terms": ["modelInferences", "toolCalls", "memoryOperations", "workspaceActions", "TRACE_VERIFIED"],
+      "proof_checks": [
+        {"ref": "src/dreaming/pilot1-runner.ts", "contains_all": ["model inference(s)", "tool call(s)", "memory operation(s)", "workspaceActionsObserved"]},
+        {"ref": "test/pilot1-runner.test.mjs", "contains_all": ["rejects trace evidence of a memory operation", "rejects trace evidence of more than one model inference", "keeps workspace actions distinct from tool calls"]}
+      ]
+    },
+    {
+      "id": "RECEIPT-01",
+      "title": "Runtime receipt authority stays outside the model",
+      "human_promise": "The model may propose hypotheses but must not be trusted to count model calls, tools, memory, writes, or other runtime facts; the deterministic outer runner owns the receipt.",
+      "why": "Model prose is generated content, not telemetry.",
+      "status": "STRONG",
+      "evidence": [
+        {"kind": "code", "ref": "src/dreaming/pilot1-runner.ts", "supports": "Constructs the receipt outside model output."},
+        {"kind": "test", "ref": "test/pilot1-runner.test.mjs", "supports": "Proves a false model-authored receipt does not affect the deterministic receipt."},
+        {"kind": "doc", "ref": "config/agents/dreaming-worker-pilot1.json", "supports": "Explicitly tells the model not to produce RUN_RECEIPT."}
+      ],
+      "watch_paths": ["src/dreaming/*", "test/pilot1-runner.test.mjs", "config/agents/*", "tools/agent/*"],
+      "watch_terms": ["RUN_RECEIPT", "externalModelCalls", "runtimeWitness", "receiptAuthority"],
+      "proof_checks": [
+        {"ref": "test/pilot1-runner.test.mjs", "contains_all": ["counts the actual model call instead of trusting model prose", "external_model_calls: 0", "externalModelCalls, 1"]},
+        {"ref": "config/agents/dreaming-worker-pilot1.json", "contains_all": ["Do not produce or estimate RUN_RECEIPT", "DETERMINISTIC_OUTER_RUNNER"]}
+      ]
+    },
+    {
+      "id": "CONFIG-01",
+      "title": "Git owns the desired agent configuration",
+      "human_promise": "The Pilot 1 configuration in Git is the desired state; Mastra Studio is checked for drift and updated from that declaration rather than becoming the only source of truth.",
+      "why": "Manual Studio edits otherwise create invisible configuration drift.",
+      "status": "PARTIAL",
+      "evidence": [
+        {"kind": "doc", "ref": "config/agents/dreaming-worker-pilot1.json", "supports": "Declares controlled Pilot 1 state."},
+        {"kind": "code", "ref": "tools/agent/sync-pilot1.mjs", "supports": "Implements check/apply against Mastra stored-agent state."},
+        {"kind": "test", "ref": "test/agent-config.test.mjs", "supports": "Checks critical bounded-authority fields in the Git declaration."}
+      ],
+      "watch_paths": ["config/agents/*", "tools/agent/*", "test/agent-config.test.mjs"],
+      "watch_terms": ["PILOT1_CONFIG_DRIFT", "PILOT1_CONFIG_IN_SYNC", "toolChoice", "memory"],
+      "proof_checks": [
+        {"ref": "tools/agent/sync-pilot1.mjs", "contains_all": ["PILOT1_CONFIG_DRIFT", "PILOT1_CONFIG_IN_SYNC", "--apply"]},
+        {"ref": "test/agent-config.test.mjs", "contains_all": ["keeps model authority bounded", "receiptAuthority"]}
+      ]
+    },
+    {
+      "id": "MODEL-01",
+      "title": "The exe.dev model adapter matches Mastra AI SDK 5",
+      "human_promise": "Custom exe.dev gateway models must satisfy the LanguageModelV2 contract expected by the installed Mastra AI SDK 5 stack.",
+      "why": "Provider discovery can look healthy while inference silently hangs when model protocol generations are incompatible.",
+      "status": "STRONG",
+      "evidence": [
+        {"kind": "test", "ref": "test/provider-config.test.mjs", "supports": "Asserts specificationVersion v2 for the OpenAI-compatible adapter."},
+        {"kind": "code", "ref": "package.json", "supports": "Pins the compatible adapter version."}
+      ],
+      "watch_paths": ["package.json", "pnpm-lock.yaml", "src/mastra/gateways/*", "test/provider-config.test.mjs"],
+      "watch_terms": ["openai-compatible", "specificationVersion", "v2", "exe/nvidia"],
+      "proof_checks": [
+        {"ref": "test/provider-config.test.mjs", "contains_all": ["specificationVersion", "'v2'", "Mastra uses AI SDK 5"]},
+        {"ref": "package.json", "contains_all": ["@ai-sdk/openai-compatible", "1.0.63"]}
+      ]
+    },
+    {
+      "id": "PROV-01",
+      "title": "Evidence identity survives into deterministic receipts",
+      "human_promise": "Every accepted evidence packet is fingerprinted and keeps source references so later claims can be tied back to the exact bounded input.",
+      "why": "Without provenance and fingerprints a hypothesis cannot be audited against the evidence that produced it.",
+      "status": "STRONG",
+      "evidence": [
+        {"kind": "code", "ref": "src/dreaming/dry-run.ts", "supports": "Validates sourceRef/evidenceHash and computes deterministic input fingerprint."},
+        {"kind": "test", "ref": "test/dry-run.test.mjs", "supports": "Covers provenance requirements and fingerprint stability/boundaries."},
+        {"kind": "code", "ref": "src/dreaming/pilot1-runner.ts", "supports": "Carries evidence and request fingerprints into Pilot 1 receipt."}
+      ],
+      "watch_paths": ["src/dreaming/*", "test/dry-run.test.mjs", "test/pilot1-runner.test.mjs"],
+      "watch_terms": ["sourceRef", "evidenceHash", "inputFingerprint", "requestFingerprint"],
+      "proof_checks": [
+        {"ref": "src/dreaming/dry-run.ts", "contains_all": ["sourceRef", "evidenceHash", "inputFingerprint"]},
+        {"ref": "test/dry-run.test.mjs", "contains_all": ["fingerprint is stable across object key ordering", "fingerprint preserves boundaries between multiple evidence items"]}
+      ]
+    },
+    {
+      "id": "PRIV-01",
+      "title": "The public implementation repository excludes private evidence and secrets",
+      "human_promise": "Public Git may contain code, synthetic fixtures, and sanitized receipts, but not private conversations, credentials, private URLs, or runtime secret state.",
+      "why": "The dreaming worker handles unusually sensitive source material even though its implementation is public.",
+      "status": "PARTIAL",
+      "evidence": [
+        {"kind": "code", "ref": "scripts/verify-repo.mjs", "supports": "Rejects obvious secret/private artifact classes and tracked runtime state."},
+        {"kind": "doc", "ref": "README.md", "supports": "States the public-code/private-evidence boundary."}
+      ],
+      "watch_paths": ["README.md", "scripts/verify-repo.mjs", "fixtures/*", "reports/*", "config/*", "src/*", "test/*"],
+      "watch_terms": ["secret", "private", "credential", ".env", "reports"]
+    }
+  ]
+}

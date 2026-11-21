@@ -11,3 +11,6 @@ dist
 
 reports/
 .stryker-tmp/
+
+__pycache__/
+*.pyc

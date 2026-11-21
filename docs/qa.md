@@ -83,4 +83,50 @@ revised: 62 killed / 0 survived / mutation score 100.00%
 
 Stryker also produced 26 compile-error mutants on the revised run. Those are recorded separately and are not counted as testable surviving mutants.
 
-The gate therefore uses `break: 100` only for the narrow deterministic `src/dreaming/dry-run.ts` scope. This does **not** establish a project-wide 100% mutation requirement. New mutation scopes must earn their own baseline and classification before becoming blocking.
+The original Pilot 0 gate used `break: 100` only for the narrow deterministic `src/dreaming/dry-run.ts` scope.
+
+Pilot 1 was then baselined separately before joining the blocking gate:
+
+```text
+pilot1 initial: 35 killed / 3 survived / mutation score 92.11%
+pilot1 revised: 38 killed / 0 survived / mutation score 100.00%
+```
+
+The three survivors exposed missing guarantees for `PUBLICATION_SAFE`, missing-task handling, and request-fingerprint sensitivity. After those promises were tested, the Pilot 1 scope reached 100% for testable mutants.
+
+The combined blocking scope is now:
+
+```text
+src/dreaming/dry-run.ts
+src/dreaming/pilot1-runner.ts
+```
+
+This still does **not** establish a project-wide 100% mutation requirement. New mutation scopes must earn their own baseline and classification before becoming blocking.
+
+## Reverse tracing
+
+The repository also carries a small reverse-trace contract in
+`contracts/dreaming-worker-invariants.json`.
+
+Feynman version: tests answer "does this code behave as encoded?", while the
+reverse-trace map asks "which human promise was this code/test supposed to
+protect?"
+
+`python3 tools/reverse_trace/check_current.py` checks only declared static
+witnesses. It deliberately does **not** claim semantic correctness.
+
+Possible states include:
+
+- `DECLARED_WITNESSES_PRESENT` — named code/test anchors are still present;
+- `DECLARED_WITNESS_MISSING` — a declared machine witness weakened or vanished;
+- `NO_DECLARED_MACHINE_WITNESS` — this promise still needs semantic/runtime review.
+
+The current Pilot 1 map includes scope/privacy boundaries, NO_DATA zero-call
+behavior, one-inference/no-tool/no-memory execution, deterministic receipt
+authority, Git-owned agent configuration, model-adapter compatibility,
+provenance/fingerprints, and the public-code/private-evidence boundary.
+
+This mechanism is adapted from the Session Search reverse-tracing baseline in
+Theseus Research #130 / PR #131. It is an advisory conformance layer, not a
+replacement for unit tests, mutation tests, runtime traces, or independent
+review.
