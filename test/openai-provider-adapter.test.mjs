@@ -101,6 +101,22 @@ test('adapter returns normalized non-streaming content and observed transport me
   });
 });
 
+test('successful SSE response without a body fails as typed STREAM_ERROR', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(204, { 'content-type': 'text/event-stream' });
+    res.end();
+  }, async baseURL => {
+    await assert.rejects(
+      () => inference(baseURL, { stream: true })(request, correlation),
+      error =>
+        error instanceof ProviderAdapterError &&
+        error.code === 'STREAM_ERROR' &&
+        error.status === 204 &&
+        error.providerState === 'RESPONDED',
+    );
+  });
+});
+
 test('adapter assembles split SSE chunks into one final artifact', async () => {
   await withServer((_req, res) => {
     res.writeHead(200, {
@@ -145,7 +161,8 @@ test('adapter reports malformed provider JSON as a typed failure', async () => {
   });
 });
 
-test('missing usage stays absent rather than becoming zero', async () => {
+test('missing usage stays absent in result and success evidence', async () => {
+  const observed = [];
   await withServer((_req, res) => {
     res.setHeader('content-type', 'application/json');
     res.end(JSON.stringify({
@@ -159,9 +176,20 @@ test('missing usage stays absent rather than becoming zero', async () => {
       ],
     }));
   }, async baseURL => {
-    const result = await inference(baseURL)(request, correlation);
+    const result = await createOpenAIChatInference({
+      baseURL,
+      configuredProvider: 'configured-provider',
+      configuredModel: 'configured/model-v1',
+      timeoutMs: 250,
+      onEvidence: evidence => observed.push(evidence),
+    })(request, correlation);
     assert.equal(result.usage, undefined);
   });
+
+  assert.equal(observed.length, 1);
+  assert.equal(observed[0].providerState, 'RESPONDED');
+  assert.equal(observed[0].usageState, 'ABSENT');
+  assert.equal(observed[0].usage, undefined);
 });
 
 test('429 preserves Retry-After without retrying implicitly', async () => {
@@ -597,6 +625,36 @@ test('SSE may finish on clean EOF without DONE and preserves final usage metadat
       reasoningTokens: undefined,
       cachedInputTokens: undefined,
     });
+  });
+});
+
+test('SSE ignores comment-only and blank data events before usable content', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.write(': keepalive\n\n');
+    res.write('data:\n\n');
+    res.write('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n');
+    res.end('data: [DONE]\n\n');
+  }, async baseURL => {
+    const result = await inference(baseURL, { stream: true })(request, correlation);
+    assert.equal(result.text, 'ok');
+    assert.equal(result.finishReason, 'stop');
+  });
+});
+
+test('SSE preserves split multi-byte UTF-8 content across transport chunks', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const event = Buffer.from('data: {"choices":[{"delta":{"content":"tea 🍵"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n');
+    const cup = Buffer.from('🍵');
+    const cupStart = event.indexOf(cup);
+    assert.notEqual(cupStart, -1);
+    res.write(event.subarray(0, cupStart + 1));
+    setTimeout(() => res.end(event.subarray(cupStart + 1)), 10);
+  }, async baseURL => {
+    const result = await inference(baseURL, { stream: true })(request, correlation);
+    assert.equal(result.text, 'tea 🍵');
+    assert.equal(result.finishReason, 'stop');
   });
 });
 
