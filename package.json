@@ -9,8 +9,11 @@
     "start": "mastra start",
     "test": "node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
-    "check": "npm run test && npm run typecheck && python3 tools/check_goal_contract.py",
-    "pilot0": "node tools/run-pilot0.mjs"
+    "check": "./tools/dev/check",
+    "pilot0": "node tools/run-pilot0.mjs",
+    "lint": "biome lint src test tools scripts package.json biome.json --diagnostic-level=error",
+    "mutation": "./tools/ci/mutation-test",
+    "build:check": "./tools/ci/build-check"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.84",
@@ -22,9 +25,12 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.6.8",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/typescript-checker": "^10.1.1",
     "@types/node": "latest",
     "mastra": "latest",
-    "typescript": "latest"
+    "typescript": "6.0.3"
   },
   "engines": {
     "node": ">=22.13.0"

@@ -1,0 +1,32 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
+  printf '%s\n' 'build-check: not inside a Git worktree' >&2
+  exit 2
+}
+
+TMP=$(mktemp -d)
+cleanup() {
+  rm -rf "$TMP"
+}
+trap cleanup EXIT INT TERM
+
+(
+  cd "$ROOT"
+  tar     --exclude=.git     --exclude=node_modules     --exclude=.mastra     --exclude=.stryker-tmp     --exclude=reports     --exclude=.env     -cf - .
+) | tar -xf - -C "$TMP"
+
+ln -s "$ROOT/node_modules" "$TMP/node_modules"
+
+mkdir -p "$TMP/.qa-bin"
+cat > "$TMP/.qa-bin/pnpm" <<'SH'
+#!/bin/sh
+exec npx --yes pnpm@11.3.0 "$@"
+SH
+chmod +x "$TMP/.qa-bin/pnpm"
+
+cd "$TMP"
+PATH="$TMP/.qa-bin:$PATH" "$ROOT/node_modules/.bin/mastra" build
+
+printf '%s\n' 'BUILD_CHECK_PASS'

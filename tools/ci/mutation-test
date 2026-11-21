@@ -1,0 +1,64 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
+  printf '%s\n' 'mutation-test: not inside a Git worktree' >&2
+  exit 2
+}
+cd "$ROOT"
+
+rm -rf reports/mutation
+mkdir -p reports/mutation
+
+set +e
+./node_modules/.bin/stryker run stryker.config.mjs
+stryker_code=$?
+set -e
+
+if [ ! -f reports/mutation/mutation.json ]; then
+  printf '%s\n' 'MUTATION_TEST_REPORT_MISSING' >&2
+  exit "$stryker_code"
+fi
+
+node --input-type=module <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+
+const report = JSON.parse(readFileSync('reports/mutation/mutation.json', 'utf8'));
+const files = Object.values(report.files ?? {});
+const mutants = files.flatMap(file => file.mutants ?? []);
+
+const count = status => mutants.filter(mutant => mutant.status === status).length;
+const killed = count('Killed');
+const survived = count('Survived');
+const timeout = count('Timeout');
+const compileError = count('CompileError');
+const noCoverage = count('NoCoverage');
+const ignored = count('Ignored');
+const scored = killed + survived + timeout + noCoverage;
+const score = scored === 0 ? null : ((killed + timeout) / scored) * 100;
+
+const receipt = {
+  schema: 'theseus.dreaming-worker.mutation-receipt.v1',
+  scope: ['src/dreaming/dry-run.ts'],
+  totalMutants: mutants.length,
+  killed,
+  survived,
+  timeout,
+  compileError,
+  noCoverage,
+  ignored,
+  mutationScore: score,
+  disposition:
+    survived === 0 && noCoverage === 0
+      ? 'NO_SURVIVORS'
+      : 'SURVIVORS_REQUIRE_CLASSIFICATION'
+};
+
+writeFileSync(
+  'reports/mutation/receipt.json',
+  JSON.stringify(receipt, null, 2) + '\n'
+);
+console.log(JSON.stringify(receipt));
+JS
+
+exit "$stryker_code"
