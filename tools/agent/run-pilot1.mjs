@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { runPilot1 } from '../../src/dreaming/pilot1-runner.ts';
+import { buildPilot1TracingEnvelope } from '../../src/mastra/pilot1-tracing.ts';
 
 const requestPath = process.argv[2];
 if (!requestPath) {
@@ -30,8 +31,11 @@ function renderPrompt(input) {
   ].join('\n');
 }
 
-const result = await runPilot1(request, async input => {
+const result = await runPilot1(request, async (input, correlation) => {
+  const tracingEnvelope = buildPilot1TracingEnvelope(correlation);
+
   const payload = {
+    ...tracingEnvelope,
     messages: renderPrompt(input),
     maxSteps: config.desired.defaultOptions.maxSteps,
     activeTools: config.desired.defaultOptions.activeTools,

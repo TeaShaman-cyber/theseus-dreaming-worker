@@ -7,26 +7,36 @@ on:
       - 'src/dreaming/dry-run.ts'
       - 'src/dreaming/pilot1-runner.ts'
       - 'src/dreaming/proposal-schema.ts'
+      - 'src/mastra/observability-routing.ts'
+      - 'src/mastra/pilot1-tracing.ts'
       - 'test/dry-run.test.mjs'
       - 'test/pilot1-runner.test.mjs'
       - 'test/proposal-schema.test.mjs'
+      - 'test/observability-routing.test.mjs'
+      - 'test/pilot1-tracing.test.mjs'
       - 'tools/ci/mutation-test'
       - 'stryker.config.mjs'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
   push:
     branches: [main]
     paths:
       - 'src/dreaming/dry-run.ts'
       - 'src/dreaming/pilot1-runner.ts'
       - 'src/dreaming/proposal-schema.ts'
+      - 'src/mastra/observability-routing.ts'
+      - 'src/mastra/pilot1-tracing.ts'
       - 'test/dry-run.test.mjs'
       - 'test/pilot1-runner.test.mjs'
       - 'test/proposal-schema.test.mjs'
+      - 'test/observability-routing.test.mjs'
+      - 'test/pilot1-tracing.test.mjs'
       - 'tools/ci/mutation-test'
       - 'stryker.config.mjs'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
 
 permissions:
   contents: read
