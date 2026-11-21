@@ -224,6 +224,52 @@ test('429 preserves Retry-After without retrying implicitly', async () => {
   assert.equal(calls, 1);
 });
 
+test('immediate TimeoutError is classified before the deadline signal aborts', async () => {
+  const originalFetch = globalThis.fetch;
+  const timeoutError = new Error('provider timeout');
+  timeoutError.name = 'TimeoutError';
+  globalThis.fetch = async () => { throw timeoutError; };
+
+  try {
+    await assert.rejects(
+      () => inference('http://provider.invalid', { timeoutMs: 10_000 })(request, correlation),
+      error =>
+        error instanceof ProviderAdapterError &&
+        error.code === 'TIMEOUT' &&
+        error.providerState === 'UNKNOWN' &&
+        error.cause === timeoutError,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('deadline abort remains TIMEOUT even when fetch rejects with a generic error', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, init) =>
+    new Promise((_resolve, reject) => {
+      const guard = setTimeout(() => reject(new Error('deadline signal did not abort promptly')), 150);
+      const rejectOnAbort = () => {
+        clearTimeout(guard);
+        reject(new Error('aborted after deadline'));
+      };
+      if (init.signal.aborted) rejectOnAbort();
+      else init.signal.addEventListener('abort', rejectOnAbort, { once: true });
+    });
+
+  try {
+    await assert.rejects(
+      () => inference('http://provider.invalid', { timeoutMs: 20 })(request, correlation),
+      error =>
+        error instanceof ProviderAdapterError &&
+        error.code === 'TIMEOUT' &&
+        error.providerState === 'UNKNOWN',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('timeout preserves unknown provider execution state', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (_url, init) =>
@@ -248,6 +294,24 @@ test('timeout preserves unknown provider execution state', async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('timeout while reading a responded JSON body remains TIMEOUT', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.flushHeaders();
+    res.write('{"choices":[');
+    // Keep the body open past the adapter deadline.
+  }, async baseURL => {
+    await assert.rejects(
+      () => inference(baseURL, { timeoutMs: 40 })(request, correlation),
+      error =>
+        error instanceof ProviderAdapterError &&
+        error.code === 'TIMEOUT' &&
+        error.status === 200 &&
+        error.providerState === 'RESPONDED',
+    );
+  });
 });
 
 test('HTTP 200 with stop and empty content is not a usable artifact', async () => {
@@ -625,6 +689,74 @@ test('whitespace-only content is not a usable artifact', async () => {
       () => inference(baseURL)(request, correlation),
       error => error instanceof ProviderAdapterError && error.code === 'EMPTY_FINAL_CONTENT',
     );
+  });
+});
+
+test('timeout while reading a responded SSE body remains TIMEOUT', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.flushHeaders();
+    res.write('data: {"choices":[{"delta":{"content":"partial"},"finish_reason":null}]}');
+    // Keep the stream open past the adapter deadline without an event boundary.
+  }, async baseURL => {
+    await assert.rejects(
+      () => inference(baseURL, { stream: true, timeoutMs: 40 })(request, correlation),
+      error =>
+        error instanceof ProviderAdapterError &&
+        error.code === 'TIMEOUT' &&
+        error.status === 200 &&
+        error.providerState === 'RESPONDED',
+    );
+  });
+});
+
+test('SSE empty choices without usage remains malformed', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.end('data: {"choices":[]}\n\n');
+  }, async baseURL => {
+    await assert.rejects(
+      () => inference(baseURL, { stream: true })(request, correlation),
+      error =>
+        error instanceof ProviderAdapterError &&
+        error.code === 'MALFORMED_RESPONSE' &&
+        error.providerState === 'RESPONDED',
+    );
+  });
+});
+
+test('SSE usage-only chunk does not terminate later content', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.write('data: {"choices":[],"usage":{"prompt_tokens":5}}\n\n');
+    res.write('data: {"choices":[{"delta":{"content":"later"},"finish_reason":"stop"}]}\n\n');
+    res.end('data: [DONE]\n\n');
+  }, async baseURL => {
+    const result = await inference(baseURL, { stream: true })(request, correlation);
+    assert.equal(result.text, 'later');
+    assert.equal(result.finishReason, 'stop');
+    assert.equal(result.usage.inputTokens, 5);
+  });
+});
+
+test('SSE usage-only final chunk preserves assembled content and usage', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.write('data: {"id":"usage-stream","choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n');
+    res.write('data: {"id":"usage-stream","choices":[],"usage":{"prompt_tokens":5,"completion_tokens":2,"total_tokens":7}}\n\n');
+    res.end('data: [DONE]\n\n');
+  }, async baseURL => {
+    const result = await inference(baseURL, { stream: true })(request, correlation);
+    assert.equal(result.text, 'ok');
+    assert.equal(result.finishReason, 'stop');
+    assert.equal(result.runId, 'usage-stream');
+    assert.deepEqual(result.usage, {
+      inputTokens: 5,
+      outputTokens: 2,
+      totalTokens: 7,
+      reasoningTokens: undefined,
+      cachedInputTokens: undefined,
+    });
   });
 });
 

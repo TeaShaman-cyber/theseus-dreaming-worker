@@ -213,6 +213,7 @@ async function parseSse(
   response: Response,
   configuredProvider: string,
   configuredModel: string,
+  timeoutSignal: AbortSignal,
 ): Promise<Pilot1InferenceResult> {
   if (!response.body) {
     throw new ProviderAdapterError('STREAM_ERROR', 'Provider stream body is missing', {
@@ -255,15 +256,20 @@ async function parseSse(
       });
     }
 
-    const choice = firstChoice(payload);
-    if (typeof choice.delta?.content === 'string') text += choice.delta.content;
-    if (typeof choice.finish_reason === 'string') finishReason = choice.finish_reason;
     if (typeof payload.model === 'string' && payload.model.length > 0) model = payload.model;
     if (typeof payload.provider === 'string' && payload.provider.length > 0) {
       provider = payload.provider;
     }
     if (typeof payload.id === 'string') runId = payload.id;
     usage = normalizeUsage(payload.usage) ?? usage;
+
+    if (Array.isArray(payload.choices) && payload.choices.length === 0 && payload.usage !== undefined) {
+      return false;
+    }
+
+    const choice = firstChoice(payload);
+    if (typeof choice.delta?.content === 'string') text += choice.delta.content;
+    if (typeof choice.finish_reason === 'string') finishReason = choice.finish_reason;
     return false;
   };
 
@@ -307,6 +313,14 @@ async function parseSse(
       };
     } catch (error) {
       if (error instanceof ProviderAdapterError) throw error;
+      if (timeoutSignal.aborted) {
+        throw new ProviderAdapterError('TIMEOUT', 'Provider response body timed out', {
+          status: response.status,
+          providerState: 'RESPONDED',
+          usage,
+          cause: error,
+        });
+      }
       throw new ProviderAdapterError('STREAM_ERROR', 'Provider stream terminated unexpectedly', {
         status: response.status,
         providerState: 'UNKNOWN',
@@ -351,6 +365,7 @@ export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): 
 
     try {
       let response: Response;
+      const timeoutSignal = AbortSignal.timeout(timeoutMs);
 
       try {
         response = await fetch(baseURL + '/chat/completions', {
@@ -361,10 +376,10 @@ export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): 
             messages: transportMessages(request, correlation),
             stream,
           }),
-          signal: AbortSignal.timeout(timeoutMs),
+          signal: timeoutSignal,
         });
       } catch (error) {
-        if (error instanceof Error && error.name === 'TimeoutError') {
+        if (timeoutSignal.aborted || (error instanceof Error && error.name === 'TimeoutError')) {
           throw new ProviderAdapterError('TIMEOUT', 'Provider request timed out', {
             providerState: 'UNKNOWN',
             cause: error,
@@ -396,12 +411,24 @@ export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): 
       let result: Pilot1InferenceResult;
 
       if (stream || contentType.includes('text/event-stream')) {
-        result = await parseSse(response, options.configuredProvider, options.configuredModel);
+        result = await parseSse(
+          response,
+          options.configuredProvider,
+          options.configuredModel,
+          timeoutSignal,
+        );
       } else {
         let payload: OpenAIResponse;
         try {
           payload = (await response.json()) as OpenAIResponse;
         } catch (error) {
+          if (timeoutSignal.aborted) {
+            throw new ProviderAdapterError('TIMEOUT', 'Provider response body timed out', {
+              status: response.status,
+              providerState: 'RESPONDED',
+              cause: error,
+            });
+          }
           throw new ProviderAdapterError('MALFORMED_RESPONSE', 'Provider response is not valid JSON', {
             status: response.status,
             providerState: 'RESPONDED',
