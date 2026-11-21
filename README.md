@@ -1,6 +1,6 @@
 # Theseus Dreaming Worker
 
-Private implementation workspace for a bounded background dreaming/hypothesis worker.
+Public implementation workspace for a bounded background dreaming/hypothesis worker. The repository is intentionally public so ordinary GitHub-hosted Actions runners can be used without consuming private-repository compute allowance. Private conversation data, provider credentials, secrets, and generated private evidence must never be committed here.
 
 The durable purpose and authority boundary live in [`contracts/dreaming-worker.yaml`](contracts/dreaming-worker.yaml). Read that contract before changing workflow semantics, provider routing, storage, or authority.
 
@@ -43,6 +43,8 @@ Model lists are discovered from each provider's read-only `/models` endpoint. Pr
 The Builder's own model is selected by `BUILDER_MODEL`; the current development default is `exe/nvidia/moonshotai/kimi-k3.1-pro`. Changing this is routing, not a change to the worker's goal contract.
 
 ## Safety boundary
+
+This repository is public by design. Public code is allowed; private evidence is not. Runtime credentials remain in exe.dev/provider integration state, and any future Session Search evidence must stay outside Git unless it is explicitly synthetic or intentionally sanitized for publication.
 
 Bootstrap verification performs model discovery only. It does not send Session Search evidence, make inference calls, promote hypotheses to truth, or write canonical memory/user preferences.
 
