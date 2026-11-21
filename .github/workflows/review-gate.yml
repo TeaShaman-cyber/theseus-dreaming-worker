@@ -28,15 +28,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git diff --no-renames --name-only "$BASE_SHA...$HEAD_SHA" > changed.txt
+          WORK=$(mktemp -d)
+          trap 'rm -rf "$WORK"' EXIT
+          git diff --no-renames --name-only "$BASE_SHA...$HEAD_SHA" > "$WORK/changed.txt"
 
           # Once this classifier exists on the base branch, a PR cannot weaken
           # its own gate by editing the classifier in the same head. The fallback
           # is only for the bootstrap PR that introduces the classifier.
           if git cat-file -e "$BASE_SHA:scripts/review_gate_required.py" 2>/dev/null; then
-            git show "$BASE_SHA:scripts/review_gate_required.py" > /tmp/review_gate_required.py
+            git show "$BASE_SHA:scripts/review_gate_required.py" > "$WORK/review_gate_required.py"
           else
-            cp scripts/review_gate_required.py /tmp/review_gate_required.py
+            cp scripts/review_gate_required.py "$WORK/review_gate_required.py"
           fi
 
           if git cat-file -e "$BASE_SHA:tools/pr/codex-review-wait.sh" 2>/dev/null              && git cat-file -e "$BASE_SHA:scripts/codex_review_status.py" 2>/dev/null              && git cat-file -e "$BASE_SHA:scripts/codex_review_bounded_status.py" 2>/dev/null; then
@@ -45,9 +47,9 @@ jobs:
             echo "base_has_gate=false" >> "$GITHUB_OUTPUT"
           fi
 
-          python3 /tmp/review_gate_required.py < changed.txt > decision.json
-          cat decision.json
-          required=$(python3 -I -c 'import json; print(str(json.load(open("decision.json"))["required"]).lower())')
+          python3 "$WORK/review_gate_required.py" < "$WORK/changed.txt" > "$WORK/decision.json"
+          cat "$WORK/decision.json"
+          required=$(python3 -I -c 'import json,sys; print(str(json.load(open(sys.argv[1]))["required"]).lower())' "$WORK/decision.json")
           echo "required=$required" >> "$GITHUB_OUTPUT"
 
   review-gate:
