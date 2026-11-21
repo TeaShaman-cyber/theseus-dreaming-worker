@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { runPilot0, type EvidencePacket } from './dry-run.ts';
+import { parseProposalSet, type ProposalSet } from './proposal-schema.ts';
 
 export type Pilot1Scope = 'SYNTHETIC_FIXTURE' | 'PUBLICATION_SAFE';
 
@@ -60,12 +61,14 @@ type Pilot1Receipt = {
 export type Pilot1Result =
   | {
       outcome: 'NO_DATA';
-      proposalText: null;
+      proposalSet: null;
+      rawModelOutput: null;
       receipt: Pilot1Receipt;
     }
   | {
       outcome: 'PROPOSED';
-      proposalText: string;
+      proposalSet: ProposalSet;
+      rawModelOutput: string;
       receipt: Pilot1Receipt;
     };
 
@@ -120,7 +123,8 @@ export async function runPilot1(
   if (gate.outcome === 'NO_DATA') {
     return {
       outcome: 'NO_DATA',
-      proposalText: null,
+      proposalSet: null,
+      rawModelOutput: null,
       receipt: {
         ...baseReceipt,
         externalModelCalls: 0,
@@ -156,10 +160,12 @@ export async function runPilot1(
   }
 
   const externalModelCalls: 1 = 1;
+  const proposalSet = parseProposalSet(inference.text, request.packet);
 
   return {
     outcome: 'PROPOSED',
-    proposalText: inference.text,
+    proposalSet,
+    rawModelOutput: inference.text,
     receipt: {
       ...baseReceipt,
       externalModelCalls,
