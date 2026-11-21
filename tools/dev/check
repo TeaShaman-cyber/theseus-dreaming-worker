@@ -16,6 +16,9 @@ npm run lint
 printf '%s\n' '== unit and regression tests =='
 npm run test
 
+printf '%s\n' '== review gate contract tests =='
+python3 -m unittest discover -s test_py -p 'test_*.py'
+
 printf '%s\n' '== typecheck =='
 npm run typecheck
 
@@ -29,7 +32,7 @@ printf '%s\n' '== reverse trace promises =='
 python3 tools/reverse_trace/check_current.py
 
 printf '%s\n' '== shell syntax =='
-sh -n tools/dev/check tools/ci/build-check tools/ci/mutation-test
+sh -n tools/dev/check tools/ci/build-check tools/ci/mutation-test tools/pr/codex-review-status.sh tools/pr/codex-review-wait.sh
 
 printf '%s\n' '== whitespace =='
 git diff --check
