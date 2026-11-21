@@ -1,0 +1,18 @@
+{
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "dependsOn": [
+    "default:worker/core-contract",
+    "default:pilot1/bounded-inference"
+  ],
+  "implementation": [
+    {
+      "file": "default:src/dreaming/pilot2-runner.ts",
+      "symbols": [
+        "runPilot2"
+      ]
+    }
+  ]
+}

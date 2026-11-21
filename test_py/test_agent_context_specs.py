@@ -15,8 +15,8 @@ class AgentContextSpecTests(unittest.TestCase):
     def test_pilot2_is_the_next_bounded_implementation(self):
         spec = (ROOT / "specs/pilot2/independent-perspectives/spec.md").read_text(encoding="utf-8")
         self.assertIn("same evidence packet", spec)
-        self.assertIn("different underlying model families", spec)
-        self.assertIn("COMPLETE | PARTIAL | NO_DATA", spec)
+        self.assertIn("different model-family identities", spec)
+        self.assertIn("COMPLETE | PARTIAL | NO_DATA | FAIL_CLOSED", spec)
         self.assertIn("MUST NOT widen data egress", spec)
         self.assertIn("majority-vote truth", spec.lower())
 
@@ -30,7 +30,6 @@ class AgentContextSpecTests(unittest.TestCase):
     def test_future_specs_do_not_claim_implementation_links_yet(self):
         for rel in [
             "specs/worker/core-contract/spec-lock.json",
-            "specs/pilot2/independent-perspectives/spec-lock.json",
             "specs/intake/session-search-boundary/spec-lock.json",
         ]:
             with self.subTest(path=rel):
@@ -41,7 +40,7 @@ class AgentContextSpecTests(unittest.TestCase):
         self.assertIn("Immediate next coding task", index)
         self.assertIn("pilot2/independent-perspectives", index)
         self.assertIn("SYNTHETIC_FIXTURE", index)
-        self.assertIn("Do not add critique", index)
+        self.assertIn("keep critique, Clef routing", index)
 
 
 if __name__ == "__main__":

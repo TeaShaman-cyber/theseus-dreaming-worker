@@ -93,7 +93,7 @@ function validateRequest(request: Pilot1Request): void {
   }
 }
 
-function requestFingerprint(
+export function pilot1RequestFingerprint(
   scope: Pilot1Scope,
   task: string,
   evidenceFingerprint: string,
@@ -113,7 +113,7 @@ export async function runPilot1(
   validateRequest(request);
 
   const gate = runPilot0(request.packet);
-  const fullRequestFingerprint = requestFingerprint(
+  const fullRequestFingerprint = pilot1RequestFingerprint(
     request.scope,
     request.task,
     gate.receipt.inputFingerprint,

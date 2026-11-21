@@ -31,23 +31,22 @@ A Pilot 2 result contains:
 - typed provider failures when a pass fails;
 - provider, actual model, and route provenance where observable;
 - one deterministic run receipt;
-- an explicit comparison artifact that preserves:
-  - compatible claims;
-  - contradictions;
-  - unique hypotheses;
-  - unresolved uncertainty.
+- an explicit deterministic comparison artifact that preserves:
+  - exact structured matches;
+  - pass-specific proposals;
+  - the fact that semantic relation is unresolved without a later critique layer.
 
-The comparison artifact is descriptive. It MUST NOT promote a proposition to truth merely because both passes agree.
+The comparison artifact is descriptive. It MUST NOT infer semantic contradiction from free-form claims, and it MUST NOT promote a proposition to truth merely because both passes agree. The original validated proposal sets remain intact so later critique can inspect agreement, contradiction, and uncertainty without losing first-pass dissent.
 
 ## Requirements
 
 ### Requirement: The two first passes are genuinely independent
 
-The two configured routes MUST identify different underlying model families.
+The two configured routes MUST declare different model-family identities.
 
-Two provider endpoints serving the same base model family MUST NOT satisfy this requirement.
+Two provider endpoints declaring the same base model family MUST NOT satisfy this requirement.
 
-If independence cannot be established from configured/observed model identity, Pilot 2 MUST fail closed or mark the independence requirement unresolved rather than claiming two independent perspectives.
+The first bounded orchestrator proves only `CONFIGURED_DISTINCT`: it rejects equal configured family identities before inference and preserves observed provider/model metadata from each pass. Stronger transport-level family verification belongs to the provider adapter. If route identity is invalid or configured independence cannot be established, Pilot 2 MUST return `FAIL_CLOSED` rather than claiming two independent perspectives.
 
 ### Requirement: First-pass isolation is blind
 
@@ -71,6 +70,36 @@ Each pass MUST independently pass schema and exact-provenance validation.
 
 A malformed or provenance-invalid pass is a typed failure, not a valid perspective.
 
+### Requirement: Terminal state distinguishes absence from analysis failure
+
+`NO_DATA` is reserved for the case where Pilot 0 accepted no new evidence and therefore no model work was attempted.
+
+After evidence has been accepted:
+
+- `COMPLETE` means two valid configured-distinct first-pass perspectives;
+- `PARTIAL` means exactly one valid perspective and one typed pass failure;
+- `FAIL_CLOSED` means no valid perspective remains, configured independence cannot be established, or the route plan is invalid.
+
+Provider/model failure after accepted evidence MUST NOT be collapsed into `NO_DATA`.
+
+### Requirement: Pass failure and receipt uncertainty stay explicit
+
+Provider-adapter and proposal-validation failures MUST be normalized into typed pass failures rather than erased behind transport success. The bounded implementation distinguishes at least:
+
+- `TIMEOUT_UNKNOWN_PROVIDER_STATE`;
+- `OUTPUT_BUDGET_EXHAUSTED`;
+- `EMPTY_FINAL_CONTENT`;
+- `JSON_VALIDATE_FAILED`;
+- `INVALID_JSON`;
+- `INVALID_SCHEMA`;
+- `PROVENANCE_REJECTED`;
+- `POLICY_VIOLATION`;
+- `INFERENCE_FAILED`.
+
+The Pilot 2 receipt MUST NOT equate invoking an inference callback with a confirmed external model call after failure. Successful Pilot 1 receipts contribute to `confirmedExternalModelCalls`; failed invoked passes contribute to `unresolvedExternalCallAttempts`.
+
+Configured route identity and observed provider/model metadata MUST remain separately inspectable.
+
 ### Requirement: Partial provider failure remains visible
 
 If one first pass succeeds and the other fails, the run MUST return a partial result containing:
@@ -86,7 +115,7 @@ The worker MUST NOT silently retry with an unapproved substitute model and MUST 
 
 Comparison MUST be based on already-frozen validated first-pass records.
 
-It MUST preserve mutually incompatible hypotheses and unresolved differences.
+The first bounded implementation MUST compare exact structured proposal fingerprints deterministically and preserve pass-specific proposals. It MUST leave semantic relation explicitly unresolved rather than pretending to detect contradiction from free-form claims.
 
 The comparison layer MUST NOT collapse disagreement into a consensus score or majority-vote truth.
 
@@ -113,9 +142,11 @@ The first code increment SHOULD implement:
 1. a provider-route identity structure containing provider/model/model-family;
 2. a two-pass orchestrator over the existing Pilot 1 validation contract;
 3. deterministic proof that both passes receive the same request/evidence fingerprints;
-4. typed `COMPLETE | PARTIAL | NO_DATA` outcome;
-5. preservation of both first-pass proposal sets and failures;
-6. a deterministic comparison structure that does not make truth judgments.
+4. typed `COMPLETE | PARTIAL | NO_DATA | FAIL_CLOSED` outcome;
+5. preservation of both first-pass proposal sets and typed failures;
+6. a deterministic exact-structured comparison that does not make semantic truth judgments.
+
+The first pure orchestrator receives injected inference functions. Provider HTTP adapters are responsible for bounding timeout/token/cost and for supplying observed provider/model metadata; those live adapters are not implemented in this slice.
 
 It SHOULD NOT yet implement:
 

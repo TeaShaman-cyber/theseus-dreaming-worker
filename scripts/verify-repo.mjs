@@ -17,6 +17,8 @@ const required = [
   'specs/worker/core-contract/verify.md',
   'specs/pilot2/independent-perspectives/spec.md',
   'specs/pilot2/independent-perspectives/verify.md',
+  'specs/pilot2/independent-perspectives/spec-lock.json',
+  'src/dreaming/pilot2-runner.ts',
   'specs/intake/session-search-boundary/spec.md',
   'specs/intake/session-search-boundary/verify.md',
   'src/dreaming/AGENTS.md',

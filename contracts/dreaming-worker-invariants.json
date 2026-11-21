@@ -519,6 +519,66 @@
           ]
         }
       ]
+    },
+    {
+      "id": "PILOT2-01",
+      "title": "Pilot 2 preserves independent first passes and distinguishes absence from analysis failure",
+      "human_promise": "Pilot 2 uses two configured-distinct model-family routes over the same bounded request/evidence fingerprints; NO_DATA is reserved for no accepted evidence, while post-evidence analysis failure is PARTIAL or FAIL_CLOSED.",
+      "why": "Multi-model analysis must not turn route duplication into fake independence or hide analysis failure as evidence absence.",
+      "status": "STRONG",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "src/dreaming/pilot2-runner.ts",
+          "supports": "Rejects same-family routes before inference, runs two blind Pilot 1 passes over the same request, preserves typed pass failures, and returns COMPLETE/PARTIAL/NO_DATA/FAIL_CLOSED."
+        },
+        {
+          "kind": "test",
+          "ref": "test/pilot2-runner.test.mjs",
+          "supports": "Covers NO_DATA zero-call, fingerprint parity, same-family rejection, partial failure, double failure, invalid JSON/provenance, and deterministic exact comparison."
+        },
+        {
+          "kind": "doc",
+          "ref": "specs/pilot2/independent-perspectives/spec-lock.json",
+          "supports": "Links the durable Pilot 2 spec to stable symbol runPilot2."
+        }
+      ],
+      "watch_paths": [
+        "src/dreaming/pilot2-runner.ts",
+        "test/pilot2-runner.test.mjs",
+        "specs/pilot2/independent-perspectives/*"
+      ],
+      "watch_terms": [
+        "CONFIGURED_DISTINCT",
+        "REJECTED_SAME_FAMILY",
+        "FAIL_CLOSED",
+        "NO_DATA",
+        "requestFingerprint",
+        "evidenceFingerprint",
+        "UNRESOLVED_WITHOUT_CRITIQUE"
+      ],
+      "proof_checks": [
+        {
+          "ref": "src/dreaming/pilot2-runner.ts",
+          "contains_all": [
+            "INDEPENDENCE_NOT_ESTABLISHED",
+            "CONFIGURED_DISTINCT",
+            "outcome = 'PARTIAL'",
+            "outcome = 'FAIL_CLOSED'",
+            "UNRESOLVED_WITHOUT_CRITIQUE"
+          ]
+        },
+        {
+          "ref": "test/pilot2-runner.test.mjs",
+          "contains_all": [
+            "short-circuits NO_DATA before either model pass",
+            "same request and evidence fingerprints",
+            "rejects same-family routes before inference",
+            "returns PARTIAL when exactly one pass succeeds",
+            "returns FAIL_CLOSED rather than NO_DATA"
+          ]
+        }
+      ]
     }
   ]
 }
