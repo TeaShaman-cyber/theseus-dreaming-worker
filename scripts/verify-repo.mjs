@@ -19,6 +19,7 @@ const required = [
   'scripts/review_gate_required.py',
   'scripts/codex_review_status.py',
   'scripts/codex_review_bounded_status.py',
+  'scripts/codex_review_changed_files.py',
   'tools/pr/codex-review-status.sh',
   'tools/pr/codex-review-wait.sh',
   '.github/workflows/qa.yml',

@@ -30,28 +30,19 @@ jobs:
           WORK=$(mktemp -d)
           trap 'rm -rf "$WORK"' EXIT
 
+          gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$WORK/pr.json"
           gh api --paginate --slurp \
             "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" \
             > "$WORK/files.json"
 
-          python3 -I - "$WORK/files.json" "$WORK/changed.bin" <<'PY'
-          import json
-          import pathlib
-          import sys
+          expected_count=$(python3 -I -c \
+            'import json,sys; value=json.load(open(sys.argv[1]))["changed_files"]; print(value if isinstance(value,int) and value >= 0 else (_ for _ in ()).throw(ValueError("invalid changed_files")))' \
+            "$WORK/pr.json")
 
-          source = pathlib.Path(sys.argv[1])
-          target = pathlib.Path(sys.argv[2])
-          payload = json.loads(source.read_text(encoding="utf-8"))
-          pages = payload if payload and isinstance(payload[0], list) else [payload]
-          names = []
-          for page in pages:
-              for item in page:
-                  name = item.get("filename")
-                  if not isinstance(name, str):
-                      raise SystemExit("review-gate: malformed pull files payload")
-                  names.append(name)
-          target.write_bytes(b"\0".join(name.encode("utf-8") for name in names) + (b"\0" if names else b""))
-          PY
+          python3 scripts/codex_review_changed_files.py \
+            --files "$WORK/files.json" \
+            --expected-count "$expected_count" \
+            --output "$WORK/changed.bin"
 
           python3 scripts/review_gate_required.py --nul \
             < "$WORK/changed.bin" \

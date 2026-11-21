@@ -16,6 +16,9 @@ class ReviewGateWorkflowContractTests(unittest.TestCase):
     def test_classifier_reads_changed_files_as_data_via_github_api(self):
         workflow = (ROOT / '.github/workflows/review-gate.yml').read_text()
         self.assertIn('/pulls/$PR_NUMBER/files?per_page=100', workflow)
+        self.assertIn('/pulls/$PR_NUMBER', workflow)
+        self.assertIn('scripts/codex_review_changed_files.py', workflow)
+        self.assertIn('--expected-count', workflow)
         self.assertIn('python3 -I -', workflow)
         self.assertIn('scripts/review_gate_required.py --nul', workflow)
         self.assertNotIn('git diff --no-renames', workflow)
