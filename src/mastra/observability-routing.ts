@@ -14,6 +14,7 @@ import { OtelExporter } from '@mastra/otel-exporter';
 
 export const OBSERVABILITY_SCOPE_KEY = 'observabilityScope';
 export const EXTERNAL_SAFE_SCOPE = 'external-safe';
+export const OBSERVABILITY_SERVICE_NAME = 'theseus-dreaming-builder';
 
 export type ExporterPlan = {
   otel: null | {
@@ -26,6 +27,28 @@ export type ExporterPlan = {
     secretKey: string;
     baseUrl?: string;
   };
+};
+
+type ObservabilityFactories = {
+  storage: () => ObservabilityExporter;
+  sensitiveDataFilter: () => InstanceType<typeof SensitiveDataFilter>;
+  otel: (
+    config: ConstructorParameters<typeof OtelExporter>[0],
+  ) => ObservabilityExporter;
+  langfuse: (
+    config: ConstructorParameters<typeof LangfuseExporter>[0],
+  ) => ObservabilityExporter;
+  observability: (
+    config: ConstructorParameters<typeof Observability>[0],
+  ) => Observability;
+};
+
+const defaultFactories: ObservabilityFactories = {
+  storage: () => new MastraStorageExporter(),
+  sensitiveDataFilter: () => new SensitiveDataFilter(),
+  otel: config => new OtelExporter(config),
+  langfuse: config => new LangfuseExporter(config),
+  observability: config => new Observability(config),
 };
 
 export function parseOtelHeaders(raw: string | undefined): Record<string, string> {
@@ -81,14 +104,14 @@ export function buildExporterPlan(
 
   const publicKey = env.LANGFUSE_PUBLIC_KEY?.trim();
   const secretKey = env.LANGFUSE_SECRET_KEY?.trim();
+  const baseUrl = env.LANGFUSE_BASE_URL?.trim();
+
   const langfuse =
     publicKey && secretKey
       ? {
           publicKey,
           secretKey,
-          ...(env.LANGFUSE_BASE_URL?.trim()
-            ? { baseUrl: env.LANGFUSE_BASE_URL.trim() }
-            : {}),
+          ...(baseUrl ? { baseUrl } : {}),
         }
       : null;
 
@@ -105,19 +128,19 @@ export const operationalSpanFormatter: CustomSpanFormatter = (
 
 export const selectObservabilityConfig: ConfigSelector = ({ requestContext }) =>
   requestContext?.get(OBSERVABILITY_SCOPE_KEY) === EXTERNAL_SAFE_SCOPE
-    ? 'external-safe'
+    ? EXTERNAL_SAFE_SCOPE
     : 'local';
 
 export function createObservability(
   env: Record<string, string | undefined> = process.env,
+  factories: ObservabilityFactories = defaultFactories,
 ): Observability {
   const plan = buildExporterPlan(env);
-
-  const externalExporters: ObservabilityExporter[] = [new MastraStorageExporter()];
+  const externalExporters: ObservabilityExporter[] = [factories.storage()];
 
   if (plan.otel) {
     externalExporters.push(
-      new OtelExporter({
+      factories.otel({
         provider: {
           custom: {
             endpoint: plan.otel.endpoint,
@@ -136,7 +159,7 @@ export function createObservability(
 
   if (plan.langfuse) {
     externalExporters.push(
-      new LangfuseExporter({
+      factories.langfuse({
         publicKey: plan.langfuse.publicKey,
         secretKey: plan.langfuse.secretKey,
         baseUrl: plan.langfuse.baseUrl,
@@ -146,17 +169,17 @@ export function createObservability(
     );
   }
 
-  return new Observability({
+  return factories.observability({
     configs: {
       local: {
-        serviceName: 'theseus-dreaming-builder',
-        exporters: [new MastraStorageExporter()],
-        spanOutputProcessors: [new SensitiveDataFilter()],
+        serviceName: OBSERVABILITY_SERVICE_NAME,
+        exporters: [factories.storage()],
+        spanOutputProcessors: [factories.sensitiveDataFilter()],
       },
-      'external-safe': {
-        serviceName: 'theseus-dreaming-builder',
+      [EXTERNAL_SAFE_SCOPE]: {
+        serviceName: OBSERVABILITY_SERVICE_NAME,
         exporters: externalExporters,
-        spanOutputProcessors: [new SensitiveDataFilter()],
+        spanOutputProcessors: [factories.sensitiveDataFilter()],
       },
     },
     configSelector: selectObservabilityConfig,
