@@ -590,6 +590,34 @@ test('SSE may finish on clean EOF without DONE and preserves final usage metadat
   });
 });
 
+test('SSE keeps the last unterminated data event on clean EOF', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.write('data: {"choices":[{"delta":{"content":"first"},"finish_reason":null}]}\n\n');
+    // A valid final event need not be followed by a blank-line separator at EOF.
+    res.end('data: {"choices":[{"delta":{"content":"second"},"finish_reason":"stop"}]}');
+  }, async baseURL => {
+    const result = await inference(baseURL, { stream: true })(request, correlation);
+    assert.equal(result.text, 'firstsecond');
+    assert.equal(result.finishReason, 'stop');
+  });
+});
+
+test('SSE empty later identity fields cannot erase observed transport identity', async () => {
+  await withServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.write('data: {"model":"transport/model-v2","provider":"observed-provider","choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n');
+    res.write('data: {"model":"","provider":"","choices":[{}]}\n\n');
+    res.end('data: [DONE]\n\n');
+  }, async baseURL => {
+    const result = await inference(baseURL, { stream: true })(request, correlation);
+    assert.equal(result.text, 'ok');
+    assert.equal(result.provider, 'observed-provider');
+    assert.equal(result.model, 'transport/model-v2');
+    assert.equal(result.finishReason, 'stop');
+  });
+});
+
 test('malformed SSE JSON becomes typed MALFORMED_RESPONSE', async () => {
   await withServer((_req, res) => {
     res.writeHead(200, { 'content-type': 'text/event-stream' });
