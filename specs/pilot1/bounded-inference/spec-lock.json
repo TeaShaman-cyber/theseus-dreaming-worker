@@ -1,0 +1,15 @@
+{
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "dependsOn": [],
+  "implementation": [
+    {
+      "file": "default:src/dreaming/pilot1-runner.ts",
+      "symbols": [
+        "runPilot1"
+      ]
+    }
+  ]
+}
