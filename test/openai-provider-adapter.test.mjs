@@ -161,8 +161,10 @@ test('adapter reports malformed provider JSON as a typed failure', async () => {
       () => inference(baseURL)(request, correlation),
       error =>
         error instanceof ProviderAdapterError &&
+        error.name === 'ProviderAdapterError' &&
         error.code === 'MALFORMED_RESPONSE' &&
-        error.providerState === 'RESPONDED',
+        error.providerState === 'RESPONDED' &&
+        error.cause instanceof SyntaxError,
     );
   });
 });
@@ -996,6 +998,44 @@ test('empty-content failure evidence preserves known usage instead of inventing 
   assert.equal(evidence[0].usage.inputTokens, 9);
   assert.equal(evidence[0].usage.outputTokens, 4);
   assert.equal(evidence[0].usableArtifact, false);
+});
+
+test('unexpected observer failure is normalized with unknown provider state and preserved cause', async () => {
+  const evidence = [];
+  const observerFailure = new Error('observer failed');
+  let observerCalls = 0;
+
+  await withServer((_req, res) => {
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({
+      choices: [{ finish_reason: 'stop', message: { content: 'ok' } }],
+    }));
+  }, async baseURL => {
+    await assert.rejects(
+      () => createOpenAIChatInference({
+        baseURL,
+        configuredProvider: 'configured-provider',
+        configuredModel: 'configured/model-v1',
+        timeoutMs: 250,
+        onEvidence: item => {
+          observerCalls += 1;
+          if (observerCalls === 1) throw observerFailure;
+          evidence.push(item);
+        },
+      })(request, correlation),
+      error =>
+        error instanceof ProviderAdapterError &&
+        error.code === 'HTTP_ERROR' &&
+        error.providerState === 'UNKNOWN' &&
+        error.cause === observerFailure,
+    );
+  });
+
+  assert.equal(observerCalls, 2);
+  assert.equal(evidence.length, 1);
+  assert.equal(evidence[0].outcome, 'FAILURE');
+  assert.equal(evidence[0].failureCode, 'HTTP_ERROR');
+  assert.equal(evidence[0].providerState, 'UNKNOWN');
 });
 
 test('SSE parser handles CRLF, comment lines, DONE and invalid metadata without trusting it', async () => {
