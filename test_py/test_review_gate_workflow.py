@@ -7,6 +7,7 @@ class ReviewGateWorkflowContractTests(unittest.TestCase):
     def test_workflow_is_base_owned_and_never_executes_pr_head_code(self):
         workflow = (ROOT / '.github/workflows/review-gate.yml').read_text()
         self.assertIn('pull_request_target:', workflow)
+        self.assertIn('types: [opened, synchronize, reopened, edited]', workflow)
         self.assertIn('github.event.pull_request.base.sha', workflow)
         self.assertNotIn('ref: ${{ github.event.pull_request.head.sha }}', workflow)
         self.assertIn('persist-credentials: false', workflow)
