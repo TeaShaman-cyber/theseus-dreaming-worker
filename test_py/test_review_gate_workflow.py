@@ -3,40 +3,30 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 
-
 class ReviewGateWorkflowContractTests(unittest.TestCase):
-    def test_workflow_uses_exact_head_review_helpers_and_base_classifier(self):
+    def test_workflow_is_base_owned_and_never_executes_pr_head_code(self):
         workflow = (ROOT / '.github/workflows/review-gate.yml').read_text()
-
-        self.assertIn('scripts/review_gate_required.py', workflow)
-        self.assertIn('tools/pr/codex-review-wait.sh', workflow)
-        self.assertIn('github.event.pull_request.head.sha', workflow)
+        self.assertIn('pull_request_target:', workflow)
         self.assertIn('github.event.pull_request.base.sha', workflow)
-        self.assertIn('git show "$BASE_SHA:scripts/review_gate_required.py"', workflow)
-        self.assertIn('base_has_gate', workflow)
-        self.assertIn("github.event.pull_request.base.sha", workflow)
-        self.assertIn("github.event.pull_request.head.sha", workflow)
-        self.assertIn('BOOTSTRAP: base branch has no review helpers yet', workflow)
-        self.assertIn('FINDINGS', workflow)
+        self.assertNotIn('ref: ${{ github.event.pull_request.head.sha }}', workflow)
         self.assertIn('persist-credentials: false', workflow)
-        self.assertIn('git diff --no-renames --name-only -z', workflow)
-        self.assertIn('python3 -I -c', workflow)
-        self.assertIn('WORK=$(mktemp -d)', workflow)
-        self.assertIn('> "$WORK/changed.bin"', workflow)
-        self.assertIn('review_gate_required.py" --nul', workflow)
-        self.assertIn('> "$WORK/review_gate_required.py"', workflow)
-        self.assertIn('> "$WORK/decision.json"', workflow)
-        self.assertNotIn('> changed.txt', workflow)
-        self.assertNotIn('> changed.bin', workflow)
-        self.assertNotIn('> decision.json', workflow)
+        self.assertIn('contents: read', workflow)
+        self.assertNotIn('contents: write', workflow)
+
+    def test_classifier_reads_changed_files_as_data_via_github_api(self):
+        workflow = (ROOT / '.github/workflows/review-gate.yml').read_text()
+        self.assertIn('/pulls/$PR_NUMBER/files?per_page=100', workflow)
+        self.assertIn('python3 -I -', workflow)
+        self.assertIn('scripts/review_gate_required.py --nul', workflow)
+        self.assertNotIn('git diff --no-renames', workflow)
 
     def test_protected_review_accepts_only_exact_head_clean(self):
         workflow = (ROOT / '.github/workflows/review-gate.yml').read_text()
-
+        self.assertIn('tools/pr/codex-review-wait.sh', workflow)
+        self.assertIn('github.event.pull_request.head.sha', workflow)
         self.assertIn("CLEAN) echo 'PASS: exact-head Codex review completed clean.'", workflow)
         self.assertIn('Exact-head Codex review has unresolved findings', workflow)
         self.assertIn('Codex review did not reach a terminal exact-head state', workflow)
-
 
 if __name__ == '__main__':
     unittest.main()

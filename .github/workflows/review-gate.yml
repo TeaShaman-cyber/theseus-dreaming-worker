@@ -1,7 +1,7 @@
 name: Risk-based Codex review
 
 on:
-  pull_request:
+  pull_request_target:
 
 permissions:
   contents: read
@@ -13,43 +13,54 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       required: ${{ steps.classify.outputs.required }}
-      base_has_gate: ${{ steps.classify.outputs.base_has_gate }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
+
       - id: classify
-        name: Classify protected review boundary
+        name: Classify protected review boundary from base-owned code
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
           set -euo pipefail
           WORK=$(mktemp -d)
           trap 'rm -rf "$WORK"' EXIT
-          git diff --no-renames --name-only -z "$BASE_SHA...$HEAD_SHA" > "$WORK/changed.bin"
 
-          # Once this classifier exists on the base branch, a PR cannot weaken
-          # its own gate by editing the classifier in the same head. The fallback
-          # is only for the bootstrap PR that introduces the classifier.
-          if git cat-file -e "$BASE_SHA:scripts/review_gate_required.py" 2>/dev/null; then
-            git show "$BASE_SHA:scripts/review_gate_required.py" > "$WORK/review_gate_required.py"
-          else
-            cp scripts/review_gate_required.py "$WORK/review_gate_required.py"
-          fi
+          gh api --paginate --slurp \
+            "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" \
+            > "$WORK/files.json"
 
-          if git cat-file -e "$BASE_SHA:tools/pr/codex-review-wait.sh" 2>/dev/null              && git cat-file -e "$BASE_SHA:scripts/codex_review_status.py" 2>/dev/null              && git cat-file -e "$BASE_SHA:scripts/codex_review_bounded_status.py" 2>/dev/null; then
-            echo "base_has_gate=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "base_has_gate=false" >> "$GITHUB_OUTPUT"
-          fi
+          python3 -I - "$WORK/files.json" "$WORK/changed.bin" <<'PY'
+          import json
+          import pathlib
+          import sys
 
-          python3 "$WORK/review_gate_required.py" --nul < "$WORK/changed.bin" > "$WORK/decision.json"
+          source = pathlib.Path(sys.argv[1])
+          target = pathlib.Path(sys.argv[2])
+          payload = json.loads(source.read_text(encoding="utf-8"))
+          pages = payload if payload and isinstance(payload[0], list) else [payload]
+          names = []
+          for page in pages:
+              for item in page:
+                  name = item.get("filename")
+                  if not isinstance(name, str):
+                      raise SystemExit("review-gate: malformed pull files payload")
+                  names.append(name)
+          target.write_bytes(b"\0".join(name.encode("utf-8") for name in names) + (b"\0" if names else b""))
+          PY
+
+          python3 scripts/review_gate_required.py --nul \
+            < "$WORK/changed.bin" \
+            > "$WORK/decision.json"
           cat "$WORK/decision.json"
-          required=$(python3 -I -c 'import json,sys; print(str(json.load(open(sys.argv[1]))["required"]).lower())' "$WORK/decision.json")
+
+          required=$(python3 -I -c \
+            'import json,sys; print(str(json.load(open(sys.argv[1]))["required"]).lower())' \
+            "$WORK/decision.json")
           echo "required=$required" >> "$GITHUB_OUTPUT"
 
   review-gate:
@@ -62,22 +73,10 @@ jobs:
           echo 'PASS: protected review boundary not touched.'
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        if: needs.classify.outputs.required == 'true' && needs.classify.outputs.base_has_gate == 'true'
+        if: needs.classify.outputs.required == 'true'
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
-
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        if: needs.classify.outputs.required == 'true' && needs.classify.outputs.base_has_gate != 'true'
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-
-      - name: Bootstrap review machinery notice
-        if: needs.classify.outputs.required == 'true' && needs.classify.outputs.base_has_gate != 'true'
-        run: |
-          echo 'BOOTSTRAP: base branch has no review helpers yet; exact-head review uses this PR head once.'
-          echo 'After this machinery lands, protected PRs use only base-branch review helpers.'
 
       - name: Wait for exact-head Codex review
         if: needs.classify.outputs.required == 'true'
@@ -93,11 +92,14 @@ jobs:
           rc=$?
           set -e
           printf '%s\n' "$result"
+
           if [ "$rc" -ne 0 ]; then
             echo "::error::Codex review did not reach a terminal exact-head state (rc=$rc)."
             exit "$rc"
           fi
-          status=$(printf '%s\n' "$result" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
+
+          status=$(printf '%s\n' "$result" | python3 -I -c \
+            'import json,sys; print(json.load(sys.stdin)["status"])')
           case "$status" in
             CLEAN) echo 'PASS: exact-head Codex review completed clean.' ;;
             FINDINGS)

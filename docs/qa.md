@@ -155,7 +155,7 @@ Terminal states are intentionally distinct:
 - `STALE` — review evidence exists, but for an older head;
 - `TIMEOUT` — bounded waiting expired and is not converted into a pass.
 
-Once the gate exists on the base branch, the workflow checks out the base-branch review helpers before judging the PR. A PR therefore cannot weaken the parser/wait logic that evaluates that same PR. The initial bootstrap PR has a one-time fallback to its own head because the base branch has no review helpers yet; after merge that fallback is no longer used.
+The trusted workflow uses `pull_request_target`, so its orchestration comes from the base branch. It checks out only the base SHA, treats the PR file list as GitHub API data, and runs only base-owned classifier/parser/wait helpers. It never executes PR-head code. The bootstrap PR that first introduces this workflow cannot be protected by a workflow that is not yet present on the base branch, so that one PR requires an explicit manual exact-head Codex `CLEAN` before promotion. After merge, protected PRs use the base-owned workflow automatically.
 
 A stale review is not equivalent to a clean current review. PR #9 is the regression example: Codex reviewed an earlier head and found a real observability wiring gap, but later commits changed the head before merge. `tools/pr/codex-review-status.sh` now classifies that final historical head as `STALE`.
 
