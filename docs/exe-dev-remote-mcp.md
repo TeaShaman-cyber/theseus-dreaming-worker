@@ -114,31 +114,49 @@ EOF
 
 ### Services with a path prefix
 
-`mcp-gate` builds the upstream URL as:
+The stock `mcp-gate` builds the upstream URL as:
 
 ```text
 UPSTREAM + incoming request path
 ```
 
-Therefore, if the internal MCP endpoint is:
-
-```text
-http://127.0.0.1:8001/api/mcp
-```
-
-set:
+If the gate fronts **only MCP**, an upstream prefix is enough. For example, if the internal endpoint is `/api/mcp`:
 
 ```bash
 UPSTREAM=http://127.0.0.1:8001/api
 ```
 
-and still give ChatGPT the clean public URL:
+Then public `/mcp` becomes internal `/api/mcp`.
 
-```text
-https://<vm>.exe.xyz/mcp
+Do **not** use that prefix trick when the same upstream also serves a GUI or other root paths. It would rewrite every route: for example `/agent-builder` would incorrectly become `/api/agent-builder`.
+
+For that mixed case, keep the upstream root:
+
+```bash
+UPSTREAM=http://127.0.0.1:8001
 ```
 
-This is useful for frameworks such as Mastra where the MCP route is under `/api/mcp`.
+and add an opt-in rewrite only for the public MCP path. This repository includes a small compatibility patch:
+
+```bash
+python3 tools/patch_mcp_gate_path.py ~/mcp-gate/mcp-gate.py
+```
+
+Then configure:
+
+```bash
+MCP_UPSTREAM_PATH=/api/mcp
+```
+
+The result is:
+
+```text
+/mcp           -> /api/mcp
+/agent-builder -> /agent-builder
+/*              -> /*
+```
+
+This is the recommended layout for Mastra Agent Builder because Studio and MCP share the same server.
 
 ## 4. Run mcp-gate under systemd
 
@@ -384,8 +402,10 @@ Mastra:
   internal MCP route: /api/mcp
 
 mcp-gate routing:
-  UPSTREAM=http://127.0.0.1:8001/api
+  UPSTREAM=http://127.0.0.1:8001
+  MCP_UPSTREAM_PATH=/api/mcp
   incoming /mcp -> http://127.0.0.1:8001/api/mcp
+  incoming /agent-builder -> http://127.0.0.1:8001/agent-builder
 
 Services:
   mcp-gate.service
@@ -393,6 +413,8 @@ Services:
 ```
 
 Mastra keeps `8000` as its code default and receives `MASTRA_PORT=8001` only from the deployment service. This avoids baking exe.dev/gate topology into application semantics.
+
+The gate uses the repository's `tools/patch_mcp_gate_path.py` compatibility patch so the public ChatGPT URL can remain `/mcp` while the Mastra built-in MCP stays at its native `/api/mcp`. Other paths are not rewritten, so the existing Agent Builder GUI URL continues to work.
 
 Verification performed on 2026-11-21:
 
