@@ -621,7 +621,7 @@ test('negative Retry-After is rejected while HTTP-date is converted to a bounded
     );
   });
 
-  const future = new Date(Date.now() + 3000).toUTCString();
+  const future = new Date(Date.now() + 60_000).toUTCString();
   await withServer((_req, res) => {
     res.statusCode = 429;
     res.setHeader('retry-after', future);
@@ -633,8 +633,8 @@ test('negative Retry-After is rejected while HTTP-date is converted to a bounded
         error instanceof ProviderAdapterError &&
         error.code === 'RATE_LIMITED' &&
         typeof error.retryAfterMs === 'number' &&
-        error.retryAfterMs >= 0 &&
-        error.retryAfterMs <= 5000,
+        error.retryAfterMs >= 30_000 &&
+        error.retryAfterMs <= 60_000,
     );
   });
 });
