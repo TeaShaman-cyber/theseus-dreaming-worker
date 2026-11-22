@@ -78,6 +78,7 @@ test('builds critique input from frozen valid Pilot 2 perspectives with stable p
   assert.equal(input.schema, 'theseus.dreaming-worker.critique-input.v1');
   assert.equal(input.perspectives.length, 2);
   assert.equal(input.perspectives[0].proposals.length, 1);
+  assert.deepEqual(input.perspectives[0].route, { id: 'route-a', provider: 'p-a', model: 'model-a', modelFamily: 'family-a' });
   assert.match(input.perspectives[0].proposals[0].proposalFingerprint, /^sha256:/);
   assert.deepEqual(
     input.perspectives.flatMap(p => p.proposals.map(x => x.proposalFingerprint)).sort(),
@@ -169,6 +170,18 @@ test('PARTIAL Pilot 2 input preserves the valid perspective and the failed one',
   assert.equal(input.failedPerspectives.length, 1);
   assert.equal(input.failedPerspectives[0].perspectiveId, 'route-b');
   assert.equal(input.failedPerspectives[0].failure.code, 'INFERENCE_FAILED');
+  assert.deepEqual(input.failedPerspectives[0].route, { id: 'route-b', provider: 'p-b', model: 'model-b', modelFamily: 'family-b' });
+});
+
+test('critique input rejects NO_DATA or FAIL_CLOSED even if a malformed result still contains a valid pass', async () => {
+  const complete = await completePilot2();
+  for (const outcome of ['NO_DATA', 'FAIL_CLOSED']) {
+    const malformed = { ...complete, outcome };
+    assert.throws(
+      () => buildCritiqueInput(malformed),
+      new RegExp(`CRITIQUE_INPUT_UNAVAILABLE: Pilot 2 outcome ${outcome}`),
+    );
+  }
 });
 
 test('critique input is unavailable when Pilot 2 has no valid perspective', async () => {
