@@ -235,3 +235,41 @@ test('multi-hop supersession cycle is rejected', () => {
     /LEDGER_SUPERSESSION_CYCLE/,
   );
 });
+
+
+test('branching and reconverging supersession history stays bounded during cycle checks', { timeout: 1000 }, () => {
+  const records = [];
+  for (let i = 0; i < 34; i += 1) {
+    records.push(createProposalRecord({
+      proposal: { ...hypothesisA, claim: `dag-${i}` },
+      origin: origin(i % 2 === 0 ? 'route-a' : 'route-b', i % 2 === 0 ? routeA : routeB),
+    }));
+  }
+
+  let ledger = [];
+  for (const record of records) ledger = appendLedgerEvent(ledger, record);
+
+  // Repeated diamonds: each pair fans out to two successors which reconverge.
+  for (let i = 0; i + 3 < records.length; i += 2) {
+    const edges = [
+      [records[i], records[i + 1]],
+      [records[i], records[i + 2]],
+      [records[i + 1], records[i + 3]],
+      [records[i + 2], records[i + 3]],
+    ];
+    for (const [from, to] of edges) {
+      const event = createSupersessionEvent({
+        supersededRecordId: from.recordId,
+        replacementRecordId: to.recordId,
+        reason: `dag edge ${from.recordId} -> ${to.recordId}`,
+      });
+      if (!ledger.some(existing => existing.eventType === 'SUPERSEDE' && existing.eventId === event.eventId)) {
+        ledger = appendLedgerEvent(ledger, event);
+      }
+    }
+  }
+
+  const view = materializeLedger(ledger);
+  assert.equal(view.records.length, records.length);
+  assert.equal(view.events.length, ledger.length);
+});

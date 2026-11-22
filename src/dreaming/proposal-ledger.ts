@@ -153,10 +153,12 @@ function pathExists(
   target: string,
 ): boolean {
   const pending = [start];
+  const visited = new Set<string>();
   while (pending.length > 0) {
     const current = pending.pop();
-    if (!current) continue;
+    if (!current || visited.has(current)) continue;
     if (current === target) return true;
+    visited.add(current);
     const next = edges.get(current);
     if (next) pending.push(...next);
   }
