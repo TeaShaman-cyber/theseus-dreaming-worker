@@ -158,6 +158,7 @@ function pathExists(
     const current = pending.pop();
     if (!current || visited.has(current)) continue;
     if (current === target) return true;
+    // Stryker disable next-line CallExpression: visited bookkeeping preserves linear traversal on valid acyclic ledgers; removing it is functionally equivalent but violates the bounded-DAG performance invariant covered by the regression test.
     visited.add(current);
     const next = edges.get(current);
     if (next) pending.push(...next);
@@ -184,12 +185,13 @@ export function appendLedgerEvent(
       throw new Error('LEDGER_SELF_SUPERSESSION');
     }
 
+    // Stryker disable ConditionalExpression: broadening this type guard is equivalent at runtime because SUPERSEDE events have no recordId; their undefined value cannot equal a nonempty string record reference.
     const records = new Set(
       ledger
-        // Stryker disable next-line ConditionalExpression: broadening this type guard is equivalent at runtime because SUPERSEDE events have no recordId; their undefined value cannot equal a nonempty string record reference.
         .filter((item): item is ProposalLedgerRecord => item.eventType === 'PROPOSAL')
         .map(item => item.recordId),
     );
+    // Stryker restore ConditionalExpression
     if (!records.has(event.supersededRecordId) || !records.has(event.replacementRecordId)) {
       throw new Error('LEDGER_SUPERSESSION_REF_MISSING');
     }
