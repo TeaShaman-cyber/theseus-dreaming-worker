@@ -22,23 +22,15 @@ const critiqueRelationSchema = z.object({
   proposal_refs: z.array(proposalRefSchema).min(1),
   evidence_refs: z.array(evidenceRefSchema).min(1),
   requested_evidence: z.array(nonempty),
-}).strict().superRefine((value, ctx) => {
-  const perspectives = new Set(value.proposal_refs.map(ref => ref.perspective_id));
-  if (value.relation !== 'UNRESOLVED' && perspectives.size < 2) {
-    ctx.addIssue({
-      code: 'custom',
-      message: `${value.relation} requires proposals from at least two perspectives`,
-      path: ['proposal_refs'],
-    });
-  }
-  if (value.relation !== 'AGREEMENT' && value.requested_evidence.length === 0) {
-    ctx.addIssue({
-      code: 'custom',
-      message: `${value.relation} requires requested_evidence`,
-      path: ['requested_evidence'],
-    });
-  }
-});
+}).strict()
+  .refine(
+    value =>
+      value.relation === 'UNRESOLVED' ||
+      new Set(value.proposal_refs.map(ref => ref.perspective_id)).size >= 2,
+  )
+  .refine(
+    value => value.relation === 'AGREEMENT' || value.requested_evidence.length > 0,
+  );
 
 export const critiqueArtifactSchema = z.object({
   schema: z.literal('theseus.dreaming-worker.critique.v1'),

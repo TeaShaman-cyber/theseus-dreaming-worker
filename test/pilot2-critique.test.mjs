@@ -228,3 +228,114 @@ test('critique JSON Schema is generated from the same validator used for parsing
   assert.match(text, /DISAGREEMENT/);
   assert.match(text, /UNRESOLVED/);
 });
+
+
+test('critique schema rejects whitespace-only semantic fields', async () => {
+  const input = buildCritiqueInput(await completePilot2());
+  const a = input.perspectives[0].proposals[0];
+  assert.throws(
+    () => parseCritiqueArtifact(JSON.stringify({
+      schema: 'theseus.dreaming-worker.critique.v1',
+      authority: 'DERIVED_ONLY',
+      relations: [{
+        relation: 'UNRESOLVED',
+        summary: '   ',
+        proposal_refs: [{ perspective_id: input.perspectives[0].perspectiveId, proposal_fingerprint: a.proposalFingerprint }],
+        evidence_refs: [{ source_ref: 'fixture:critique#1', evidence_hash: 'sha256:critique-1' }],
+        requested_evidence: ['More evidence.'],
+      }],
+    }), input),
+    /CRITIQUE_SCHEMA_INVALID/,
+  );
+});
+
+test('critique artifact supports multiple relations and multiple evidence references', async () => {
+  const result = await runPilot2(
+    { scope: 'SYNTHETIC_FIXTURE', task: 'Interpret the evidence.', packet },
+    [
+      {
+        id: 'route-a', provider: 'p-a', model: 'model-a', modelFamily: 'family-a',
+        infer: inference('model-a', [{
+          type: 'FACT',
+          claim: 'The fixture records both a timeout and a later success.',
+          source_refs: packet.evidence.map(ref => ({ source_ref: ref.sourceRef, evidence_hash: ref.evidenceHash })),
+        }]),
+      },
+      {
+        id: 'route-b', provider: 'p-b', model: 'model-b', modelFamily: 'family-b',
+        infer: inference('model-b', [proposal('INFERENCE', 'The timeout may have been transient.')]),
+      },
+    ],
+  );
+  const input = buildCritiqueInput(result);
+  const a = input.perspectives[0].proposals[0];
+  const b = input.perspectives[1].proposals[0];
+
+  const artifact = parseCritiqueArtifact(JSON.stringify({
+    schema: 'theseus.dreaming-worker.critique.v1',
+    authority: 'DERIVED_ONLY',
+    relations: [
+      {
+        relation: 'UNRESOLVED',
+        summary: 'The factual sequence alone does not establish a cause.',
+        proposal_refs: [{ perspective_id: input.perspectives[0].perspectiveId, proposal_fingerprint: a.proposalFingerprint }],
+        evidence_refs: [
+          { source_ref: 'fixture:critique#1', evidence_hash: 'sha256:critique-1' },
+          { source_ref: 'fixture:critique#2', evidence_hash: 'sha256:critique-2' },
+        ],
+        requested_evidence: ['Provider-side timing evidence.'],
+      },
+      {
+        relation: 'DISAGREEMENT',
+        summary: 'One pass states only the sequence; the other proposes a transient explanation.',
+        proposal_refs: [
+          { perspective_id: input.perspectives[0].perspectiveId, proposal_fingerprint: a.proposalFingerprint },
+          { perspective_id: input.perspectives[1].perspectiveId, proposal_fingerprint: b.proposalFingerprint },
+        ],
+        evidence_refs: [{ source_ref: 'fixture:critique#1', evidence_hash: 'sha256:critique-1' }],
+        requested_evidence: ['Comparable timing evidence.'],
+      },
+    ],
+  }), input);
+
+  assert.equal(artifact.relations.length, 2);
+  assert.equal(artifact.relations[0].evidence_refs.length, 2);
+});
+
+test('malformed PARTIAL result with no valid perspective fails closed at critique boundary', async () => {
+  const valid = await completePilot2();
+  const malformed = { ...valid, outcome: 'PARTIAL', passes: [] };
+  assert.throws(
+    () => buildCritiqueInput(malformed),
+    /CRITIQUE_INPUT_UNAVAILABLE: no valid Pilot 2 perspectives/,
+  );
+});
+
+test('critique parser rejects malformed JSON explicitly', async () => {
+  const input = buildCritiqueInput(await completePilot2());
+  assert.throws(() => parseCritiqueArtifact('{', input), /CRITIQUE_JSON_INVALID/);
+});
+
+test('agreement may be recorded without requesting additional evidence', async () => {
+  const input = buildCritiqueInput(await completePilot2());
+  const a = input.perspectives[0].proposals[0];
+  const b = input.perspectives[1].proposals[0];
+
+  const artifact = parseCritiqueArtifact(JSON.stringify({
+    schema: 'theseus.dreaming-worker.critique.v1',
+    authority: 'DERIVED_ONLY',
+    relations: [{
+      relation: 'AGREEMENT',
+      summary: 'Both perspectives accept the observed timeout as part of the evidence.',
+      proposal_refs: [
+        { perspective_id: input.perspectives[0].perspectiveId, proposal_fingerprint: a.proposalFingerprint },
+        { perspective_id: input.perspectives[1].perspectiveId, proposal_fingerprint: b.proposalFingerprint },
+      ],
+      evidence_refs: [{ source_ref: 'fixture:critique#1', evidence_hash: 'sha256:critique-1' }],
+      requested_evidence: [],
+    }],
+  }), input);
+
+  assert.equal(artifact.relations[0].relation, 'AGREEMENT');
+  assert.deepEqual(artifact.relations[0].requested_evidence, []);
+});
