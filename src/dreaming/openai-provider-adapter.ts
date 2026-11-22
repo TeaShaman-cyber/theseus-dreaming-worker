@@ -70,6 +70,7 @@ export type OpenAIChatInferenceOptions = {
   configuredModel: string;
   configuredModelFamily?: string;
   timeoutMs?: number;
+  maxOutputTokens?: number;
   stream?: boolean;
   onEvidence?: (evidence: ProviderCallEvidence) => void;
 };
@@ -139,12 +140,25 @@ function retryAfterMs(value: string | null): number | undefined {
   return Math.max(0, dateMs - Date.now());
 }
 
+const proposalV1SystemPrompt = [
+  'Return JSON only: no markdown, code fences, or prose outside the JSON object.',
+  'Root must be exactly {"schema":"theseus.dreaming-worker.proposals.v1","proposals":[...]}.',
+  'Allowed proposal types: FACT, INFERENCE, HYPOTHESIS, UNKNOWN.',
+  'FACT fields: type, claim, source_refs.',
+  'INFERENCE fields: type, claim, source_refs, assumptions, uncertainty.',
+  'HYPOTHESIS fields: type, claim, why_plausible, source_refs, falsifier, required_evidence, competing_explanations, uncertainty.',
+  'UNKNOWN fields: type, claim, why_unknown, source_refs, required_evidence.',
+  'uncertainty must be LOW, MEDIUM, or HIGH.',
+  'Every source_refs entry must be {"source_ref":"...","evidence_hash":"..."} copied exactly from packet evidence sourceRef/evidenceHash.',
+  'Arrays required by a proposal type must be non-empty. Do not add undeclared fields.',
+  'Do not claim provider/model identity from prose and do not emit runtime receipt fields.',
+].join(' ');
+
 function transportMessages(request: Pilot1Request, correlation: Pilot1Correlation) {
   return [
     {
       role: 'system',
-      content:
-        'Return only the requested typed proposal artifact. Do not claim provider/model identity from prose.',
+      content: proposalV1SystemPrompt,
     },
     {
       role: 'user',
@@ -388,6 +402,7 @@ export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): 
           body: JSON.stringify({
             model: options.configuredModel,
             messages: transportMessages(request, correlation),
+            max_tokens: options.maxOutputTokens,
             stream,
           }),
           signal: timeoutSignal,

@@ -134,6 +134,8 @@ Implemented and verified:
 
 - Pilot 0 deterministic evidence/provenance gate;
 - Pilot 1 one bounded external inference;
+- Pilot 2 two configured-distinct blind first passes with typed partial/fail-closed outcomes;
+- generic OpenAI-compatible provider adapter plus bounded live Pilot 2 composition;
 - typed proposal schema;
 - exact source-reference and evidence-hash validation;
 - deterministic outer receipt;
@@ -142,7 +144,6 @@ Implemented and verified:
 
 Not yet implemented:
 
-- independent multi-family Pilot 2;
 - optional critique/conclave;
 - durable hypothesis ledger;
 - durable worker checkpoint;

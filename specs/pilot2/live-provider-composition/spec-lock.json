@@ -1,0 +1,18 @@
+{
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "dependsOn": [
+    "default:pilot2/independent-perspectives",
+    "default:worker/core-contract"
+  ],
+  "implementation": [
+    {
+      "file": "default:src/dreaming/pilot2-live-composition.ts",
+      "symbols": [
+        "runPilot2WithProviders"
+      ]
+    }
+  ]
+}
