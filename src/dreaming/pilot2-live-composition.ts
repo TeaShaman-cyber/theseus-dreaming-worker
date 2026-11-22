@@ -34,10 +34,10 @@ function nonEmpty(value: string | undefined): boolean {
 function rethrowForPilot2(error: unknown): never {
   if (error instanceof ProviderAdapterError) {
     if (error.code === 'OUTPUT_BUDGET_EXHAUSTED') {
-      throw new Error(`PILOT2_OUTPUT_BUDGET_EXHAUSTED: ${error.message}`, { cause: error });
+      throw new Error(`PILOT2_OUTPUT_BUDGET_EXHAUSTED: ${error.message}`);
     }
     if (error.code === 'EMPTY_FINAL_CONTENT') {
-      throw new Error(`PILOT2_EMPTY_FINAL_CONTENT: ${error.message}`, { cause: error });
+      throw new Error(`PILOT2_EMPTY_FINAL_CONTENT: ${error.message}`);
     }
   }
   throw error;
