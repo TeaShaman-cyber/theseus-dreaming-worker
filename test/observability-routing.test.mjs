@@ -400,3 +400,29 @@ test('OTLP resource attributes trim environment and release labels', () => {
     'service.version': 'abc123',
   });
 });
+
+test('OTLP resource attributes omit whitespace-only environment and release labels', () => {
+  const otelCalls = [];
+
+  createObservability(
+    {
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otlp.example/v1/traces',
+      OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf',
+      THESEUS_ENVIRONMENT: '   ',
+      THESEUS_RELEASE: '\t  ',
+    },
+    {
+      storage: () => ({ kind: 'storage' }),
+      sensitiveDataFilter: () => ({ kind: 'filter' }),
+      otel(config) {
+        otelCalls.push(config);
+        return { kind: 'otel' };
+      },
+      langfuse: () => ({ kind: 'langfuse' }),
+      observability: config => ({ kind: 'observability', config }),
+    },
+  );
+
+  assert.equal(otelCalls.length, 1);
+  assert.deepEqual(otelCalls[0].resourceAttributes, {});
+});
