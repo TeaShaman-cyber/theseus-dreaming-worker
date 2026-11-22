@@ -26,7 +26,7 @@ A revision is represented only by a separate `SUPERSEDE` event linking an existi
 
 ## Content-addressed identity
 
-Record/event identity is derived deterministically from canonical event payload content. Append MUST recompute and verify the ID; a forged or stale ID fails closed.
+Record/event identity is derived deterministically from canonical event payload content. Append MUST independently recompute both the embedded Proposal v1 fingerprint and the outer event ID; a forged/stale proposal fingerprint or event ID fails closed.
 
 Proposal fingerprints reuse the same Proposal v1 fingerprint function used by Pilot 2 critique references.
 

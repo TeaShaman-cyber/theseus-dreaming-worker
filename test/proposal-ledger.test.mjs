@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -126,5 +127,32 @@ test('content-addressed ids are revalidated on append and tampering fails closed
   assert.throws(
     () => appendLedgerEvent(ledger, { ...supersede, eventId: 'sha256:forged' }),
     /LEDGER_EVENT_ID_MISMATCH/,
+  );
+});
+
+
+function canonicalizeForTest(value) {
+  if (Array.isArray(value)) return value.map(canonicalizeForTest);
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, canonicalizeForTest(item)]),
+    );
+  }
+  return value;
+}
+
+function contentIdForTest(payload) {
+  return 'sha256:' + createHash('sha256').update(JSON.stringify(canonicalizeForTest(payload))).digest('hex');
+}
+
+test('proposal fingerprint is independently revalidated even when outer record id is valid', () => {
+  const record = createProposalRecord({ proposal: { ...hypothesisB, claim: 'fingerprint-forgery' }, origin: origin('route-b', routeB) });
+  const forgedPayload = { ...record, proposalFingerprint: 'sha256:wrong' };
+  const { recordId: _old, ...payloadWithoutId } = forgedPayload;
+  const forged = { ...forgedPayload, recordId: contentIdForTest(payloadWithoutId) };
+
+  assert.throws(
+    () => appendLedgerEvent([], forged),
+    /LEDGER_PROPOSAL_FINGERPRINT_MISMATCH/,
   );
 });

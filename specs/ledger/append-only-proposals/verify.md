@@ -36,3 +36,7 @@
 
 - **THEN** its falsifier and required evidence remain exact
 - **AND** authority remains `DERIVED_ONLY`
+
+#### Scenario: Proposal fingerprint does not match embedded Proposal v1 payload
+
+- **THEN** append fails with `LEDGER_PROPOSAL_FINGERPRINT_MISMATCH`

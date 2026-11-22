@@ -111,6 +111,9 @@ function expectedEventId(event: ProposalLedgerEvent): string {
 }
 
 function assertEventIdentity(event: ProposalLedgerEvent): void {
+  if (event.eventType === 'PROPOSAL' && event.proposalFingerprint !== fingerprintProposal(event.proposal)) {
+    throw new Error(`LEDGER_PROPOSAL_FINGERPRINT_MISMATCH: ${event.recordId}`);
+  }
   if (eventId(event) !== expectedEventId(event)) {
     throw new Error(`LEDGER_EVENT_ID_MISMATCH: ${eventId(event)}`);
   }
