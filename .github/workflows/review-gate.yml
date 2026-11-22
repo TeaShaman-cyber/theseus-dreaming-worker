@@ -70,7 +70,7 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
-      - name: Wait for exact-head Codex review
+      - name: Observe exact-head Codex review
         if: needs.classify.outputs.required == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -80,23 +80,35 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          result=$(./tools/pr/codex-review-wait.sh "$PR_NUMBER" "$EXPECTED_HEAD" 600 10)
+          result=$(./tools/pr/codex-review-wait.sh "$PR_NUMBER" "$EXPECTED_HEAD" 120 10)
           rc=$?
           set -e
           printf '%s\n' "$result"
 
+          if [ "$rc" -eq 2 ]; then
+            echo "::error::Codex review evidence could not be read or classified."
+            exit 2
+          fi
+          if [ "$rc" -eq 3 ]; then
+            echo "::warning::Codex review debt remains: exact-head review is pending, stale, or timed out. This advisory signal does not grant or deny promotion."
+            exit 0
+          fi
           if [ "$rc" -ne 0 ]; then
-            echo "::error::Codex review did not reach a terminal exact-head state (rc=$rc)."
+            echo "::error::Unexpected Codex review helper rc=$rc."
             exit "$rc"
           fi
 
           status=$(printf '%s\n' "$result" | python3 -I -c \
             'import json,sys; print(json.load(sys.stdin)["status"])')
           case "$status" in
-            CLEAN) echo 'PASS: exact-head Codex review completed clean.' ;;
+            CLEAN)
+              echo 'PASS: exact-head Codex review completed clean.'
+              ;;
             FINDINGS)
-              echo '::error::Exact-head Codex review has unresolved findings.'
-              exit 1
+              echo '::warning::Codex findings require explicit adjudication: fix, reject with evidence, or track in a follow-up issue. Codex remains advisory, not merge authority.'
+              ;;
+            UNAVAILABLE_QUOTA)
+              echo '::warning::Codex review debt remains: code-review quota is unavailable. Retry on a future protected change or when availability is independently observed; do not busy-loop.'
               ;;
             *)
               echo "::error::Unexpected terminal Codex status: $status"

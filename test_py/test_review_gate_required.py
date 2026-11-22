@@ -90,6 +90,22 @@ class ReviewGateRequiredTests(unittest.TestCase):
         self.assertTrue(result['required'])
         self.assertEqual(len(result['matches']), 4)
 
+    def test_cloudflare_runtime_boundary_diff_requires_review(self):
+        result = classify_paths([
+            'docs/cloudflare-runtime.md',
+            'src/runtime/cloudflare-pilot1-boundary.ts',
+            'src/runtime/cloudflare-worker.ts',
+            'test/cloudflare-pilot1-boundary.test.mjs',
+        ])
+        self.assertTrue(result['required'])
+        self.assertEqual(
+            [match['path'] for match in result['matches']],
+            [
+                'src/runtime/cloudflare-pilot1-boundary.ts',
+                'src/runtime/cloudflare-worker.ts',
+            ],
+        )
+
     def test_empty_diff_does_not_require_review(self):
         self.assertEqual(classify_paths([]), {'required': False, 'matches': []})
 

@@ -5,11 +5,49 @@ import argparse
 import json
 import pathlib
 import sys
+from datetime import datetime
 from typing import Any
 
 MARKER_PREFIX = "<!-- codex-review-state:v1 "
 MARKER_SUFFIX = " -->"
 CODEX_TRUSTED_LOGINS = {"chatgpt-codex-connector[bot]"}
+
+
+def _timestamp_seconds(value: str) -> float | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def _is_quota_notice(comment: dict[str, Any]) -> bool:
+    login = str((comment.get("user") or {}).get("login") or "")
+    if login not in CODEX_TRUSTED_LOGINS:
+        return False
+    body = str(comment.get("body") or "").lower()
+    return "codex usage limits" in body or "usage limits for code reviews" in body
+
+
+def _has_nearby_quota_notice(
+    comments: list[dict[str, Any]], review_timestamp: str, *, window_seconds: int = 300
+) -> bool:
+    review_time = _timestamp_seconds(review_timestamp)
+    if review_time is None:
+        return False
+    for comment in comments:
+        if not _is_quota_notice(comment):
+            continue
+        notice_time = _timestamp_seconds(
+            str(comment.get("updated_at") or comment.get("created_at") or "")
+        )
+        if notice_time is None:
+            continue
+        if abs(notice_time - review_time) <= window_seconds:
+            return True
+    return False
 
 
 def _extract_state(body: str) -> dict[str, Any] | None:
@@ -81,6 +119,13 @@ def classify_codex_review(comments: list[dict[str, Any]], head_sha: str) -> dict
     unresolved = review.get("has_unresolved_findings")
 
     if status != "completed":
+        if status == "failed" and _has_nearby_quota_notice(comments, current["updated_at"]):
+            return {
+                **base,
+                "status": "UNAVAILABLE_QUOTA",
+                "reason": "codex-review-quota",
+                "reviewed_commit": review.get("commit_sha"),
+            }
         return {
             **base,
             "status": "PENDING",
@@ -135,7 +180,7 @@ def classify_codex_wait(
     if timeout_seconds < 0:
         raise ValueError("timeout_seconds must be non-negative")
     status = str(review_state.get("status") or "")
-    if status in {"CLEAN", "FINDINGS"}:
+    if status in {"CLEAN", "FINDINGS", "UNAVAILABLE_QUOTA"}:
         disposition = "TERMINAL"
     elif elapsed_seconds >= timeout_seconds:
         disposition = "TIMEOUT"

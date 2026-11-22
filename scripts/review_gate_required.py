@@ -14,6 +14,7 @@ PROTECTED_PREFIXES = (
     'tools/agent/',
     'tools/reverse_trace/',
     'src/dreaming/',
+    'src/runtime/',
     'src/mastra/gateways/',
     'config/agents/',
     'contracts/',

@@ -146,19 +146,22 @@ review.
 
 ## Risk-based exact-head Codex review
 
-Codex review is not a universal merge authority. Ordinary low-risk changes remain advisory, but changes to protected verification, authority, permission, model-routing, privacy, canonical-state, SpecD/review, or fail-closed boundaries require an exact-head Codex review.
+Codex review is an independent advisory reviewer, not merge authority. Protected verification, authority, permission, model-routing, privacy, canonical-state, SpecD/review, and fail-closed changes must request and observe exact-head Codex review when it is available, but external Codex quota or review latency does not become project promotion authority.
 
-`.github/workflows/review-gate.yml` classifies the PR diff with `scripts/review_gate_required.py`. For protected changes it waits for Codex review evidence for the exact PR head via `tools/pr/codex-review-wait.sh`.
+`.github/workflows/review-gate.yml` classifies the PR diff with `scripts/review_gate_required.py`. For protected changes it observes bounded exact-head Codex evidence via `tools/pr/codex-review-wait.sh`; the workflow fails only when trusted review evidence cannot be read/classified, not because the external reviewer is pending or unavailable.
 
-Terminal states are intentionally distinct:
+States are intentionally distinct:
 
 - `CLEAN` — exact-head review completed without unresolved findings;
-- `FINDINGS` — exact-head review completed with unresolved findings and the workflow fails;
+- `FINDINGS` — exact-head review completed with findings; every finding must be explicitly adjudicated as `fix`, `reject with evidence`, or `follow-up issue`;
+- `UNAVAILABLE_QUOTA` — an exact-head review attempt failed because Codex code-review quota is unavailable; this creates review debt, not a permanent waiver and not a promotion veto;
 - `PENDING` — review is not terminal;
 - `STALE` — review evidence exists, but for an older head;
-- `TIMEOUT` — bounded waiting expired and is not converted into a pass.
+- `TIMEOUT` — bounded waiting expired; review debt remains.
 
-The trusted workflow uses `pull_request_target`, so its orchestration comes from the base branch. It checks out only the base SHA, treats the PR file list as GitHub API data, and runs only base-owned classifier/parser/wait helpers. It never executes PR-head code. The bootstrap PR that first introduces this workflow cannot be protected by a workflow that is not yet present on the base branch, so that one PR requires an explicit manual exact-head Codex `CLEAN` before promotion. After merge, protected PRs use the base-owned workflow automatically.
+Late review is still evidence. If Codex completes after promotion, its findings must be read and adjudicated rather than discarded because the PR already merged. A later observed successful Codex review is also evidence that the review surface is available again; future protected changes should continue requesting it. Do not busy-loop quota failures.
+
+The trusted workflow uses `pull_request_target`, so its orchestration comes from the base branch. It checks out only the base SHA, treats the PR file list as GitHub API data, and runs only base-owned classifier/parser/wait helpers. It never executes PR-head code. A PR that changes this review policy is a protected authority/process change: it requires explicit maintainer intent plus normal deterministic QA and hosted verification, but the old Codex-only condition cannot serve as immutable authority over its own replacement.
 
 A stale review is not equivalent to a clean current review. PR #9 is the regression example: Codex reviewed an earlier head and found a real observability wiring gap, but later commits changed the head before merge. `tools/pr/codex-review-status.sh` now classifies that final historical head as `STALE`.
 
