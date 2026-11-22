@@ -96,6 +96,21 @@ It MUST NOT automatically promote those proposals into:
 
 Promotion requires a separate authority path.
 
+## Runtime Lifecycle Status
+
+Cloudflare Workers is the selected target runtime, but the current Cloudflare state is **pre-operational acceptance**.
+
+The following states are intentionally distinct:
+
+- target runtime selected;
+- build/configuration ready;
+- technical version or deployment exists;
+- bounded acceptance canary executed;
+- explicitly authorized go-live / introduction into operation;
+- operating production service.
+
+Earlier states MUST NOT be described as later states merely because a deploy command succeeded or a provider holds a deployed version. As of the current specification, Dreaming Worker has **not** been introduced into operation and is **not** a production service.
+
 ## Current Implementation State
 
 Implemented and verified:

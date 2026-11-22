@@ -1,13 +1,13 @@
-# Cloudflare production runtime readiness
+# Cloudflare target runtime readiness and pre-operational acceptance
 
 Issue: #23. Architecture authority: TeaShaman-cyber/theseus-research#127.
 
 This repository has two deliberately different runtime surfaces:
 
 - `src/mastra/index.ts` is the **exe.dev development/Builder surface**. It keeps Editor, workspace, local LibSQL and the exe.dev model gateway.
-- `src/runtime/cloudflare-worker.ts` is the **Cloudflare production candidate**. It constructs Pilot 1 directly from Git-owned configuration and does not depend on Editor/Stored Agent state or the exe.dev gateway.
+- `src/runtime/cloudflare-worker.ts` is the **Cloudflare target-runtime candidate**. It constructs Pilot 1 directly from Git-owned configuration and does not depend on Editor/Stored Agent state or the exe.dev gateway.
 
-Production deployment is not implied by this document. It remains an explicit promotion boundary.
+Current lifecycle status is **pre-operational acceptance**. A Cloudflare version, technical deployment, or bounded acceptance canary does not mean that Dreaming Worker is in production or has been introduced into operation. Go-live / introduction into operation remains a later explicit promotion boundary.
 
 ## Cloudflare runtime contract
 
@@ -120,21 +120,21 @@ The first Issue #23 local profile produced about 30.3 MiB uncompressed Build Out
 
 ## Promotion boundary
 
-Before production release, require all of the following current evidence:
+Before any go-live / introduction into operation, require all of the following current evidence:
 
 1. issue-owned Neon boundary and least-privilege SQL role readback;
 2. Hyperdrive created against that exact runtime role/database boundary;
 3. real model/observability bindings configured without values entering Git or issue comments;
 4. readiness receipt `DEPLOY_CONFIG_READY`;
 5. canonical repository QA and exact-head review gates;
-6. explicit current authorization for production deployment;
+6. explicit current authorization for go-live / introduction into operation;
 7. post-deploy health plus synthetic Pilot 1 receipt/Grafana/Langfuse correlation readback.
 
-Until then the terminal state is readiness work only, not production release.
+Until then the terminal state is pre-operational readiness/acceptance only, not production and not introduced into operation.
 
-## Production Pilot 1 HTTP boundary
+## Target-runtime Pilot 1 HTTP boundary
 
-The production Worker does not expose the raw Mastra /api/* surface to
+The target-runtime Worker does not expose the raw Mastra /api/* surface to
 external callers. Those routes are guarded by a per-runtime internal capability
 used only by the Worker itself.
 
