@@ -1,0 +1,25 @@
+{
+  "scope": "SYNTHETIC_FIXTURE",
+  "task": "Return JSON only matching this exact root contract: {\"schema\":\"theseus.dreaming-worker.proposals.v1\",\"proposals\":[...]}. Propose one or two evidence-linked interpretations of why the first synthetic timeout was followed by a successful retry. Do not claim the cause is known. Each HYPOTHESIS must contain type, claim, why_plausible, source_refs, falsifier, required_evidence, competing_explanations, uncertainty. Each source_refs item must copy the exact source_ref and evidence_hash from the supplied packet. uncertainty must be LOW, MEDIUM, or HIGH. No markdown or extra root fields.",
+  "packet": {
+    "schema": "theseus-evidence-packet-v1",
+    "packetId": "fixture-pilot2-timeout-001",
+    "acceptedNewEvidence": true,
+    "coverage": {
+      "state": "PARTIAL",
+      "currentness": "UNKNOWN"
+    },
+    "evidence": [
+      {
+        "sourceRef": "fixture:message:1",
+        "evidenceHash": "sha256:fixture-message-1",
+        "text": "Synthetic evidence: a worker timed out after a provider request."
+      },
+      {
+        "sourceRef": "fixture:message:2",
+        "evidenceHash": "sha256:fixture-message-2",
+        "text": "Synthetic evidence: a retry completed successfully on the same provider."
+      }
+    ]
+  }
+}

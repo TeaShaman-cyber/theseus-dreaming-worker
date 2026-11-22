@@ -4,6 +4,7 @@ import type {
   Pilot1InferenceResult,
   Pilot1Request,
 } from './pilot1-runner.ts';
+import { proposalSetJsonSchema } from './proposal-schema.ts';
 
 export type ProviderExecutionState = 'UNKNOWN' | 'RESPONDED';
 
@@ -70,6 +71,9 @@ export type OpenAIChatInferenceOptions = {
   configuredModel: string;
   configuredModelFamily?: string;
   timeoutMs?: number;
+  maxTokens?: number;
+  apiKey?: string;
+  responseFormat?: 'json_object';
   stream?: boolean;
   onEvidence?: (evidence: ProviderCallEvidence) => void;
 };
@@ -140,11 +144,16 @@ function retryAfterMs(value: string | null): number | undefined {
 }
 
 function transportMessages(request: Pilot1Request, correlation: Pilot1Correlation) {
+  const schema = JSON.stringify(proposalSetJsonSchema);
   return [
     {
       role: 'system',
       content:
-        'Return only the requested typed proposal artifact. Do not claim provider/model identity from prose.',
+        'Return only the requested typed proposal artifact as one JSON object. ' +
+        'No markdown, no code fences, no prose before or after JSON. ' +
+        'Match this JSON Schema exactly: ' +
+        schema +
+        '. Do not claim provider/model identity from prose.',
     },
     {
       role: 'user',
@@ -382,12 +391,21 @@ export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): 
       const timeoutSignal = AbortSignal.timeout(timeoutMs);
 
       try {
+        const headers: Record<string, string> = {
+          'content-type': 'application/json',
+        };
+        if (options.apiKey) headers.authorization = `Bearer ${options.apiKey}`;
+
         response = await fetch(baseURL + '/chat/completions', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers,
           body: JSON.stringify({
             model: options.configuredModel,
             messages: transportMessages(request, correlation),
+            ...(options.maxTokens === undefined ? {} : { max_tokens: options.maxTokens }),
+            ...(options.responseFormat === undefined
+              ? {}
+              : { response_format: { type: options.responseFormat } }),
             stream,
           }),
           signal: timeoutSignal,

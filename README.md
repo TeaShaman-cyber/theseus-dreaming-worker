@@ -44,7 +44,7 @@ The Builder's own model is selected by `BUILDER_MODEL`; the current development 
 
 ## Safety boundary
 
-This repository is public by design. Public code is allowed; private evidence is not. Runtime credentials remain in exe.dev/provider integration state, and any future Session Search evidence must stay outside Git unless it is explicitly synthetic or intentionally sanitized for publication.
+This repository is public by design. Public code is allowed; private evidence is not. Runtime credentials remain in the selected runtime/provider secret boundary rather than Git; the current exe.dev integration is one development/acceptance implementation, not an architectural dependency. Any future Session Search evidence must stay outside Git unless it is explicitly synthetic or intentionally sanitized for publication.
 
 Bootstrap verification performs model discovery only. It does not send Session Search evidence, make inference calls, promote hypotheses to truth, or write canonical memory/user preferences.
 
@@ -69,3 +69,17 @@ Expected properties of the result:
 
 Implementation: `src/dreaming/dry-run.ts`.
 Tests: `test/dry-run.test.mjs`.
+
+
+## Pilot 2 bounded two-family run
+
+Pilot 2 composes two explicit model-family routes through the repo-owned OpenAI-compatible adapter. Route configuration supplies `baseURL`, provider/model identity, model family, timeout, output-token bound, and optionally an environment-variable name for a bearer key; the execution path does not require exe.dev.
+
+Run a synthetic/publication-safe request with:
+
+    npm run pilot2 -- <request.json> <routes.json>
+
+The runner preserves each validated perspective independently and reports `COMPLETE`, `PARTIAL`, `FAIL_CLOSED`, or `NO_DATA`; provider transport success alone never upgrades an invalid analytical artifact into success.
+
+Implementation: `src/dreaming/pilot2-e2e.ts`, `src/dreaming/pilot2-runner.ts`.
+Acceptance fixture: `fixtures/pilot2-timeout.json`.

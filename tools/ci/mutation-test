@@ -39,7 +39,7 @@ const score = scored === 0 ? null : ((killed + timeout) / scored) * 100;
 
 const receipt = {
   schema: 'theseus.dreaming-worker.mutation-receipt.v1',
-  scope: ['src/dreaming/dry-run.ts', 'src/dreaming/pilot1-runner.ts', 'src/dreaming/pilot2-runner.ts', 'src/dreaming/proposal-schema.ts', 'src/mastra/observability-routing.ts', 'src/mastra/pilot1-tracing.ts'],
+  scope: ['src/dreaming/dry-run.ts', 'src/dreaming/pilot1-runner.ts', 'src/dreaming/pilot2-runner.ts', 'src/dreaming/pilot2-e2e.ts', 'src/dreaming/proposal-schema.ts', 'src/mastra/observability-routing.ts', 'src/mastra/pilot1-tracing.ts'],
   totalMutants: mutants.length,
   killed,
   survived,

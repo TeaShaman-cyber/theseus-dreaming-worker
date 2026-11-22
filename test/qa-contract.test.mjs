@@ -50,3 +50,19 @@ test('targeted mutation workflow runs the repository mutation endpoint', () => {
   assert.match(workflow, /persist-credentials:\s*false/);
   assert.match(workflow, /pnpm-workspace\.yaml/);
 });
+
+test('Pilot 2 E2E composition participates in targeted mutation coverage', () => {
+  const workflow = readFileSync('.github/workflows/mutation.yml', 'utf8');
+  const stryker = readFileSync('stryker.config.mjs', 'utf8');
+  const endpoint = readFileSync('tools/ci/mutation-test', 'utf8');
+
+  for (const required of [
+    'src/dreaming/pilot2-e2e.ts',
+    'test/pilot2-e2e.test.mjs',
+  ]) {
+    assert.ok(workflow.includes(required), 'mutation workflow missing path: ' + required);
+  }
+  assert.match(stryker, /src\/dreaming\/pilot2-e2e\.ts/);
+  assert.match(stryker, /test\/pilot2-e2e\.test\.mjs/);
+  assert.match(endpoint, /src\/dreaming\/pilot2-e2e\.ts/);
+});

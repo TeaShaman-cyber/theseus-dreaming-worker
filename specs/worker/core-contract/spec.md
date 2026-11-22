@@ -134,15 +134,18 @@ Implemented and verified:
 
 - Pilot 0 deterministic evidence/provenance gate;
 - Pilot 1 one bounded external inference;
+- Pilot 2 two configured-distinct blind first passes with COMPLETE / PARTIAL / FAIL_CLOSED receipts;
+- OpenAI-compatible provider adapter with typed transport failures, bounded timeout/output, optional bearer auth, and explicit JSON response mode;
+- first bounded real two-family Pilot 2 end-to-end acceptance on a synthetic fixture;
 - typed proposal schema;
 - exact source-reference and evidence-hash validation;
-- deterministic outer receipt;
-- one-inference / zero-tool / zero-memory runtime witness;
+- model-facing Proposal v1 JSON Schema derived from the same deterministic Zod validator;
+- deterministic outer receipts and divergence comparison;
+- one-inference / zero-tool / zero-memory Pilot 1 runtime witness;
 - safe synthetic/publication-safe scope.
 
 Not yet implemented:
 
-- independent multi-family Pilot 2;
 - optional critique/conclave;
 - durable hypothesis ledger;
 - durable worker checkpoint;

@@ -6,6 +6,7 @@ import {
   ProviderAdapterError,
   createOpenAIChatInference,
 } from '../src/dreaming/openai-provider-adapter.ts';
+import { proposalSetJsonSchema } from '../src/dreaming/proposal-schema.ts';
 
 async function withServer(handler, fn) {
   const server = createServer(handler);
@@ -540,6 +541,7 @@ test('adapter sends configured model, stream flag, task, packet and correlation 
     captured = {
       method: req.method,
       contentType: req.headers['content-type'],
+      authorization: req.headers.authorization,
       rawBody: body,
     };
 
@@ -558,18 +560,31 @@ test('adapter sends configured model, stream flag, task, packet and correlation 
       configuredProvider: 'configured-provider',
       configuredModel: 'configured/model-v1',
       timeoutMs: 250,
+      maxTokens: 777,
+      apiKey: 'test-secret',
+      responseFormat: 'json_object',
       stream: false,
     })(request, correlation);
   });
 
   assert.equal(captured.method, 'POST');
   assert.equal(captured.contentType, 'application/json');
+  assert.equal(captured.authorization, 'Bearer test-secret');
   const capturedBody = JSON.parse(captured.rawBody);
   assert.equal(capturedBody.model, 'configured/model-v1');
+  assert.equal(capturedBody.max_tokens, 777);
+  assert.deepEqual(capturedBody.response_format, { type: 'json_object' });
   assert.equal(capturedBody.stream, false);
   assert.equal(capturedBody.messages.length, 2);
   assert.equal(capturedBody.messages[0].role, 'system');
   assert.match(capturedBody.messages[0].content, /typed proposal artifact/);
+  assert.match(capturedBody.messages[0].content, /FACT.*INFERENCE.*HYPOTHESIS.*UNKNOWN/s);
+  assert.match(capturedBody.messages[0].content, /theseus\.dreaming-worker\.proposals\.v1/);
+  assert.ok(
+    capturedBody.messages[0].content.includes(JSON.stringify(proposalSetJsonSchema)),
+    'system prompt must embed JSON Schema derived from the deterministic validator',
+  );
+  assert.match(capturedBody.messages[0].content, /No markdown.*code fences/s);
   assert.equal(capturedBody.messages[1].role, 'user');
 
   const userPayload = JSON.parse(capturedBody.messages[1].content);
