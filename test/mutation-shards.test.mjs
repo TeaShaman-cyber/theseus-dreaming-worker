@@ -3,17 +3,19 @@ import test from 'node:test';
 
 import { MUTATION_SHARDS, getMutationShard } from '../scripts/mutation-shards.mjs';
 
-test('heavy mutation is split into three explicit hosted shards', () => {
+test('heavy mutation is split into explicit hosted shards', () => {
   assert.deepEqual(Object.keys(MUTATION_SHARDS).sort(), [
     'critique',
-    'dreaming-core',
     'observability',
+    'pilot0-1',
+    'pilot2',
   ]);
 
   assert.deepEqual(MUTATION_SHARDS.critique.mutate, [
     'src/dreaming/pilot2-critique.ts',
   ]);
-  assert.ok(MUTATION_SHARDS['dreaming-core'].mutate.includes('src/dreaming/pilot2-live-composition.ts'));
+  assert.ok(MUTATION_SHARDS['pilot0-1'].mutate.includes('src/dreaming/pilot1-runner.ts'));
+  assert.ok(MUTATION_SHARDS.pilot2.mutate.includes('src/dreaming/pilot2-live-composition.ts'));
   assert.ok(MUTATION_SHARDS.observability.mutate.includes('src/mastra/observability-routing.ts'));
 });
 

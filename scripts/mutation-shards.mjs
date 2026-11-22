@@ -1,18 +1,24 @@
 export const MUTATION_SHARDS = Object.freeze({
-  'dreaming-core': Object.freeze({
+  'pilot0-1': Object.freeze({
     mutate: Object.freeze([
       'src/dreaming/dry-run.ts',
       'src/dreaming/pilot1-runner.ts',
-      'src/dreaming/pilot2-runner.ts',
-      'src/dreaming/pilot2-live-composition.ts',
       'src/dreaming/proposal-schema.ts',
     ]),
     tests: Object.freeze([
       'test/dry-run.test.mjs',
       'test/pilot1-runner.test.mjs',
+      'test/proposal-schema.test.mjs',
+    ]),
+  }),
+  pilot2: Object.freeze({
+    mutate: Object.freeze([
+      'src/dreaming/pilot2-runner.ts',
+      'src/dreaming/pilot2-live-composition.ts',
+    ]),
+    tests: Object.freeze([
       'test/pilot2-runner.test.mjs',
       'test/pilot2-live-composition.test.mjs',
-      'test/proposal-schema.test.mjs',
     ]),
   }),
   critique: Object.freeze({

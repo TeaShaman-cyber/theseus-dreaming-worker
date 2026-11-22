@@ -84,7 +84,8 @@ test('hosted mutation uses parallel named shards instead of one monolithic job',
   const wrapper = readFileSync('tools/ci/mutation-test', 'utf8');
 
   assert.match(workflow, /matrix:/);
-  assert.match(workflow, /dreaming-core/);
+  assert.match(workflow, /pilot0-1/);
+  assert.match(workflow, /pilot2/);
   assert.match(workflow, /critique/);
   assert.match(workflow, /observability/);
   assert.match(workflow, /npm run mutation -- \$\{\{ matrix\.shard \}\}/);
