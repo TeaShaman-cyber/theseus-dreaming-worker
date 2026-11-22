@@ -78,6 +78,23 @@ THESEUS_RELEASE
 
 Missing variables leave that exporter disabled.
 
+## Local readiness probe
+
+Use the repo-owned readiness command to classify current runtime configuration without printing endpoint, header, key, environment-label, or release values:
+
+```bash
+tools/dev/observability-readiness
+```
+
+It reports the fixed observability service name plus only configuration state and the names of present variables. Expected states are:
+
+- `LOCAL_ONLY` — neither external backend is configured;
+- `PARTIAL` — at least one external route is incomplete or only one backend is configured;
+- `EXTERNAL_READY` — both Grafana/OTel and Langfuse configuration contracts are complete;
+- `INVALID` — Grafana/OTel configuration violates the existing exporter contract.
+
+`UNCONFIGURED` and `PARTIAL` are observations, not execution failures: external observability is optional and missing telemetry never overrides the deterministic receipt or local Mastra witness. The command makes no backend calls and does not attach or modify credentials.
+
 ## Authority
 
 External telemetry is advisory. A missing Grafana or Langfuse record is never proof that a run did not happen.
