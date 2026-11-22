@@ -1,7 +1,8 @@
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseProposalSet, proposalSetJsonSchema } from '../src/dreaming/proposal-schema.ts';
+import { fingerprintProposal, parseProposalSet, proposalSetJsonSchema } from '../src/dreaming/proposal-schema.ts';
 
 const packet = {
   schema: 'theseus-evidence-packet-v1',
@@ -296,4 +297,16 @@ test('model-facing Proposal v1 JSON Schema is generated from the validator shape
   assert.match(text, /required_evidence/);
   assert.match(text, /array/);
   assert.match(text, /source_refs/);
+});
+
+
+test('proposal fingerprint is exact SHA-256 with stable protocol prefix', () => {
+  const proposal = {
+    type: 'FACT',
+    claim: 'Fingerprint fixture.',
+    source_refs: refs,
+  };
+  const expected = 'sha256:' + createHash('sha256').update(JSON.stringify(proposal)).digest('hex');
+  assert.equal(fingerprintProposal(proposal), expected);
+  assert.match(fingerprintProposal(proposal), /^sha256:[0-9a-f]{64}$/);
 });

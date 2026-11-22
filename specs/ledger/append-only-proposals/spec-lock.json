@@ -1,0 +1,18 @@
+{
+  "schema": { "name": "schema-std", "version": 1 },
+  "dependsOn": [
+    "default:worker/core-contract",
+    "default:pilot2/critique-contract"
+  ],
+  "implementation": [
+    {
+      "file": "default:src/dreaming/proposal-ledger.ts",
+      "symbols": [
+        "createProposalRecord",
+        "createSupersessionEvent",
+        "appendLedgerEvent",
+        "materializeLedger"
+      ]
+    }
+  ]
+}

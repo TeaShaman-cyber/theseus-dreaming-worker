@@ -39,7 +39,7 @@ class AgentContextSpecTests(unittest.TestCase):
         index = (ROOT / "specs/README.md").read_text(encoding="utf-8")
         self.assertIn("Immediate next coding task", index)
         self.assertIn("pilot2/critique-contract", index)
-        self.assertIn("bounded critique inference", index)
+        self.assertIn("append-only proposal-ledger contract", index)
         self.assertIn("DERIVED_ONLY", index)
         self.assertIn("private Session Search intake", index)
         self.assertIn("Clef remains a separate", index)

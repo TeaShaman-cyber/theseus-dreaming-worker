@@ -1,8 +1,7 @@
-import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import type { Pilot2PassFailed, Pilot2PassSuccess, Pilot2Result } from './pilot2-runner.ts';
-import type { ProposalSet } from './proposal-schema.ts';
+import { fingerprintProposal, type Proposal, type ProposalSet } from './proposal-schema.ts';
 
 const nonempty = z.string().trim().min(1);
 
@@ -42,8 +41,6 @@ export const critiqueArtifactJsonSchema = z.toJSONSchema(critiqueArtifactSchema)
 
 export type CritiqueArtifact = z.infer<typeof critiqueArtifactSchema>;
 
-type Proposal = ProposalSet['proposals'][number];
-
 export type CritiqueInputProposal = {
   proposalFingerprint: string;
   proposal: Proposal;
@@ -68,10 +65,6 @@ export type CritiqueInput = {
     failure: Pilot2PassFailed['failure'];
   }>;
 };
-
-function fingerprintProposal(proposal: Proposal): string {
-  return 'sha256:' + createHash('sha256').update(JSON.stringify(proposal)).digest('hex');
-}
 
 export function buildCritiqueInput(result: Pilot2Result): CritiqueInput {
   if (result.outcome !== 'COMPLETE' && result.outcome !== 'PARTIAL') {
