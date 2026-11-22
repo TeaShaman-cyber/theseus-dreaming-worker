@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseProposalSet } from '../src/dreaming/proposal-schema.ts';
+import { parseProposalSet, proposalSetJsonSchema } from '../src/dreaming/proposal-schema.ts';
 
 const packet = {
   schema: 'theseus-evidence-packet-v1',
@@ -287,4 +287,13 @@ test('rejects UNKNOWN with no path to resolving the uncertainty', () => {
     () => parseProposalSet(raw, packet),
     /PILOT1_PROPOSAL_SCHEMA_INVALID/,
   );
+});
+
+
+test('model-facing Proposal v1 JSON Schema is generated from the validator shape', () => {
+  const text = JSON.stringify(proposalSetJsonSchema);
+  assert.match(text, /theseus\.dreaming-worker\.proposals\.v1/);
+  assert.match(text, /required_evidence/);
+  assert.match(text, /array/);
+  assert.match(text, /source_refs/);
 });

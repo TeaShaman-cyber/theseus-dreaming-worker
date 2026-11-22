@@ -69,3 +69,21 @@ Expected properties of the result:
 
 Implementation: `src/dreaming/dry-run.ts`.
 Tests: `test/dry-run.test.mjs`.
+
+
+## Pilot 2 bounded live execution
+
+Pilot 2 composes two explicitly configured, model-family-distinct OpenAI-compatible routes over the same synthetic or publication-safe evidence packet. The portable core does not depend on exe.dev, Cloudflare, or another host; provider base URLs and optional runtime credentials are supplied by the caller.
+
+Run the repo-owned CLI with an explicit request fixture and route configuration:
+
+```bash
+npm run --silent pilot2 -- fixtures/pilot2-timeout.json /path/to/routes.json
+```
+
+The route file supplies `id`, `provider`, `model`, `modelFamily`, `baseURL`, `timeoutMs`, and `maxOutputTokens`; it may also request `responseFormat: "json_object"` and name an `apiKeyEnv` environment variable. Secrets are resolved at runtime and are not emitted in the result.
+
+A bounded two-family acceptance run has reached `COMPLETE` with strict Proposal v1/provenance validation and preserved model divergence. The publication-safe full artifact is stored at `artifacts/acceptance/pilot2-first-complete.json`.
+
+Implementation: `src/dreaming/pilot2-live-composition.ts`.
+CLI: `tools/agent/run-pilot2.mjs`.

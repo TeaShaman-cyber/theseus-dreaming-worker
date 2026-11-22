@@ -4,6 +4,7 @@ import type {
   Pilot1InferenceResult,
   Pilot1Request,
 } from './pilot1-runner.ts';
+import { proposalSetJsonSchema } from './proposal-schema.ts';
 
 export type ProviderExecutionState = 'UNKNOWN' | 'RESPONDED';
 
@@ -71,6 +72,8 @@ export type OpenAIChatInferenceOptions = {
   configuredModelFamily?: string;
   timeoutMs?: number;
   maxOutputTokens?: number;
+  apiKey?: string;
+  responseFormat?: 'json_object';
   stream?: boolean;
   onEvidence?: (evidence: ProviderCallEvidence) => void;
 };
@@ -141,16 +144,9 @@ function retryAfterMs(value: string | null): number | undefined {
 }
 
 const proposalV1SystemPrompt = [
-  'Return JSON only: no markdown, code fences, or prose outside the JSON object.',
-  'Root must be exactly {"schema":"theseus.dreaming-worker.proposals.v1","proposals":[...]}.',
-  'Allowed proposal types: FACT, INFERENCE, HYPOTHESIS, UNKNOWN.',
-  'FACT fields: type, claim, source_refs.',
-  'INFERENCE fields: type, claim, source_refs, assumptions, uncertainty.',
-  'HYPOTHESIS fields: type, claim, why_plausible, source_refs, falsifier, required_evidence, competing_explanations, uncertainty.',
-  'UNKNOWN fields: type, claim, why_unknown, source_refs, required_evidence.',
-  'uncertainty must be LOW, MEDIUM, or HIGH.',
-  'Every source_refs entry must be {"source_ref":"...","evidence_hash":"..."} copied exactly from packet evidence sourceRef/evidenceHash.',
-  'Arrays required by a proposal type must be non-empty. Do not add undeclared fields.',
+  'Return only one JSON object. No markdown, code fences, or prose before or after JSON.',
+  'Match this JSON Schema exactly:',
+  JSON.stringify(proposalSetJsonSchema),
   'Do not claim provider/model identity from prose and do not emit runtime receipt fields.',
 ].join(' ');
 
@@ -396,13 +392,19 @@ export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): 
       const timeoutSignal = AbortSignal.timeout(timeoutMs);
 
       try {
+        const headers: Record<string, string> = { 'content-type': 'application/json' };
+        if (options.apiKey) headers.authorization = `Bearer ${options.apiKey}`;
+
         response = await fetch(baseURL + '/chat/completions', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers,
           body: JSON.stringify({
             model: options.configuredModel,
             messages: transportMessages(request, correlation),
             max_tokens: options.maxOutputTokens,
+            ...(options.responseFormat === undefined
+              ? {}
+              : { response_format: { type: options.responseFormat } }),
             stream,
           }),
           signal: timeoutSignal,

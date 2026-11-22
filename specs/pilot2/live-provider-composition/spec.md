@@ -15,6 +15,8 @@ Live composition consumes:
 - explicit route id, provider, model, model-family, and base URL;
 - a positive integer output-token bound for every route;
 - a bounded timeout, using either the adapter's bounded default or an explicit route override;
+- optional provider JSON-object response mode;
+- optional bearer credential supplied at runtime, never embedded in the route artifact;
 - optional transport-evidence observation.
 
 Provider base URLs are caller/runtime configuration. The Dreaming Worker core MUST NOT hardcode exe.dev hostnames, gateway IDs, Cloudflare endpoints, or another execution host.
@@ -33,6 +35,8 @@ Every live route MUST supply a positive integer `maxOutputTokens` value before a
 
 The provider adapter MUST transmit that value as the provider request's output-token bound.
 
+The model-facing Proposal v1 contract MUST be generated from the same canonical Zod schema used for deterministic response validation. A handwritten duplicate schema MUST NOT become a second source of truth.
+
 ### Requirement: Invalid live configuration fails before network work
 
 Missing route identity, missing base URL, missing/invalid output-token bound, or an invalid route count MUST be rejected before provider work.
@@ -42,6 +46,8 @@ Configured same-family routes MUST reach the existing Pilot 2 independence check
 ### Requirement: Runtime/provider evidence stays separate
 
 Configured route identity and observed provider/model metadata MUST remain separately observable.
+
+Provider-specific JSON framing and bearer authentication are transport options only. They MUST NOT change Pilot 2 analytical semantics or become architectural dependencies on the current execution host.
 
 Transport success MUST NOT be treated as proposal success. A returned artifact still has to pass Proposal v1 JSON, schema, provenance, and Pilot 1 policy validation.
 
@@ -54,6 +60,8 @@ This layer MUST NOT add tools, memory, private Session Search intake, scheduler 
 ## Current Acceptance Signal
 
 A bounded live synthetic run is valid evidence even when it returns `PARTIAL` or `FAIL_CLOSED`; those outcomes are part of the Pilot 2 contract and MUST remain explicit rather than being repaired into apparent success.
+
+A bounded two-family acceptance run has also reached `COMPLETE` through the repo-owned CLI with two validated perspectives and deterministic divergence preservation. The full publication-safe artifact is stored at `artifacts/acceptance/pilot2-first-complete.json`.
 
 ## Spec Dependencies
 
