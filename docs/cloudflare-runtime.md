@@ -102,7 +102,7 @@ It performs:
 
 The dry run sends no deployment API request and cannot provision missing resources.
 
-With placeholder resources the receipt must report `BUILD_READY`, not deployment readiness. A strict check is available after real resource configuration:
+Before issue-owned resources are configured the receipt reports `BUILD_READY`. Once the versioned Hyperdrive/non-secret production endpoints are present, the receipt may report `DEPLOY_CONFIG_READY` while secret values remain explicitly `DECLARED_VALUES_UNVERIFIED` until a deployment-time secret provisioning/readback step. A strict check is available after real resource configuration:
 
 ```bash
 node tools/dev/cloudflare-readiness.mjs --require-configured
