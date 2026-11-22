@@ -1,0 +1,95 @@
+{
+  "schema": "theseus.dreaming-worker.live-critique-acceptance.v1",
+  "sourcePilot2Artifact": "artifacts/acceptance/pilot2-first-complete.json",
+  "result": {
+    "outcome": "CRITIQUED",
+    "artifact": {
+      "schema": "theseus.dreaming-worker.critique.v1",
+      "authority": "DERIVED_ONLY",
+      "relations": [
+        {
+          "relation": "AGREEMENT",
+          "summary": "Both perspectives propose that a transient condition (network issue or load) caused the timeout and allowed the retry to succeed, aligning on the self-resolving nature of the failure.",
+          "proposal_refs": [
+            {
+              "perspective_id": "groq-qwen3.8-27b",
+              "proposal_fingerprint": "sha256:b4e18f0161f03fdca5bddb1796af35e74dc5db8d57134e581ad14cd01c059c0a"
+            },
+            {
+              "perspective_id": "openrouter-mistral-small-3.2",
+              "proposal_fingerprint": "sha256:f85c2730cf77cc62a9cb9ef844b7dbc2f89e3f7f44fb8fc3125aec865168b11b"
+            },
+            {
+              "perspective_id": "openrouter-mistral-small-3.2",
+              "proposal_fingerprint": "sha256:8bfadf44fd1bb021881d7f94b34ea1d5441b5154cc81bbd1e52b4274a134022b"
+            }
+          ],
+          "evidence_refs": [
+            {
+              "source_ref": "fixture:message:1",
+              "evidence_hash": "sha256:fixture-message-1"
+            },
+            {
+              "source_ref": "fixture:message:2",
+              "evidence_hash": "sha256:fixture-message-2"
+            }
+          ],
+          "requested_evidence": [
+            "Confirmation that the request identifiers and provider targets are identical for both attempts",
+            "Provider-side metrics or logs indicating a transient dip in service availability shortly before the retry",
+            "Detailed request/response telemetry capturing exact timestamps and intermediary hop data",
+            "Provider status records from the specific time window of the transaction"
+          ]
+        },
+        {
+          "relation": "UNRESOLVED",
+          "summary": "The evidence is insufficient to distinguish between transient network issues, provider overload, or other mechanisms, leaving the specific root cause unknown as noted by the second proposal of the first perspective.",
+          "proposal_refs": [
+            {
+              "perspective_id": "groq-qwen3.8-27b",
+              "proposal_fingerprint": "sha256:49ee6e99ab31989c24783e2cde5b0bed8bcc8afebcd32285d696cbb044241516"
+            }
+          ],
+          "evidence_refs": [
+            {
+              "source_ref": "fixture:message:1",
+              "evidence_hash": "sha256:fixture-message-1"
+            },
+            {
+              "source_ref": "fixture:message:2",
+              "evidence_hash": "sha256:fixture-message-2"
+            }
+          ],
+          "requested_evidence": [
+            "Detailed request/response telemetry capturing exact timestamps and intermediary hop data",
+            "Provider status records from the specific time window of the transaction"
+          ]
+        }
+      ]
+    },
+    "rawModelOutput": "{\n  \"schema\": \"theseus.dreaming-worker.critique.v1\",\n  \"authority\": \"DERIVED_ONLY\",\n  \"relations\": [\n    {\n      \"relation\": \"AGREEMENT\",\n      \"summary\": \"Both perspectives propose that a transient condition (network issue or load) caused the timeout and allowed the retry to succeed, aligning on the self-resolving nature of the failure.\",\n      \"proposal_refs\": [\n        {\n          \"perspective_id\": \"groq-qwen3.8-27b\",\n          \"proposal_fingerprint\": \"sha256:b4e18f0161f03fdca5bddb1796af35e74dc5db8d57134e581ad14cd01c059c0a\"\n        },\n        {\n          \"perspective_id\": \"openrouter-mistral-small-3.2\",\n          \"proposal_fingerprint\": \"sha256:f85c2730cf77cc62a9cb9ef844b7dbc2f89e3f7f44fb8fc3125aec865168b11b\"\n        },\n        {\n          \"perspective_id\": \"openrouter-mistral-small-3.2\",\n          \"proposal_fingerprint\": \"sha256:8bfadf44fd1bb021881d7f94b34ea1d5441b5154cc81bbd1e52b4274a134022b\"\n        }\n      ],\n      \"evidence_refs\": [\n        {\n          \"source_ref\": \"fixture:message:1\",\n          \"evidence_hash\": \"sha256:fixture-message-1\"\n        },\n        {\n          \"source_ref\": \"fixture:message:2\",\n          \"evidence_hash\": \"sha256:fixture-message-2\"\n        }\n      ],\n      \"requested_evidence\": [\n        \"Confirmation that the request identifiers and provider targets are identical for both attempts\",\n        \"Provider-side metrics or logs indicating a transient dip in service availability shortly before the retry\",\n        \"Detailed request/response telemetry capturing exact timestamps and intermediary hop data\",\n        \"Provider status records from the specific time window of the transaction\"\n      ]\n    },\n    {\n      \"relation\": \"UNRESOLVED\",\n      \"summary\": \"The evidence is insufficient to distinguish between transient network issues, provider overload, or other mechanisms, leaving the specific root cause unknown as noted by the second proposal of the first perspective.\",\n      \"proposal_refs\": [\n        {\n          \"perspective_id\": \"groq-qwen3.8-27b\",\n          \"proposal_fingerprint\": \"sha256:49ee6e99ab31989c24783e2cde5b0bed8bcc8afebcd32285d696cbb044241516\"\n        }\n      ],\n      \"evidence_refs\": [\n        {\n          \"source_ref\": \"fixture:message:1\",\n          \"evidence_hash\": \"sha256:fixture-message-1\"\n        },\n        {\n          \"source_ref\": \"fixture:message:2\",\n          \"evidence_hash\": \"sha256:fixture-message-2\"\n        }\n      ],\n      \"requested_evidence\": [\n        \"Detailed request/response telemetry capturing exact timestamps and intermediary hop data\",\n        \"Provider status records from the specific time window of the transaction\"\n      ]\n    }\n  ]\n}",
+    "receipt": {
+      "schema": "theseus.dreaming-worker.critique-live-receipt.v1",
+      "packetId": "fixture-pilot2-timeout-001",
+      "evidenceFingerprint": "sha256:f95a506f4894afc8de30c4f22c86c53016bb4472bc0ca7672499514c4b107cf7",
+      "requestFingerprint": "sha256:01290cc8529c1acc2d4af84545015a15568fcd209d9d1ee006ef2163c3e09af4",
+      "configuredRoute": {
+        "id": "groq-qwen3.8-27b-critic",
+        "provider": "groq",
+        "model": "qwen/qwen3.8-27b",
+        "modelFamily": "qwen-3.8"
+      },
+      "observedModel": "qwen/qwen3.8-27b",
+      "providerState": "RESPONDED",
+      "finishReason": "stop",
+      "bounds": {
+        "timeoutMs": 20000,
+        "maxOutputTokens": 1200
+      },
+      "externalModelCalls": 1,
+      "toolsUsed": 0,
+      "memoryUsed": false,
+      "canonicalWrites": 0
+    }
+  }
+}

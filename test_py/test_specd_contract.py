@@ -65,6 +65,27 @@ class SpecDDurableContractTests(unittest.TestCase):
             }],
         )
 
+    def test_pilot2_live_critique_spec_lock_links_exact_stable_symbol(self):
+        spec_dir = ROOT / "specs" / "pilot2" / "live-critique"
+        lock = json.loads((spec_dir / "spec-lock.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(lock["schema"], {"name": "schema-std", "version": 1})
+        self.assertEqual(
+            lock["dependsOn"],
+            [
+                "default:pilot2/critique-contract",
+                "default:pilot2/independent-perspectives",
+                "default:worker/core-contract",
+            ],
+        )
+        self.assertEqual(
+            lock["implementation"],
+            [{
+                "file": "default:src/dreaming/pilot2-critique-live.ts",
+                "symbols": ["runLiveCritique"],
+            }],
+        )
+
     def test_pilot2_live_composition_spec_lock_links_exact_stable_symbol(self):
         spec_dir = ROOT / "specs" / "pilot2" / "live-provider-composition"
         lock = json.loads((spec_dir / "spec-lock.json").read_text(encoding="utf-8"))

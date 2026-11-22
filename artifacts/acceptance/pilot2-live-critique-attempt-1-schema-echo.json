@@ -1,0 +1,37 @@
+{
+  "schema": "theseus.dreaming-worker.live-critique-acceptance.v1",
+  "sourcePilot2Artifact": "artifacts/acceptance/pilot2-first-complete.json",
+  "result": {
+    "outcome": "FAILED",
+    "artifact": null,
+    "rawModelOutput": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"schema\": {\n      \"type\": \"string\",\n      \"const\": \"theseus.dreaming-worker.critique.v1\"\n    },\n    \"authority\": {\n      \"type\": \"string\",\n      \"const\": \"DERIVED_ONLY\"\n    },\n    \"relations\": {\n      \"minItems\": 1,\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"relation\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"AGREEMENT\",\n              \"DISAGREEMENT\",\n              \"UNRESOLVED\"\n            ]\n          },\n          \"summary\": {\n            \"type\": \"string\",\n            \"minLength\": 1\n          },\n          \"proposal_refs\": {\n            \"minItems\": 1,\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"object\",\n              \"properties\": {\n                \"perspective_id\": {\n                  \"type\": \"string\",\n                  \"minLength\": 1\n                },\n                \"proposal_fingerprint\": {\n                  \"type\": \"string\",\n                  \"minLength\": 1\n                }\n              },\n              \"required\": [\n                \"perspective_id\",\n                \"proposal_fingerprint\"\n              ],\n              \"additionalProperties\": false\n            }\n          },\n          \"evidence_refs\": {\n            \"minItems\": 1,\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"object\",\n              \"properties\": {\n                \"source_ref\": {\n                  \"type\": \"string\",\n                  \"minLength\": 1\n                },\n                \"evidence_hash\": {\n                  \"type\": \"string\",\n                  \"minLength\": 1\n                }\n              },\n              \"required\": [\n                \"source_ref\",\n                \"evidence_hash\"\n              ],\n              \"additionalProperties\": false\n            }\n          },\n          \"requested_evidence\": {\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"string\",\n              \"minLength\": 1\n            }\n          }\n        },\n        \"required\": [\n          \"relation\",\n          \"summary\",\n          \"proposal_refs\",\n          \"evidence_refs\",\n          \"requested_evidence\"\n        ],\n        \"additionalProperties\": false\n      }\n    }\n  },\n  \"required\": [\n    \"schema\",\n    \"authority\",\n    \"relations\"\n  ],\n  \"additionalProperties\": false\n}",
+    "failure": {
+      "code": "CRITIQUE_SCHEMA_INVALID",
+      "message": "CRITIQUE_SCHEMA_INVALID: ✖ Unrecognized keys: \"$schema\", \"type\", \"properties\", \"required\", \"additionalProperties\"\n✖ Invalid input: expected \"theseus.dreaming-worker.critique.v1\"\n  → at schema\n✖ Invalid input: expected \"DERIVED_ONLY\"\n  → at authority\n✖ Invalid input: expected array, received undefined\n  → at relations"
+    },
+    "receipt": {
+      "schema": "theseus.dreaming-worker.critique-live-receipt.v1",
+      "packetId": "fixture-pilot2-timeout-001",
+      "evidenceFingerprint": "sha256:f95a506f4894afc8de30c4f22c86c53016bb4472bc0ca7672499514c4b107cf7",
+      "requestFingerprint": "sha256:01290cc8529c1acc2d4af84545015a15568fcd209d9d1ee006ef2163c3e09af4",
+      "configuredRoute": {
+        "id": "openrouter-mistral-small-3.2-critic",
+        "provider": "openrouter",
+        "model": "mistralai/mistral-small-3.2-24b-instruct",
+        "modelFamily": "mistral-small-3.2"
+      },
+      "observedProvider": "DeepInfra",
+      "observedModel": "mistralai/mistral-small-3.2-24b-instruct",
+      "providerState": "RESPONDED",
+      "finishReason": "stop",
+      "bounds": {
+        "timeoutMs": 30000,
+        "maxOutputTokens": 1200
+      },
+      "externalModelCalls": 1,
+      "toolsUsed": 0,
+      "memoryUsed": false,
+      "canonicalWrites": 0
+    }
+  }
+}

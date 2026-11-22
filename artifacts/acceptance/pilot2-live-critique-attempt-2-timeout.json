@@ -1,0 +1,34 @@
+{
+  "schema": "theseus.dreaming-worker.live-critique-acceptance.v1",
+  "sourcePilot2Artifact": "artifacts/acceptance/pilot2-first-complete.json",
+  "result": {
+    "outcome": "FAILED",
+    "artifact": null,
+    "rawModelOutput": null,
+    "failure": {
+      "code": "TIMEOUT_UNKNOWN_PROVIDER_STATE",
+      "message": "Critique provider response body timed out"
+    },
+    "receipt": {
+      "schema": "theseus.dreaming-worker.critique-live-receipt.v1",
+      "packetId": "fixture-pilot2-timeout-001",
+      "evidenceFingerprint": "sha256:f95a506f4894afc8de30c4f22c86c53016bb4472bc0ca7672499514c4b107cf7",
+      "requestFingerprint": "sha256:01290cc8529c1acc2d4af84545015a15568fcd209d9d1ee006ef2163c3e09af4",
+      "configuredRoute": {
+        "id": "openrouter-mistral-small-3.2-critic",
+        "provider": "openrouter",
+        "model": "mistralai/mistral-small-3.2-24b-instruct",
+        "modelFamily": "mistral-small-3.2"
+      },
+      "providerState": "RESPONDED",
+      "bounds": {
+        "timeoutMs": 30000,
+        "maxOutputTokens": 1200
+      },
+      "externalModelCalls": 1,
+      "toolsUsed": 0,
+      "memoryUsed": false,
+      "canonicalWrites": 0
+    }
+  }
+}
