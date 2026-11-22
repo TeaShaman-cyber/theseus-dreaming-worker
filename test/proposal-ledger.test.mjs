@@ -76,6 +76,7 @@ test('append-only ledger preserves history and derives superseded state without 
   assert.deepEqual(view.records.find(item => item.record.recordId === a.recordId).supersededBy, [b.recordId]);
   assert.equal(view.records.find(item => item.record.recordId === b.recordId).state, 'ACTIVE');
   assert.equal(view.events.length, 3);
+  assert.deepEqual(view.events, next);
 });
 
 test('duplicate event ids fail closed', () => {
@@ -131,18 +132,8 @@ test('content-addressed ids are revalidated on append and tampering fails closed
 });
 
 
-function canonicalizeForTest(value) {
-  if (Array.isArray(value)) return value.map(canonicalizeForTest);
-  if (value !== null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, canonicalizeForTest(item)]),
-    );
-  }
-  return value;
-}
-
 function contentIdForTest(payload) {
-  return 'sha256:' + createHash('sha256').update(JSON.stringify(canonicalizeForTest(payload))).digest('hex');
+  return 'sha256:' + createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
 
 test('proposal fingerprint is independently revalidated even when outer record id is valid', () => {
@@ -154,5 +145,93 @@ test('proposal fingerprint is independently revalidated even when outer record i
   assert.throws(
     () => appendLedgerEvent([], forged),
     /LEDGER_PROPOSAL_FINGERPRINT_MISMATCH/,
+  );
+});
+
+
+test('schema normalization makes record ids stable across caller key insertion order', () => {
+  const normal = createProposalRecord({ proposal: { ...hypothesisA, claim: 'order-stable' }, origin: origin('route-a', routeA) });
+  const reorderedOrigin = {
+    route: { modelFamily: routeA.modelFamily, model: routeA.model, provider: routeA.provider, id: routeA.id },
+    perspectiveId: 'route-a',
+    requestFingerprint: 'sha256:request',
+    evidenceFingerprint: 'sha256:evidence',
+    packetId: 'packet-001',
+  };
+  const reorderedProposal = {
+    uncertainty: hypothesisA.uncertainty,
+    competing_explanations: [...hypothesisA.competing_explanations],
+    required_evidence: [...hypothesisA.required_evidence],
+    falsifier: hypothesisA.falsifier,
+    source_refs: structuredClone(hypothesisA.source_refs),
+    why_plausible: hypothesisA.why_plausible,
+    claim: 'order-stable',
+    type: 'HYPOTHESIS',
+  };
+  const reordered = createProposalRecord({ proposal: reorderedProposal, origin: reorderedOrigin });
+  assert.equal(reordered.recordId, normal.recordId);
+  assert.equal(reordered.proposalFingerprint, normal.proposalFingerprint);
+});
+
+test('whitespace-only ledger identity and supersession reason are rejected', () => {
+  assert.throws(
+    () => createProposalRecord({ proposal: { ...hypothesisA, claim: 'whitespace-origin' }, origin: { ...origin('route-a', routeA), perspectiveId: '   ' } }),
+  );
+  const a = createProposalRecord({ proposal: { ...hypothesisA, claim: 'whitespace-a' }, origin: origin('route-a', routeA) });
+  const b = createProposalRecord({ proposal: { ...hypothesisB, claim: 'whitespace-b' }, origin: origin('route-b', routeB) });
+  assert.throws(
+    () => createSupersessionEvent({ supersededRecordId: a.recordId, replacementRecordId: b.recordId, reason: '   ' }),
+  );
+});
+
+test('append revalidates already-present ledger records before accepting a new event', () => {
+  const a = createProposalRecord({ proposal: { ...hypothesisA, claim: 'existing-a' }, origin: origin('route-a', routeA) });
+  const b = createProposalRecord({ proposal: { ...hypothesisB, claim: 'existing-b' }, origin: origin('route-b', routeB) });
+  const forgedPayload = { ...a, proposalFingerprint: 'sha256:wrong-existing' };
+  const { recordId: _old, ...payloadWithoutId } = forgedPayload;
+  const forgedExisting = { ...forgedPayload, recordId: contentIdForTest(payloadWithoutId) };
+  assert.throws(
+    () => appendLedgerEvent([forgedExisting], b),
+    /LEDGER_PROPOSAL_FINGERPRINT_MISMATCH/,
+  );
+});
+
+test('direct self-supersession event fails even when its content id is valid', () => {
+  const a = createProposalRecord({ proposal: { ...hypothesisA, claim: 'direct-self' }, origin: origin('route-a', routeA) });
+  const payload = {
+    schema: 'theseus.dreaming-worker.proposal-ledger-supersession.v1',
+    eventType: 'SUPERSEDE',
+    authority: 'DERIVED_ONLY',
+    supersededRecordId: a.recordId,
+    replacementRecordId: a.recordId,
+    reason: 'direct forged self edge',
+  };
+  const event = { ...payload, eventId: contentIdForTest(payload) };
+  assert.throws(() => appendLedgerEvent([a], event), /LEDGER_SELF_SUPERSESSION/);
+});
+
+test('supersession events cannot masquerade as proposal-record references', () => {
+  const a = createProposalRecord({ proposal: { ...hypothesisA, claim: 'event-ref-a' }, origin: origin('route-a', routeA) });
+  const b = createProposalRecord({ proposal: { ...hypothesisB, claim: 'event-ref-b' }, origin: origin('route-b', routeB) });
+  let ledger = appendLedgerEvent([], a);
+  ledger = appendLedgerEvent(ledger, b);
+  const first = createSupersessionEvent({ supersededRecordId: a.recordId, replacementRecordId: b.recordId, reason: 'first edge' });
+  ledger = appendLedgerEvent(ledger, first);
+  const invalid = createSupersessionEvent({ supersededRecordId: b.recordId, replacementRecordId: first.eventId, reason: 'event id is not a proposal record' });
+  assert.throws(() => appendLedgerEvent(ledger, invalid), /LEDGER_SUPERSESSION_REF_MISSING/);
+});
+
+test('multi-hop supersession cycle is rejected', () => {
+  const a = createProposalRecord({ proposal: { ...hypothesisA, claim: 'multi-a' }, origin: origin('route-a', routeA) });
+  const b = createProposalRecord({ proposal: { ...hypothesisB, claim: 'multi-b' }, origin: origin('route-b', routeB) });
+  const c = createProposalRecord({ proposal: { ...hypothesisA, claim: 'multi-c' }, origin: origin('route-a', routeA) });
+  let ledger = appendLedgerEvent([], a);
+  ledger = appendLedgerEvent(ledger, b);
+  ledger = appendLedgerEvent(ledger, c);
+  ledger = appendLedgerEvent(ledger, createSupersessionEvent({ supersededRecordId: a.recordId, replacementRecordId: b.recordId, reason: 'A -> B' }));
+  ledger = appendLedgerEvent(ledger, createSupersessionEvent({ supersededRecordId: b.recordId, replacementRecordId: c.recordId, reason: 'B -> C' }));
+  assert.throws(
+    () => appendLedgerEvent(ledger, createSupersessionEvent({ supersededRecordId: c.recordId, replacementRecordId: a.recordId, reason: 'C -> A' })),
+    /LEDGER_SUPERSESSION_CYCLE/,
   );
 });

@@ -1,9 +1,9 @@
-import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import {
   factProposal,
   fingerprintProposal,
+  sha256Fingerprint,
   hypothesisProposal,
   inferenceProposal,
   unknownProposal,
@@ -79,22 +79,8 @@ type SupersessionInput = {
   reason: string;
 };
 
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value !== null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([key, item]) => [key, canonicalize(item)]),
-    );
-  }
-  return value;
-}
-
 function contentId(payload: unknown): string {
-  return 'sha256:' + createHash('sha256')
-    .update(JSON.stringify(canonicalize(payload)))
-    .digest('hex');
+  return sha256Fingerprint(JSON.stringify(payload));
 }
 
 function eventId(event: ProposalLedgerEvent): string {
@@ -162,18 +148,17 @@ export function createSupersessionEvent(input: SupersessionInput): ProposalLedge
 }
 
 function pathExists(
-  edges: Map<string, string[]>,
+  edges: Map<string, Set<string>>,
   start: string,
   target: string,
 ): boolean {
   const pending = [start];
-  const seen = new Set<string>();
   while (pending.length > 0) {
     const current = pending.pop();
-    if (!current || seen.has(current)) continue;
+    if (!current) continue;
     if (current === target) return true;
-    seen.add(current);
-    pending.push(...(edges.get(current) ?? []));
+    const next = edges.get(current);
+    if (next) pending.push(...next);
   }
   return false;
 }
@@ -206,12 +191,15 @@ export function appendLedgerEvent(
       throw new Error('LEDGER_SUPERSESSION_REF_MISSING');
     }
 
-    const edges = new Map<string, string[]>();
+    const edges = new Map<string, Set<string>>();
     for (const item of ledger) {
       if (item.eventType !== 'SUPERSEDE') continue;
-      const next = edges.get(item.supersededRecordId) ?? [];
-      next.push(item.replacementRecordId);
-      edges.set(item.supersededRecordId, next);
+      const existing = edges.get(item.supersededRecordId);
+      if (existing) {
+        existing.add(item.replacementRecordId);
+      } else {
+        edges.set(item.supersededRecordId, new Set([item.replacementRecordId]));
+      }
     }
     if (pathExists(edges, event.replacementRecordId, event.supersededRecordId)) {
       throw new Error('LEDGER_SUPERSESSION_CYCLE');

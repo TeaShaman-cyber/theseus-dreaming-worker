@@ -77,8 +77,12 @@ export const proposalSetJsonSchema = z.toJSONSchema(proposalSetSchema);
 export type ProposalSet = z.infer<typeof proposalSetSchema>;
 export type Proposal = ProposalSet['proposals'][number];
 
+export function sha256Fingerprint(value: string): string {
+  return 'sha256:' + createHash('sha256').update(value).digest('hex');
+}
+
 export function fingerprintProposal(proposal: Proposal): string {
-  return 'sha256:' + createHash('sha256').update(JSON.stringify(proposal)).digest('hex');
+  return sha256Fingerprint(JSON.stringify(proposal));
 }
 
 export function parseProposalSet(rawText: string, packet: EvidencePacket): ProposalSet {
