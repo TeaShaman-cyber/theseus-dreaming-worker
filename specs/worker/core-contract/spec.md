@@ -136,6 +136,7 @@ Implemented and verified:
 - Pilot 1 one bounded external inference;
 - Pilot 2 two configured-distinct blind first passes with typed partial/fail-closed outcomes;
 - generic OpenAI-compatible provider adapter plus bounded live Pilot 2 composition;
+- deterministic critique input/artifact contract over frozen Pilot 2 perspectives;
 - typed proposal schema;
 - exact source-reference and evidence-hash validation;
 - deterministic outer receipt;
@@ -144,7 +145,7 @@ Implemented and verified:
 
 Not yet implemented:
 
-- optional critique/conclave;
+- live critique/conclave inference;
 - durable hypothesis ledger;
 - durable worker checkpoint;
 - unattended accepted-source delta reader;

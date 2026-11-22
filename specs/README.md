@@ -8,6 +8,8 @@ This directory is the durable map from project intent to implementation work.
 
 - `pilot1/bounded-inference` — one bounded external model inference with exact provenance, typed proposals, deterministic runtime receipt, and no tool/memory authority.
 - `pilot2/independent-perspectives` — pure two-pass orchestration over two configured-distinct model families, preserving typed failures and first-pass disagreement with `COMPLETE | PARTIAL | NO_DATA | FAIL_CLOSED`.
+- `pilot2/live-provider-composition` — bounded runtime-agnostic live composition over explicit provider routes, with a publication-safe `COMPLETE` acceptance artifact.
+- `pilot2/critique-contract` — deterministic input/provenance contract for analyzing frozen Pilot 2 perspectives without turning critique into truth authority.
 
 ### Recovered core design
 
@@ -22,11 +24,12 @@ The general worker contract and the real Session Search intake boundary remain s
 
 ## Immediate next coding task
 
-After this pure orchestration slice is promoted, add a bounded live provider-adapter smoke for `SYNTHETIC_FIXTURE` only:
+After the deterministic critique contract is promoted, add one bounded critique inference over the frozen critique input:
 
-1. pass transport/provider model identity into the existing Pilot 2 route contract;
-2. normalize timeout, JSON-validation, empty-final-content, and output-budget exhaustion into typed pass failures;
-3. prove one `COMPLETE`, one `PARTIAL`, and one `FAIL_CLOSED` synthetic run against approved provider routes;
-4. keep critique, Clef routing, private Session Search intake, durable ledger, scheduler, and automatic memory promotion out of that increment.
+1. use the generated critique JSON Schema as the model-facing output contract;
+2. accept only the already-built frozen critique input; do not fetch new evidence;
+3. validate every proposal/evidence reference deterministically;
+4. keep the result `DERIVED_ONLY` and preserve the two original perspectives unchanged;
+5. keep private Session Search intake, durable ledger, scheduler, routing heuristics, and canonical-memory promotion out of that increment.
 
 Clef remains a separate researched decision/relevance layer candidate and is not counted as one of the two analytical perspectives.

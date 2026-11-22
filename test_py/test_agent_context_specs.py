@@ -38,9 +38,11 @@ class AgentContextSpecTests(unittest.TestCase):
     def test_spec_index_points_to_immediate_next_coding_task(self):
         index = (ROOT / "specs/README.md").read_text(encoding="utf-8")
         self.assertIn("Immediate next coding task", index)
-        self.assertIn("pilot2/independent-perspectives", index)
-        self.assertIn("SYNTHETIC_FIXTURE", index)
-        self.assertIn("keep critique, Clef routing", index)
+        self.assertIn("pilot2/critique-contract", index)
+        self.assertIn("bounded critique inference", index)
+        self.assertIn("DERIVED_ONLY", index)
+        self.assertIn("private Session Search intake", index)
+        self.assertIn("Clef remains a separate", index)
 
 
 if __name__ == "__main__":
