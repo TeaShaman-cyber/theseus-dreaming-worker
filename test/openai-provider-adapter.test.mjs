@@ -1288,3 +1288,38 @@ test('SSE parser handles CRLF, comment lines, DONE and invalid metadata without 
     assert.equal(result.finishReason, 'stop');
   });
 });
+
+test('adapter omits optional auth and response controls when they are not configured', async () => {
+  let captured;
+
+  await withServer(async (req, res) => {
+    let body = '';
+    for await (const chunk of req) body += chunk;
+    captured = {
+      authorization: req.headers.authorization,
+      body: JSON.parse(body),
+    };
+
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({
+      choices: [
+        {
+          finish_reason: 'stop',
+          message: { role: 'assistant', content: '{"ok":true}' },
+        },
+      ],
+    }));
+  }, async baseURL => {
+    await createOpenAIChatInference({
+      baseURL,
+      configuredProvider: 'configured-provider',
+      configuredModel: 'configured/model-v1',
+      timeoutMs: 250,
+      stream: false,
+    })(request, correlation);
+  });
+
+  assert.equal(captured.authorization, undefined);
+  assert.equal(Object.hasOwn(captured.body, 'max_tokens'), false);
+  assert.equal(Object.hasOwn(captured.body, 'response_format'), false);
+});
