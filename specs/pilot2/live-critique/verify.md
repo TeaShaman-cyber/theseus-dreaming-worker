@@ -35,3 +35,12 @@
 
 - **THEN** those outcomes remain distinct typed failures
 - **AND** no automatic retry occurs
+
+### Requirement: Runtime credentials remain transport-only
+
+#### Scenario: A direct provider requires bearer authentication
+
+- **GIVEN** a route with a runtime `apiKey`
+- **WHEN** live critique sends the provider request
+- **THEN** the key is sent only as the Authorization header
+- **AND** it is absent from model input and the outer receipt

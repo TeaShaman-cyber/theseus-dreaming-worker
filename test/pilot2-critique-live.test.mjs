@@ -392,3 +392,35 @@ test('missing or non-string message content is EMPTY_FINAL_CONTENT', async () =>
     }
   } finally { globalThis.fetch = originalFetch; }
 });
+
+test('optional runtime apiKey is sent only as Authorization and never leaks into receipt or model input', async () => {
+  const originalFetch = globalThis.fetch;
+  let observed;
+  globalThis.fetch = async (_url, options) => {
+    observed = { headers: options.headers, body: JSON.parse(options.body) };
+    return response(JSON.stringify(validArtifact));
+  };
+  try {
+    const secret = 'critique-secret';
+    const result = await runLiveCritique(input, { ...route, apiKey: secret });
+    assert.equal(result.outcome, 'CRITIQUED');
+    assert.equal(observed.headers.authorization, 'Bearer critique-secret');
+    assert.equal(JSON.stringify(observed.body).includes(secret), false);
+    assert.equal(JSON.stringify(result.receipt).includes(secret), false);
+    assert.equal('apiKey' in result.receipt.configuredRoute, false);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('Authorization header is omitted when no critique apiKey is configured', async () => {
+  const originalFetch = globalThis.fetch;
+  let observedAuthorization;
+  globalThis.fetch = async (_url, options) => {
+    observedAuthorization = options.headers.authorization;
+    return response(JSON.stringify(validArtifact));
+  };
+  try {
+    const result = await runLiveCritique(input, route);
+    assert.equal(result.outcome, 'CRITIQUED');
+    assert.equal(observedAuthorization, undefined);
+  } finally { globalThis.fetch = originalFetch; }
+});

@@ -15,6 +15,7 @@ const critiqueRouteSchema = z.object({
   baseURL: z.string().trim().url(),
   timeoutMs: z.number().finite().positive().optional(),
   maxOutputTokens: z.number().int().positive(),
+  apiKey: z.string().min(1).optional(),
 }).strict();
 
 export type CritiqueProviderRouteConfig = z.infer<typeof critiqueRouteSchema>;
@@ -161,9 +162,12 @@ export async function runLiveCritique(
   try {
     let response: Response;
     try {
+      const headers: Record<string, string> = { 'content-type': 'application/json' };
+      if (route.apiKey) headers.authorization = `Bearer ${route.apiKey}`;
+
       response = await fetch(endpointFor(route.baseURL), {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers,
         body: JSON.stringify({
           model: route.model,
           messages: [

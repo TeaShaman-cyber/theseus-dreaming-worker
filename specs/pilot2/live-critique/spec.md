@@ -9,7 +9,7 @@ It does not change Pilot 2 first-pass artifacts, does not retrieve new evidence,
 ## Input
 
 - one `CritiqueInput` built from a frozen Pilot 2 `COMPLETE` or `PARTIAL` result;
-- one explicit provider route with id, provider, model, model-family, base URL, timeout, and output-token bound.
+- one explicit provider route with id, provider, model, model-family, base URL, timeout, output-token bound, and optional runtime bearer credential.
 
 The model receives only the supplied critique input. No tools, memory, retrieval, private Session Search context, or canonical state are available.
 
@@ -41,7 +41,7 @@ Free prose or structurally invalid model output is not partial success.
 
 The outer receipt records configured route identity separately from observed provider/model metadata, explicit bounds, one attempted external call, and zero tools, memory, and canonical writes.
 
-Model prose is never authoritative for provider identity or execution metadata.
+Model prose is never authoritative for provider identity or execution metadata. Runtime credentials are transport-only: they are sent only in request headers and MUST NOT appear in model input or receipts.
 
 ## Non-scope
 
