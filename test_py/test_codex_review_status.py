@@ -37,6 +37,14 @@ def summary(state, updated_at="2026-10-24T20:00:00Z"):
         ),
     }
 
+def quota_comment(created_at="2026-10-24T20:00:05Z"):
+    return {
+        "user": {"login": "chatgpt-codex-connector[bot]"},
+        "created_at": created_at,
+        "updated_at": created_at,
+        "body": "You have reached your Codex usage limits for code reviews.",
+    }
+
 
 class CodexReviewStatusTest(unittest.TestCase):
     def test_running_review_is_pending(self):
@@ -64,6 +72,34 @@ class CodexReviewStatusTest(unittest.TestCase):
         self.assertEqual(result["status"], "FINDINGS")
         self.assertEqual(result["reason"], "unresolved-findings")
         self.assertTrue(result["advisory"])
+
+    def test_failed_exact_head_with_nearby_quota_notice_is_unavailable_quota(self):
+        result = classify_codex_review([
+            summary({
+                "commit_sha": HEAD,
+                "has_any_findings": True,
+                "has_unresolved_findings": True,
+                "status": "failed",
+            }, updated_at="2026-10-24T20:00:00Z"),
+            quota_comment("2026-10-24T20:00:05Z"),
+        ], HEAD)
+        self.assertEqual(result["status"], "UNAVAILABLE_QUOTA")
+        self.assertEqual(result["reason"], "codex-review-quota")
+        self.assertEqual(result["reviewed_commit"], HEAD)
+        self.assertTrue(result["advisory"])
+
+    def test_old_quota_notice_does_not_poison_new_failed_review(self):
+        result = classify_codex_review([
+            quota_comment("2026-10-23T20:00:00Z"),
+            summary({
+                "commit_sha": HEAD,
+                "has_any_findings": True,
+                "has_unresolved_findings": True,
+                "status": "failed",
+            }, updated_at="2026-10-24T20:00:00Z"),
+        ], HEAD)
+        self.assertEqual(result["status"], "PENDING")
+        self.assertEqual(result["reason"], "review-nonterminal")
 
     def test_completed_clean_review_on_exact_head_is_clean(self):
         result = classify_codex_review([
@@ -134,6 +170,12 @@ class CodexReviewStatusTest(unittest.TestCase):
         result = classify_codex_wait(state, elapsed_seconds=2, timeout_seconds=120)
         self.assertEqual(result["wait_disposition"], "TERMINAL")
         self.assertEqual(result["status"], "FINDINGS")
+
+    def test_wait_quota_unavailable_is_terminal_advisory_evidence(self):
+        state = {"status": "UNAVAILABLE_QUOTA", "head_sha": HEAD, "advisory": True}
+        result = classify_codex_wait(state, elapsed_seconds=1, timeout_seconds=120)
+        self.assertEqual(result["wait_disposition"], "TERMINAL")
+        self.assertEqual(result["status"], "UNAVAILABLE_QUOTA")
 
     def test_wait_pending_becomes_timeout_at_bound(self):
         state = {"status": "PENDING", "head_sha": HEAD, "advisory": True}
