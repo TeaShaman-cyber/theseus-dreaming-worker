@@ -1,10 +1,14 @@
+import { getMutationShard } from './scripts/mutation-shards.mjs';
+
+const shard = getMutationShard(process.env.MUTATION_SHARD);
+
 export default {
   plugins: ['@stryker-mutator/typescript-checker'],
-  mutate: ['src/dreaming/dry-run.ts', 'src/dreaming/pilot1-runner.ts', 'src/dreaming/pilot2-runner.ts', 'src/dreaming/pilot2-live-composition.ts', 'src/dreaming/proposal-schema.ts', 'src/mastra/observability-routing.ts', 'src/mastra/pilot1-tracing.ts'],
+  mutate: [...shard.mutate],
   ignorePatterns: ['.claude/**', '.agents/**', '.mastra/**', 'reports/**'],
   testRunner: 'command',
   commandRunner: {
-    command: 'node --test test/dry-run.test.mjs test/pilot1-runner.test.mjs test/pilot2-runner.test.mjs test/pilot2-live-composition.test.mjs test/proposal-schema.test.mjs test/observability-routing.test.mjs test/pilot1-tracing.test.mjs'
+    command: `node --test ${shard.tests.join(' ')}`
   },
   checkers: ['typescript'],
   tsconfigFile: 'tsconfig.json',
