@@ -1,4 +1,5 @@
 import {
+  ProviderAdapterError,
   createOpenAIChatInference,
   type ProviderCallEvidence,
 } from './openai-provider-adapter.ts';
@@ -77,7 +78,7 @@ export function buildPilot2Routes(
       }
     }
 
-    const infer = createOpenAIChatInference({
+    const adapterInfer = createOpenAIChatInference({
       baseURL,
       configuredProvider: provider,
       configuredModel: model,
@@ -89,6 +90,26 @@ export function buildPilot2Routes(
       apiKey,
       onEvidence: evidence => options.onEvidence?.({ routeId: id, ...evidence }),
     });
+
+    const infer: Pilot2Route['infer'] = async (request, correlation) => {
+      try {
+        return await adapterInfer(request, correlation);
+      } catch (error) {
+        if (error instanceof ProviderAdapterError) {
+          if (error.code === 'OUTPUT_BUDGET_EXHAUSTED') {
+            throw new Error(`PILOT2_OUTPUT_BUDGET_EXHAUSTED: ${error.message}`, {
+              cause: error,
+            });
+          }
+          if (error.code === 'EMPTY_FINAL_CONTENT') {
+            throw new Error(`PILOT2_EMPTY_FINAL_CONTENT: ${error.message}`, {
+              cause: error,
+            });
+          }
+        }
+        throw error;
+      }
+    };
 
     return { id, provider, model, modelFamily, infer };
   });

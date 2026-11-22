@@ -211,3 +211,110 @@ test('Pilot 2 E2E composition rejects unsupported response format modes', () => 
     /PILOT2_E2E_ROUTE_INVALID.*responseFormat/,
   );
 });
+
+async function startRawProvider(responsePayload) {
+  return await new Promise((resolve, reject) => {
+    const server = http.createServer((_req, res) => {
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify(responsePayload));
+    });
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      resolve({
+        baseURL: 'http://127.0.0.1:' + address.port + '/v1',
+        close: () => new Promise((done, fail) => server.close(error => error ? fail(error) : done())),
+      });
+    });
+  });
+}
+
+async function runComposedFailureCase({ finishReason, content }) {
+  const failing = await startRawProvider({
+    id: 'run-failing',
+    model: 'family-a/model-observed',
+    choices: [{
+      finish_reason: finishReason,
+      message: { role: 'assistant', content },
+    }],
+  });
+  const passing = await startProvider({
+    provider: 'transport-b',
+    model: 'family-b/model-observed',
+    proposal: {
+      type: 'UNKNOWN',
+      claim: 'The synthetic evidence does not establish a unique cause.',
+      why_unknown: 'Only timeout and retry-success observations are available.',
+      source_refs: [{
+        source_ref: 'fixture:message:1',
+        evidence_hash: 'sha256:fixture-message-1',
+      }],
+      required_evidence: ['First-attempt provider and transport traces.'],
+    },
+  });
+
+  try {
+    const routes = buildPilot2Routes({
+      routes: [
+        {
+          id: 'route-a',
+          provider: 'configured-a',
+          model: 'family-a/model-configured',
+          modelFamily: 'family-a',
+          baseURL: failing.baseURL,
+          maxTokens: 800,
+          timeoutMs: 2000,
+        },
+        {
+          id: 'route-b',
+          provider: 'configured-b',
+          model: 'family-b/model-configured',
+          modelFamily: 'family-b',
+          baseURL: passing.baseURL,
+          maxTokens: 800,
+          timeoutMs: 2000,
+        },
+      ],
+    });
+
+    return await runPilot2({
+      scope: 'SYNTHETIC_FIXTURE',
+      task: 'Return one evidence-linked proposal.',
+      packet: {
+        schema: 'theseus-evidence-packet-v1',
+        packetId: 'fixture-e2e-failure-001',
+        acceptedNewEvidence: true,
+        coverage: { state: 'PARTIAL', currentness: 'UNKNOWN' },
+        evidence: [{
+          sourceRef: 'fixture:message:1',
+          evidenceHash: 'sha256:fixture-message-1',
+          text: 'Synthetic evidence: a first request timed out and a later retry succeeded.',
+        }],
+      },
+    }, routes);
+  } finally {
+    await Promise.all([failing.close(), passing.close()]);
+  }
+}
+
+test('Pilot 2 E2E preserves adapter output-budget exhaustion as a typed pass failure', async () => {
+  const result = await runComposedFailureCase({
+    finishReason: 'length',
+    content: '',
+  });
+
+  assert.equal(result.outcome, 'PARTIAL');
+  const failed = result.passes.find(pass => pass.status === 'FAILED');
+  assert.equal(failed.failure.code, 'OUTPUT_BUDGET_EXHAUSTED');
+});
+
+test('Pilot 2 E2E preserves adapter empty final content as a typed pass failure', async () => {
+  const result = await runComposedFailureCase({
+    finishReason: 'stop',
+    content: '',
+  });
+
+  assert.equal(result.outcome, 'PARTIAL');
+  const failed = result.passes.find(pass => pass.status === 'FAILED');
+  assert.equal(failed.failure.code, 'EMPTY_FINAL_CONTENT');
+});
