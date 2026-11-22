@@ -51,3 +51,10 @@
 - **GIVEN** the bounded live composition path
 - **WHEN** it runs
 - **THEN** it adds no tools, memory, canonical writes, private Session Search intake, scheduler, critique, or publication authority
+
+#### Scenario: Adapter returns no usable final content
+
+- **GIVEN** the live provider adapter reports `EMPTY_FINAL_CONTENT` or `OUTPUT_BUDGET_EXHAUSTED`
+- **WHEN** live composition hands the failed pass to Pilot 2
+- **THEN** the corresponding Pilot 2 failure code is preserved
+- **AND** the pass does not degrade to generic `INFERENCE_FAILED`

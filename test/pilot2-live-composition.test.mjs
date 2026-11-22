@@ -165,3 +165,54 @@ test('same-family live routes fail closed before provider calls', async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test('preserves adapter empty-content and output-budget failure codes through live composition', async () => {
+  const originalFetch = globalThis.fetch;
+
+  for (const failureCase of [
+    { finishReason: 'stop', expected: 'EMPTY_FINAL_CONTENT' },
+    { finishReason: 'length', expected: 'OUTPUT_BUDGET_EXHAUSTED' },
+  ]) {
+    globalThis.fetch = async url => {
+      if (String(url).startsWith('https://family-a.example/')) {
+        return responseFor('family-a-model', 'The retry budget is bounded to one attempt.');
+      }
+
+      if (String(url).startsWith('https://family-b.example/')) {
+        return new Response(
+          JSON.stringify({
+            id: 'resp-family-b-model',
+            model: 'family-b-model',
+            choices: [{
+              finish_reason: failureCase.finishReason,
+              message: { content: '' },
+            }],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+
+      throw new Error(`unexpected URL ${url}`);
+    };
+
+    const result = await runPilot2WithProviders(
+      { scope: 'SYNTHETIC_FIXTURE', task: 'State what the evidence supports.', packet },
+      [
+        {
+          id: 'route-a', provider: 'provider-a', model: 'family-a-model', modelFamily: 'family-a',
+          baseURL: 'https://family-a.example/v1', timeoutMs: 1000, maxOutputTokens: 400,
+        },
+        {
+          id: 'route-b', provider: 'provider-b', model: 'family-b-model', modelFamily: 'family-b',
+          baseURL: 'https://family-b.example/v1', timeoutMs: 1000, maxOutputTokens: 400,
+        },
+      ],
+    );
+
+    assert.equal(result.outcome, 'PARTIAL');
+    const failed = result.passes.find(pass => pass.status === 'FAILED');
+    assert.equal(failed?.failure.code, failureCase.expected);
+  }
+
+  globalThis.fetch = originalFetch;
+});

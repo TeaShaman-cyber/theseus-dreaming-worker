@@ -45,6 +45,8 @@ Configured route identity and observed provider/model metadata MUST remain separ
 
 Transport success MUST NOT be treated as proposal success. A returned artifact still has to pass Proposal v1 JSON, schema, provenance, and Pilot 1 policy validation.
 
+Adapter failures already represented by Pilot 2's typed contract MUST keep that meaning across the composition boundary. In particular, `EMPTY_FINAL_CONTENT` and `OUTPUT_BUDGET_EXHAUSTED` MUST NOT degrade to generic `INFERENCE_FAILED`.
+
 ### Requirement: Scope does not widen
 
 This layer MUST NOT add tools, memory, private Session Search intake, scheduler behavior, critique/conclave, canonical writes, durable ledger/checkpoints, or publication authority.

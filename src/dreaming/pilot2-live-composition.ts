@@ -1,4 +1,5 @@
 import {
+  ProviderAdapterError,
   createOpenAIChatInference,
   type ProviderCallEvidence,
 } from './openai-provider-adapter.ts';
@@ -26,6 +27,18 @@ export type Pilot2ProviderEvidence = {
 
 function nonEmpty(value: string | undefined): boolean {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function rethrowForPilot2(error: unknown): never {
+  if (error instanceof ProviderAdapterError) {
+    if (error.code === 'OUTPUT_BUDGET_EXHAUSTED') {
+      throw new Error(`PILOT2_OUTPUT_BUDGET_EXHAUSTED: ${error.message}`, { cause: error });
+    }
+    if (error.code === 'EMPTY_FINAL_CONTENT') {
+      throw new Error(`PILOT2_EMPTY_FINAL_CONTENT: ${error.message}`, { cause: error });
+    }
+  }
+  throw error;
 }
 
 function validateRouteConfigs(routes: Pilot2ProviderRouteConfig[]): void {
@@ -64,16 +77,26 @@ export async function runPilot2WithProviders(
       provider: route.provider,
       model: route.model,
       modelFamily: route.modelFamily,
-      infer: createOpenAIChatInference({
-        baseURL: route.baseURL,
-        configuredProvider: route.provider,
-        configuredModel: route.model,
-        configuredModelFamily: route.modelFamily,
-        timeoutMs: route.timeoutMs,
-        maxOutputTokens: route.maxOutputTokens,
-        stream: route.stream,
-        onEvidence: evidence => onEvidence?.({ routeId: route.id, evidence }),
-      }),
+      infer: (() => {
+        const adapterInference = createOpenAIChatInference({
+          baseURL: route.baseURL,
+          configuredProvider: route.provider,
+          configuredModel: route.model,
+          configuredModelFamily: route.modelFamily,
+          timeoutMs: route.timeoutMs,
+          maxOutputTokens: route.maxOutputTokens,
+          stream: route.stream,
+          onEvidence: evidence => onEvidence?.({ routeId: route.id, evidence }),
+        });
+
+        return async (innerRequest, correlation) => {
+          try {
+            return await adapterInference(innerRequest, correlation);
+          } catch (error) {
+            return rethrowForPilot2(error);
+          }
+        };
+      })(),
     })),
   );
 }
