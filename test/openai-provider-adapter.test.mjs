@@ -726,21 +726,47 @@ test('whitespace-only content is not a usable artifact', async () => {
 });
 
 test('timeout while reading a responded SSE body remains TIMEOUT', async () => {
-  await withServer((_req, res) => {
-    res.writeHead(200, { 'content-type': 'text/event-stream' });
-    res.flushHeaders();
-    res.write('data: {"choices":[{"delta":{"content":"partial"},"finish_reason":null}]}');
-    // Keep the stream open past the adapter deadline without an event boundary.
-  }, async baseURL => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, init) => {
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            'data: {"choices":[{"delta":{"content":"partial"},"finish_reason":null}]}',
+          ),
+        );
+        const guard = setTimeout(
+          () => controller.error(new Error('deadline signal did not abort promptly')),
+          150,
+        );
+        init.signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(guard);
+            controller.error(init.signal.reason);
+          },
+          { once: true },
+        );
+      },
+    });
+    return new Response(body, {
+      status: 200,
+      headers: { 'content-type': 'text/event-stream' },
+    });
+  };
+
+  try {
     await assert.rejects(
-      () => inference(baseURL, { stream: true, timeoutMs: 40 })(request, correlation),
+      () => inference('http://provider.invalid', { stream: true, timeoutMs: 20 })(request, correlation),
       error =>
         error instanceof ProviderAdapterError &&
         error.code === 'TIMEOUT' &&
         error.status === 200 &&
         error.providerState === 'RESPONDED',
     );
-  });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('SSE empty choices without usage remains malformed', async () => {
