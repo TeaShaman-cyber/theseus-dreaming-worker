@@ -266,6 +266,10 @@ test('createObservability wires local storage, filters and exact external export
     traces: true,
     logs: false,
   });
+  assert.deepEqual(calls.otel[0].resourceAttributes, {
+    'deployment.environment.name': 'test',
+    'service.version': 'deadbeef',
+  });
   assert.equal(calls.otel[0].customSpanFormatter, operationalSpanFormatter);
 
   assert.deepEqual(calls.langfuse[0], {

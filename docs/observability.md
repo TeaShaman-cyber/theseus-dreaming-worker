@@ -76,7 +76,12 @@ THESEUS_ENVIRONMENT
 THESEUS_RELEASE
 ```
 
-Missing variables leave that exporter disabled.
+When Grafana/OTel is enabled, these map to standard OpenTelemetry resource attributes:
+
+- `THESEUS_ENVIRONMENT` -> `deployment.environment.name`
+- `THESEUS_RELEASE` -> `service.version`
+
+Langfuse receives the same values through its exporter `environment` and `release` options. Missing exporter variables leave that exporter disabled; missing optional labels do not disable export.
 
 ## Local readiness probe
 
@@ -103,6 +108,8 @@ Runtime facts used for acceptance remain tied to deterministic receipts and Mast
 
 ## Current verification
 
-A synthetic Pilot 1 run on 2026-11-21 completed successfully with no Grafana or Langfuse environment configured. The deterministic receipt still observed one model inference, zero tool calls, zero memory operations, and the local Mastra trace contained the correlation metadata.
+The exe.dev development/acceptance runtime is externally configured without storing real Grafana or Langfuse credentials in the VM. Provider-side exe.dev HTTP proxy integrations hold Basic authentication; the runtime receives only proxy URLs and non-secret Langfuse constructor placeholders. Production remains a separate Cloudflare Workers target.
 
-Live export into Grafana and Langfuse remains **not configured / unverified** until runtime credentials/endpoints are supplied.
+A synthetic Pilot 1 run was independently read back from the deterministic Mastra receipt, Grafana Tempo, and Langfuse with the same trace ID and matching request/evidence fingerprints. Grafana's OTel export omits span `input` and `output`; Langfuse intentionally retains semantic input/output for the current `SYNTHETIC_FIXTURE` / `PUBLICATION_SAFE` phase, so broader evidence classes remain prohibited on the external-safe route.
+
+A bounded stable-runtime failure canary made both external exporter endpoints unreachable while Pilot 1 still completed `PROPOSED / TRACE_VERIFIED` with one external model call, zero tools, and zero canonical writes. External telemetry is therefore verified as advisory rather than execution authority for the current acceptance surface.
