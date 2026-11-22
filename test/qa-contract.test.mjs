@@ -39,7 +39,6 @@ test('targeted mutation workflow runs the repository mutation endpoint', () => {
   assert.match(workflow, /src\/dreaming\/pilot1-runner\.ts/);
   assert.match(workflow, /src\/dreaming\/pilot2-runner\.ts/);
   assert.match(workflow, /src\/dreaming\/pilot2-live-composition\.ts/);
-  assert.match(workflow, /src\/dreaming\/pilot2-critique\.ts/);
   assert.match(workflow, /src\/dreaming\/proposal-schema\.ts/);
   assert.match(workflow, /src\/mastra\/observability-routing\.ts/);
   assert.match(workflow, /src\/mastra\/pilot1-tracing\.ts/);
@@ -47,7 +46,6 @@ test('targeted mutation workflow runs the repository mutation endpoint', () => {
   assert.match(workflow, /test\/pilot1-runner\.test\.mjs/);
   assert.match(workflow, /test\/pilot2-runner\.test\.mjs/);
   assert.match(workflow, /test\/pilot2-live-composition\.test\.mjs/);
-  assert.match(workflow, /test\/pilot2-critique\.test\.mjs/);
   assert.match(workflow, /test\/proposal-schema\.test\.mjs/);
   assert.match(workflow, /test\/observability-routing\.test\.mjs/);
   assert.match(workflow, /test\/pilot1-tracing\.test\.mjs/);

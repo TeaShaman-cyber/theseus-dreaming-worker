@@ -116,6 +116,15 @@ src/dreaming/proposal-schema.ts
 
 This still does **not** establish a project-wide 100% mutation requirement. New mutation scopes must earn their own baseline and classification before becoming blocking.
 
+
+Pilot 2 critique earned its first focused behavioral baseline separately from the combined hosted mutation job:
+
+```text
+pilot2 critique contract: 112 killed / 0 survived / mutation score 100.00%
+```
+
+The critique run intentionally omits the per-mutant TypeScript checker because canonical `npm run typecheck` is already a separate required check and the checker showed memory-pressure restarts when repeated for every mutant. This focused critique baseline is evidence for the new critique contract; it is not yet added to the combined blocking mutation scope.
+
 ## Reverse tracing
 
 The repository also carries a small reverse-trace contract in
