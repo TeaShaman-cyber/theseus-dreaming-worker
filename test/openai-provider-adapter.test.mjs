@@ -1348,3 +1348,40 @@ test('adapter can request provider JSON-object mode and bearer auth explicitly',
   assert.equal(observed.authorization, 'Bearer test-secret');
   assert.deepEqual(observed.body.response_format, { type: 'json_object' });
 });
+
+test('adapter omits Authorization entirely when apiKey is not configured', async () => {
+  let observedAuthorization;
+  await withServer((req, res) => {
+    observedAuthorization = req.headers.authorization;
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({
+      model: 'fake/model-v1',
+      choices: [{ finish_reason: 'stop', message: { content: '{\"ok\":true}' } }],
+    }));
+  }, async baseURL => {
+    await inference(baseURL, { maxOutputTokens: 321 })(request, correlation);
+  });
+
+  assert.equal(observedAuthorization, undefined);
+});
+
+test('adapter omits response_format when JSON-object mode is not configured', async () => {
+  let observedBody;
+  await withServer((req, res) => {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      observedBody = JSON.parse(body);
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({
+        model: 'fake/model-v1',
+        choices: [{ finish_reason: 'stop', message: { content: '{\"ok\":true}' } }],
+      }));
+    });
+  }, async baseURL => {
+    await inference(baseURL, { maxOutputTokens: 321 })(request, correlation);
+  });
+
+  assert.equal(observedBody.response_format, undefined);
+});
