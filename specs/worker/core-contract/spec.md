@@ -96,6 +96,23 @@ It MUST NOT automatically promote those proposals into:
 
 Promotion requires a separate authority path.
 
+### Requirement: State claims are evidence-bound, not lexically inferred
+
+A runtime, deployment, review, capability, or authority state MUST be claimed only from evidence that establishes that exact state.
+
+Terminology from one layer MUST NOT silently promote a claim in another layer. In particular:
+
+- `production mode` does not establish an operating production service;
+- a deployed version does not establish go-live or introduction into operation;
+- configured does not establish available;
+- available does not establish invoked or completed;
+- review requested does not establish review completed or clean;
+- green deterministic checks do not by themselves establish acceptance or promotion authority.
+
+This failure mode is treated as **lexical state leakage**: a familiar token or label biases interpretation toward a stronger lifecycle or authority state than the evidence supports.
+
+When lexical state leakage is possible, the stronger state MUST remain unclaimed until its own observable postcondition is verified.
+
 ## Runtime Lifecycle Status
 
 Cloudflare Workers is the selected target runtime, but the current Cloudflare state is **pre-operational acceptance**.

@@ -29,6 +29,7 @@ invariants:
   - partial or stale coverage cannot justify absence claims
   - independent model passes remain independent before optional critique/synthesis
   - generator capability is not acceptance authority
+  - state claims require exact-state evidence; lexical labels such as production/configured/deployed MUST NOT promote lifecycle, capability, review, or authority state
   - exact source provenance survives every derived proposal
   - retries, spend, batch size, and external data egress are bounded and explicit
   - Mastra is a development surface; Git contracts and verified runtime state remain authoritative
