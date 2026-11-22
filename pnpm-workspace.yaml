@@ -7,3 +7,4 @@ overrides:
 allowBuilds:
   esbuild: true
   protobufjs: true
+  workerd: true
