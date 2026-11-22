@@ -372,3 +372,31 @@ test('Langfuse environment defaults to development when enabled without explicit
   assert.equal(langfuse[0].environment, 'development');
   assert.equal(langfuse[0].release, undefined);
 });
+
+test('OTLP resource attributes trim environment and release labels', () => {
+  const otelCalls = [];
+  createObservability(
+    {
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otlp.example/v1/traces',
+      OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf',
+      THESEUS_ENVIRONMENT: '  staging  ',
+      THESEUS_RELEASE: '  abc123  ',
+    },
+    {
+      storage: () => ({ kind: 'storage' }),
+      sensitiveDataFilter: () => ({ kind: 'filter' }),
+      otel(config) {
+        otelCalls.push(config);
+        return { kind: 'otel' };
+      },
+      langfuse: () => ({ kind: 'langfuse' }),
+      observability: config => ({ kind: 'observability', config }),
+    },
+  );
+
+  assert.equal(otelCalls.length, 1);
+  assert.deepEqual(otelCalls[0].resourceAttributes, {
+    'deployment.environment.name': 'staging',
+    'service.version': 'abc123',
+  });
+});
