@@ -569,7 +569,8 @@ test('adapter sends configured model, stream flag, task, packet and correlation 
   assert.equal(capturedBody.stream, false);
   assert.equal(capturedBody.messages.length, 2);
   assert.equal(capturedBody.messages[0].role, 'system');
-  assert.match(capturedBody.messages[0].content, /typed proposal artifact/);
+  assert.match(capturedBody.messages[0].content, /theseus\.dreaming-worker\.proposals\.v1/);
+  assert.match(capturedBody.messages[0].content, /source_refs/);
   assert.equal(capturedBody.messages[1].role, 'user');
 
   const userPayload = JSON.parse(capturedBody.messages[1].content);
@@ -1246,4 +1247,51 @@ test('SSE parser handles CRLF, comment lines, DONE and invalid metadata without 
     assert.equal(result.runId, undefined);
     assert.equal(result.finishReason, 'stop');
   });
+});
+
+test('adapter sends the configured output-token bound to the provider', async () => {
+  let observedBody;
+  await withServer((req, res) => {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      observedBody = JSON.parse(body);
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({
+        id: 'chatcmpl-bounded',
+        model: 'fake/model-v1',
+        choices: [{ finish_reason: 'stop', message: { content: '{\"ok\":true}' } }],
+      }));
+    });
+  }, async baseURL => {
+    await inference(baseURL, { maxOutputTokens: 321 })(request, correlation);
+  });
+
+  assert.equal(observedBody.max_tokens, 321);
+});
+
+test('adapter carries the exact Proposal v1 output contract in the system message', async () => {
+  let observedBody;
+  await withServer((req, res) => {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      observedBody = JSON.parse(body);
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({
+        model: 'fake/model-v1',
+        choices: [{ finish_reason: 'stop', message: { content: '{\"ok\":true}' } }],
+      }));
+    });
+  }, async baseURL => {
+    await inference(baseURL, { maxOutputTokens: 321 })(request, correlation);
+  });
+
+  const system = observedBody.messages[0].content;
+  assert.match(system, /theseus\.dreaming-worker\.proposals\.v1/);
+  assert.match(system, /source_refs/);
+  assert.match(system, /evidence_hash/);
+  assert.match(system, /FACT.*INFERENCE.*HYPOTHESIS.*UNKNOWN/s);
 });
