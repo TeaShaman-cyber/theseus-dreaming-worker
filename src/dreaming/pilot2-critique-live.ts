@@ -17,7 +17,7 @@ const critiqueRouteSchema = z.object({
   provider: z.string().trim().min(1),
   model: z.string().trim().min(1),
   modelFamily: z.string().trim().min(1),
-  baseURL: z.string().trim().url(),
+  baseURL: z.string().url(),
   timeoutMs: z.number().finite().positive().optional(),
   maxOutputTokens: z.number().int().positive(),
   apiKey: z.string().min(1).optional(),
