@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { runLiveCritique } from '../src/dreaming/pilot2-critique-live.ts';
+import { critiqueArtifactJsonSchema } from '../src/dreaming/pilot2-critique.ts';
 
 const input = {
   schema: 'theseus.dreaming-worker.critique-input.v1',
@@ -246,6 +247,20 @@ test('rate limit, ordinary HTTP failure, and pre-response network failure stay d
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test('unexpected SSE transport failure is normalized to MALFORMED_RESPONSE for critique', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(null, {
+    status: 200,
+    headers: { 'content-type': 'text/event-stream' },
+  });
+  try {
+    const result = await runLiveCritique(input, route);
+    assert.equal(result.outcome, 'FAILED');
+    assert.equal(result.failure.code, 'MALFORMED_RESPONSE');
+    assert.equal(result.receipt.providerState, 'RESPONDED');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('malformed provider JSON and malformed choices are typed transport failures', async () => {
   const originalFetch = globalThis.fetch;
   try {
@@ -298,6 +313,40 @@ test('transport metadata comes only from response metadata and default bounds re
     assert.equal(result.receipt.bounds.timeoutMs, 15000);
     assert.equal(result.receipt.bounds.maxOutputTokens, 500);
   } finally { globalThis.fetch = originalFetch; }
+});
+
+test('live critique request has one exact model-facing protocol contract', async () => {
+  const originalFetch = globalThis.fetch;
+  let body;
+  globalThis.fetch = async (_url, options) => {
+    body = JSON.parse(options.body);
+    return response(JSON.stringify(validArtifact));
+  };
+
+  try {
+    const result = await runLiveCritique(input, route);
+    assert.equal(result.outcome, 'CRITIQUED');
+    assert.deepEqual(body.messages.map(message => message.role), ['system', 'user']);
+    assert.equal(body.messages[1].content, JSON.stringify(input));
+
+    const expectedSystem = [
+      'Return exactly one JSON object and no surrounding prose or markdown.',
+      'Compare the frozen perspectives; do not decide truth or choose a winner.',
+      'Use only proposal and evidence references present in the supplied critique input.',
+      'Keep authority exactly DERIVED_ONLY.',
+      'Return an INSTANCE that validates against the following JSON Schema. Do not return the JSON Schema itself.',
+      'The top-level output keys must be exactly schema, authority, and relations.',
+      JSON.stringify(critiqueArtifactJsonSchema),
+    ].join(' ');
+
+    assert.equal(body.messages[0].content, expectedSystem);
+    assert.deepEqual(body.response_format, { type: 'json_object' });
+    assert.equal(body.stream, false);
+    assert.equal(body.model, route.model);
+    assert.equal(body.max_tokens, route.maxOutputTokens);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('system prompt keeps critique derived-only and forbids winner selection', async () => {

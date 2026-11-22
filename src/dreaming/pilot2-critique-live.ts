@@ -7,6 +7,11 @@ import {
   type CritiqueInput,
 } from './pilot2-critique.ts';
 
+import {
+  executeOpenAIChatTransport,
+  ProviderAdapterError,
+} from './openai-provider-adapter.ts';
+
 const critiqueRouteSchema = z.object({
   id: z.string().trim().min(1),
   provider: z.string().trim().min(1),
@@ -72,29 +77,10 @@ export type LiveCritiqueResult =
       receipt: CritiqueReceipt;
     };
 
-class CritiqueTransportError extends Error {
-  readonly code: CritiqueFailureCode;
-
-  constructor(code: CritiqueFailureCode, message: string) {
-    super(message);
-    this.name = 'CritiqueTransportError';
-    this.code = code;
-  }
-}
-
 function parseRoute(route: CritiqueProviderRouteConfig): CritiqueProviderRouteConfig {
   const parsed = critiqueRouteSchema.safeParse(route);
   if (!parsed.success) throw new Error('CRITIQUE_ROUTE_INVALID');
   return parsed.data;
-}
-
-function endpointFor(baseURL: string): string {
-  const base = baseURL.replace(/\/+$/, '') + '/';
-  return new URL('chat/completions', base).toString();
-}
-
-function observedString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
 function systemPrompt(): string {
@@ -128,7 +114,6 @@ export async function runLiveCritique(
 ): Promise<LiveCritiqueResult> {
   const route = parseRoute(routeInput);
   const timeoutMs = route.timeoutMs ?? 15_000;
-  const timeoutSignal = AbortSignal.timeout(timeoutMs);
   const configuredRoute = {
     id: route.id,
     provider: route.provider,
@@ -160,102 +145,66 @@ export async function runLiveCritique(
   });
 
   try {
-    let response: Response;
-    try {
-      const headers: Record<string, string> = { 'content-type': 'application/json' };
-      if (route.apiKey) headers.authorization = `Bearer ${route.apiKey}`;
-
-      response = await fetch(endpointFor(route.baseURL), {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          model: route.model,
-          messages: [
-            { role: 'system', content: systemPrompt() },
-            { role: 'user', content: JSON.stringify(input) },
-          ],
-          max_tokens: route.maxOutputTokens,
-          response_format: { type: 'json_object' },
-          stream: false,
-        }),
-        signal: timeoutSignal,
-      });
-    } catch (error) {
-      if (timeoutSignal.aborted || (error instanceof Error && error.name === 'TimeoutError')) {
-        throw new CritiqueTransportError('TIMEOUT_UNKNOWN_PROVIDER_STATE', 'Critique provider request timed out');
-      }
-      throw new CritiqueTransportError('HTTP_ERROR', 'Critique provider request failed before response');
-    }
+    const transport = await executeOpenAIChatTransport({
+      baseURL: route.baseURL,
+      configuredProvider: route.provider,
+      configuredModel: route.model,
+      timeoutMs,
+      maxOutputTokens: route.maxOutputTokens,
+      apiKey: route.apiKey,
+      responseFormat: 'json_object',
+      stream: false,
+      messages: [
+        { role: 'system', content: systemPrompt() },
+        { role: 'user', content: JSON.stringify(input) },
+      ],
+    });
 
     providerState = 'RESPONDED';
-    if (response.status === 429) {
-      throw new CritiqueTransportError('RATE_LIMITED', 'Critique provider rate limited the request');
-    }
-    if (!response.ok) {
-      throw new CritiqueTransportError('HTTP_ERROR', `Critique provider returned HTTP ${response.status}`);
-    }
-
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch {
-      if (timeoutSignal.aborted) {
-        throw new CritiqueTransportError('TIMEOUT_UNKNOWN_PROVIDER_STATE', 'Critique provider response body timed out');
-      }
-      throw new CritiqueTransportError('MALFORMED_RESPONSE', 'Critique provider response is not valid JSON');
-    }
-
-    if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
-      throw new CritiqueTransportError('MALFORMED_RESPONSE', 'Critique provider response is not an object');
-    }
-    const body = payload as Record<string, unknown>;
-    if (!Array.isArray(body.choices) || body.choices.length === 0 || typeof body.choices[0] !== 'object' || body.choices[0] === null) {
-      throw new CritiqueTransportError('MALFORMED_RESPONSE', 'Critique provider response has no choice');
-    }
-
-    observedProvider = observedString(body.provider);
-    observedModel = observedString(body.model);
-
-    const choice = body.choices[0] as Record<string, unknown>;
-    finishReason = observedString(choice.finish_reason);
-    const message = choice.message;
-    const finalText =
-      message && typeof message === 'object' && typeof (message as Record<string, unknown>).content === 'string'
-        ? (message as Record<string, string>).content
-        : '';
-    rawModelOutput = finalText;
-
-    if (finishReason === 'length') {
-      throw new CritiqueTransportError('OUTPUT_BUDGET_EXHAUSTED', 'Critique output budget exhausted');
-    }
-    if (!finalText.trim()) {
-      throw new CritiqueTransportError('EMPTY_FINAL_CONTENT', 'Critique provider returned no usable content');
-    }
+    observedProvider = transport.observedProvider;
+    observedModel = transport.observedModel;
+    finishReason = transport.finishReason;
+    rawModelOutput = transport.text;
 
     try {
-      const artifact = parseCritiqueArtifact(finalText, input);
-      return { outcome: 'CRITIQUED', artifact, rawModelOutput: finalText, receipt: receipt() };
+      const artifact = parseCritiqueArtifact(transport.text, input);
+      return {
+        outcome: 'CRITIQUED',
+        artifact,
+        rawModelOutput: transport.text,
+        receipt: receipt(),
+      };
     } catch (error) {
       const code = validationCode(error);
       if (!code) throw error;
       return {
         outcome: 'FAILED',
         artifact: null,
-        rawModelOutput: finalText,
+        rawModelOutput: transport.text,
         failure: { code, message: error instanceof Error ? error.message : String(error) },
         receipt: receipt(),
       };
     }
   } catch (error) {
-    const failure =
-      error instanceof CritiqueTransportError
-        ? error
-        : new CritiqueTransportError('HTTP_ERROR', 'Critique provider execution failed unexpectedly');
+    const transportFailure = error instanceof ProviderAdapterError ? error : null;
+    if (transportFailure) providerState = transportFailure.providerState;
+
+    const code: CritiqueFailureCode = transportFailure
+      ? transportFailure.code === 'TIMEOUT'
+        ? 'TIMEOUT_UNKNOWN_PROVIDER_STATE'
+        : transportFailure.code === 'STREAM_ERROR'
+          ? 'MALFORMED_RESPONSE'
+          : transportFailure.code
+      : 'HTTP_ERROR';
+
     return {
       outcome: 'FAILED',
       artifact: null,
       rawModelOutput,
-      failure: { code: failure.code, message: failure.message },
+      failure: {
+        code,
+        message: transportFailure?.message ?? code,
+      },
       receipt: receipt(),
     };
   }

@@ -13,6 +13,8 @@ It does not change Pilot 2 first-pass artifacts, does not retrieve new evidence,
 
 The model receives only the supplied critique input. No tools, memory, retrieval, private Session Search context, or canonical state are available.
 
+Wire-level OpenAI-compatible HTTP/SSE execution is delegated to the shared provider transport used by the existing provider adapter. This layer owns only critique-specific prompt construction, transport-code mapping, deterministic artifact validation, and the critique receipt. Provider-specific/model semantics MUST NOT be moved into the shared transport.
+
 ## Model-facing contract
 
 The system prompt MUST embed `critiqueArtifactJsonSchema`, generated from the same Zod contract used by `parseCritiqueArtifact`.
