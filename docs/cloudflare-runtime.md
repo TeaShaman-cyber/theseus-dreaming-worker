@@ -131,3 +131,23 @@ Before production release, require all of the following current evidence:
 7. post-deploy health plus synthetic Pilot 1 receipt/Grafana/Langfuse correlation readback.
 
 Until then the terminal state is readiness work only, not production release.
+
+## Production Pilot 1 HTTP boundary
+
+The production Worker does not expose the raw Mastra /api/* surface to
+external callers. Those routes are guarded by a per-runtime internal capability
+used only by the Worker itself.
+
+The bounded acceptance surface is:
+
+POST /__theseus/pilot1/synthetic
+
+It accepts no caller-provided evidence or task. The route always runs the
+checked-in fixtures/pilot1-timeout.json fixture through the deterministic
+runPilot1 outer runner, invokes the internal Mastra Agent with the established
+external-safe tracing envelope, reads the resulting Mastra trace witness, and
+returns the canonical theseus.dreaming-worker.pilot1-receipt.v1 result.
+
+This endpoint is an acceptance canary, not a general inference API. Public
+workers.dev routing should remain disabled outside a bounded acceptance
+window until a separately reviewed invocation/authentication surface exists.
