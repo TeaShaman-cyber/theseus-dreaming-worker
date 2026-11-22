@@ -48,6 +48,7 @@ test('targeted mutation workflow delegates scope to the shard manifest', () => {
     'src/dreaming/pilot2-live-composition.ts',
     'src/dreaming/pilot2-critique.ts',
     'src/dreaming/pilot2-critique-live.ts',
+    'src/dreaming/proposal-ledger.ts',
     'src/dreaming/proposal-schema.ts',
     'src/mastra/observability-routing.ts',
     'src/mastra/pilot1-tracing.ts',
@@ -89,6 +90,7 @@ test('hosted mutation uses parallel named shards instead of one monolithic job',
   assert.match(workflow, /pilot2/);
   assert.match(workflow, /critique/);
   assert.match(workflow, /critique-live/);
+  assert.match(workflow, /ledger/);
   assert.match(workflow, /observability/);
   assert.match(workflow, /npm run mutation -- \$\{\{ matrix\.shard \}\}/);
   assert.match(workflow, /mutation-receipt-\$\{\{ matrix\.shard \}\}-\$\{\{ github\.sha \}\}/);

@@ -138,6 +138,7 @@ Implemented and verified:
 - generic OpenAI-compatible provider adapter plus bounded live Pilot 2 composition;
 - deterministic critique input/artifact contract over frozen Pilot 2 perspectives;
 - bounded live critique inference over frozen critique input;
+- append-only proposal-ledger contract with deterministic supersession semantics;
 - typed proposal schema;
 - exact source-reference and evidence-hash validation;
 - deterministic outer receipt;

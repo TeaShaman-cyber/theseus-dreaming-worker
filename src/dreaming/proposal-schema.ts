@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import type { EvidencePacket } from './dry-run.ts';
@@ -14,7 +15,7 @@ const sourceRef = z
 
 const sourceRefs = z.array(sourceRef).min(1);
 
-const factProposal = z
+export const factProposal = z
   .object({
     type: z.literal('FACT'),
     claim: nonempty,
@@ -22,7 +23,7 @@ const factProposal = z
   })
   .strict();
 
-const inferenceProposal = z
+export const inferenceProposal = z
   .object({
     type: z.literal('INFERENCE'),
     claim: nonempty,
@@ -32,7 +33,7 @@ const inferenceProposal = z
   })
   .strict();
 
-const hypothesisProposal = z
+export const hypothesisProposal = z
   .object({
     type: z.literal('HYPOTHESIS'),
     claim: nonempty,
@@ -45,7 +46,7 @@ const hypothesisProposal = z
   })
   .strict();
 
-const unknownProposal = z
+export const unknownProposal = z
   .object({
     type: z.literal('UNKNOWN'),
     claim: nonempty,
@@ -74,6 +75,11 @@ export const proposalSetSchema = z
 export const proposalSetJsonSchema = z.toJSONSchema(proposalSetSchema);
 
 export type ProposalSet = z.infer<typeof proposalSetSchema>;
+export type Proposal = ProposalSet['proposals'][number];
+
+export function fingerprintProposal(proposal: Proposal): string {
+  return 'sha256:' + createHash('sha256').update(JSON.stringify(proposal)).digest('hex');
+}
 
 export function parseProposalSet(rawText: string, packet: EvidencePacket): ProposalSet {
   let decoded: unknown;

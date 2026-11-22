@@ -31,7 +31,7 @@ Expensive checks run by risk and changed surface rather than on every tiny edit.
 
 Heavy mutation QA is GitHub-runner-first. The governed exe.dev VM is the control/development plane: use it for editing, the fast gate, focused regression tests, and short diagnostics. Do not use it as the default executor for the blocking mutation suite. When heavy QA needs interactive investigation rather than a batch CI run, use a Codespace; only fall back to the smaller VM after an observed need.
 
-The hosted mutation workflow runs five independent shards in parallel: `pilot0-1`, `pilot2`, `critique`, `critique-live`, and `observability`. The repository wrapper requires an explicit shard name, so plain `npm run mutation` fails before Stryker starts instead of accidentally launching the whole heavy suite locally.
+The hosted mutation workflow runs six independent shards in parallel: `pilot0-1`, `pilot2`, `critique`, `critique-live`, `ledger`, and `observability`. The repository wrapper requires an explicit shard name, so plain `npm run mutation` fails before Stryker starts instead of accidentally launching the whole heavy suite locally.
 
 `npm run cloudflare:startup-check` profiles Worker startup locally. It is an acceptance/diagnostic signal rather than a per-commit gate; local timing does not prove Cloudflare production startup time.
 
