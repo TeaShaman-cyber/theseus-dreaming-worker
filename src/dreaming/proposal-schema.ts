@@ -71,6 +71,8 @@ export const proposalSetSchema = z
   })
   .strict();
 
+export const proposalSetJsonSchema = z.toJSONSchema(proposalSetSchema);
+
 export type ProposalSet = z.infer<typeof proposalSetSchema>;
 
 export function parseProposalSet(rawText: string, packet: EvidencePacket): ProposalSet {

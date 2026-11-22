@@ -1,0 +1,249 @@
+{
+  "schema": "theseus.dreaming-worker.pilot2-e2e.v1",
+  "result": {
+    "outcome": "COMPLETE",
+    "passes": [
+      {
+        "status": "SUCCESS",
+        "route": {
+          "id": "groq-qwen3.8-27b",
+          "provider": "groq",
+          "model": "qwen/qwen3.8-27b",
+          "modelFamily": "qwen-3.8"
+        },
+        "proposalSet": {
+          "schema": "theseus.dreaming-worker.proposals.v1",
+          "proposals": [
+            {
+              "type": "HYPOTHESIS",
+              "claim": "The initial timeout was transient, causing the first attempt to fail, but the retry succeeded because the transient condition had cleared.",
+              "why_plausible": "The evidence shows a timeout followed by a successful retry. Transient failures that self-clear are a common pattern in network or workload systems, making it plausible that the retry succeeded at a later point.",
+              "source_refs": [
+                {
+                  "source_ref": "fixture:message:1",
+                  "evidence_hash": "sha256:fixture-message-1"
+                },
+                {
+                  "source_ref": "fixture:message:2",
+                  "evidence_hash": "sha256:fixture-message-2"
+                }
+              ],
+              "falsifier": "If the retried request targeted an entirely different provider or host than the original request, this hypothesis is invalid because the success would not represent a resolution on the same endpoint.",
+              "required_evidence": [
+                "Confirmation that the request identifiers and provider targets are identical for both attempts",
+                "Provider-side metrics or logs indicating a transient dip in service availability shortly before the retry"
+              ],
+              "competing_explanations": [
+                "The retry succeeded due to a specific backoff delay exceeding a configured rate limit",
+                "The worker locally cached a partial response during the timeout, and the retry merely completed an existing session"
+              ],
+              "uncertainty": "MEDIUM"
+            },
+            {
+              "type": "UNKNOWN",
+              "claim": "The exact root cause of the initial timeout and the specific mechanism allowing the subsequent retry to succeed remains unknown.",
+              "why_unknown": "The provided evidence states that a timeout occurred on a request and that a retry completed successfully on the same provider, but it does not contain network logs, timing metrics, or provider telemetry necessary to distinguish between load spikes, infrastructure issues, or retry configuration effects.",
+              "source_refs": [
+                {
+                  "source_ref": "fixture:message:1",
+                  "evidence_hash": "sha256:fixture-message-1"
+                },
+                {
+                  "source_ref": "fixture:message:2",
+                  "evidence_hash": "sha256:fixture-message-2"
+                }
+              ],
+              "required_evidence": [
+                "Detailed request/response telemetry capturing exact timestamps and intermediary hop data",
+                "Provider status records from the specific time window of the transaction"
+              ]
+            }
+          ]
+        },
+        "rawModelOutput": "{\n  \"schema\": \"theseus.dreaming-worker.proposals.v1\",\n  \"proposals\": [\n    {\n      \"type\": \"HYPOTHESIS\",\n      \"claim\": \"The initial timeout was transient, causing the first attempt to fail, but the retry succeeded because the transient condition had cleared.\",\n      \"why_plausible\": \"The evidence shows a timeout followed by a successful retry. Transient failures that self-clear are a common pattern in network or workload systems, making it plausible that the retry succeeded at a later point.\",\n      \"source_refs\": [\n        {\n          \"source_ref\": \"fixture:message:1\",\n          \"evidence_hash\": \"sha256:fixture-message-1\"\n        },\n        {\n          \"source_ref\": \"fixture:message:2\",\n          \"evidence_hash\": \"sha256:fixture-message-2\"\n        }\n      ],\n      \"falsifier\": \"If the retried request targeted an entirely different provider or host than the original request, this hypothesis is invalid because the success would not represent a resolution on the same endpoint.\",\n      \"required_evidence\": [\n        \"Confirmation that the request identifiers and provider targets are identical for both attempts\",\n        \"Provider-side metrics or logs indicating a transient dip in service availability shortly before the retry\"\n      ],\n      \"competing_explanations\": [\n        \"The retry succeeded due to a specific backoff delay exceeding a configured rate limit\",\n        \"The worker locally cached a partial response during the timeout, and the retry merely completed an existing session\"\n      ],\n      \"uncertainty\": \"MEDIUM\"\n    },\n    {\n      \"type\": \"UNKNOWN\",\n      \"claim\": \"The exact root cause of the initial timeout and the specific mechanism allowing the subsequent retry to succeed remains unknown.\",\n      \"why_unknown\": \"The provided evidence states that a timeout occurred on a request and that a retry completed successfully on the same provider, but it does not contain network logs, timing metrics, or provider telemetry necessary to distinguish between load spikes, infrastructure issues, or retry configuration effects.\",\n      \"source_refs\": [\n        {\n          \"source_ref\": \"fixture:message:1\",\n          \"evidence_hash\": \"sha256:fixture-message-1\"\n        },\n        {\n          \"source_ref\": \"fixture:message:2\",\n          \"evidence_hash\": \"sha256:fixture-message-2\"\n        }\n      ],\n      \"required_evidence\": [\n        \"Detailed request/response telemetry capturing exact timestamps and intermediary hop data\",\n        \"Provider status records from the specific time window of the transaction\"\n      ]\n    }\n  ]\n}",
+        "receipt": {
+          "schema": "theseus.dreaming-worker.pilot1-receipt.v1",
+          "scope": "SYNTHETIC_FIXTURE",
+          "packetId": "fixture-pilot2-timeout-001",
+          "evidenceFingerprint": "sha256:f95a506f4894afc8de30c4f22c86c53016bb4472bc0ca7672499514c4b107cf7",
+          "requestFingerprint": "sha256:01290cc8529c1acc2d4af84545015a15568fcd209d9d1ee006ef2163c3e09af4",
+          "evidenceCount": 2,
+          "toolsUsed": 0,
+          "memoryUsed": false,
+          "canonicalWrites": 0,
+          "externalModelCalls": 1,
+          "runtimeWitness": "CALLER_OBSERVED",
+          "workspaceActionsObserved": null,
+          "provider": "groq",
+          "model": "qwen/qwen3.8-27b",
+          "finishReason": "stop",
+          "usage": {
+            "inputTokens": 1098,
+            "outputTokens": 585,
+            "totalTokens": 1683
+          },
+          "runId": "chatcmpl-ec164e05-1744-48b2-b394-44b186a78bd3"
+        }
+      },
+      {
+        "status": "SUCCESS",
+        "route": {
+          "id": "openrouter-mistral-small-3.2",
+          "provider": "openrouter",
+          "model": "mistralai/mistral-small-3.2-24b-instruct",
+          "modelFamily": "mistral-small-3.2"
+        },
+        "proposalSet": {
+          "schema": "theseus.dreaming-worker.proposals.v1",
+          "proposals": [
+            {
+              "type": "INFERENCE",
+              "claim": "The initial timeout might have been due to a temporary network issue that resolved itself, allowing the retry to succeed.",
+              "source_refs": [
+                {
+                  "source_ref": "fixture:message:1",
+                  "evidence_hash": "sha256:fixture-message-1"
+                },
+                {
+                  "source_ref": "fixture:message:2",
+                  "evidence_hash": "sha256:fixture-message-2"
+                }
+              ],
+              "assumptions": [
+                "Network issues can be temporary and resolve without intervention."
+              ],
+              "uncertainty": "HIGH"
+            },
+            {
+              "type": "INFERENCE",
+              "claim": "The provider might have been temporarily overloaded, causing the timeout, but was able to handle the retry once the load decreased.",
+              "source_refs": [
+                {
+                  "source_ref": "fixture:message:1",
+                  "evidence_hash": "sha256:fixture-message-1"
+                },
+                {
+                  "source_ref": "fixture:message:2",
+                  "evidence_hash": "sha256:fixture-message-2"
+                }
+              ],
+              "assumptions": [
+                "Providers can experience temporary spikes in load that affect their ability to respond promptly."
+              ],
+              "uncertainty": "HIGH"
+            }
+          ]
+        },
+        "rawModelOutput": "{\n  \"schema\": \"theseus.dreaming-worker.proposals.v1\",\n  \"proposals\": [\n    {\n      \"type\": \"INFERENCE\",\n      \"claim\": \"The initial timeout might have been due to a temporary network issue that resolved itself, allowing the retry to succeed.\",\n      \"source_refs\": [\n        {\n          \"source_ref\": \"fixture:message:1\",\n          \"evidence_hash\": \"sha256:fixture-message-1\"\n        },\n        {\n          \"source_ref\": \"fixture:message:2\",\n          \"evidence_hash\": \"sha256:fixture-message-2\"\n        }\n      ],\n      \"assumptions\": [\n        \"Network issues can be temporary and resolve without intervention.\"\n      ],\n      \"uncertainty\": \"HIGH\"\n    },\n    {\n      \"type\": \"INFERENCE\",\n      \"claim\": \"The provider might have been temporarily overloaded, causing the timeout, but was able to handle the retry once the load decreased.\",\n      \"source_refs\": [\n        {\n          \"source_ref\": \"fixture:message:1\",\n          \"evidence_hash\": \"sha256:fixture-message-1\"\n        },\n        {\n          \"source_ref\": \"fixture:message:2\",\n          \"evidence_hash\": \"sha256:fixture-message-2\"\n        }\n      ],\n      \"assumptions\": [\n        \"Providers can experience temporary spikes in load that affect their ability to respond promptly.\"\n      ],\n      \"uncertainty\": \"HIGH\"\n    }\n  ]\n}",
+        "receipt": {
+          "schema": "theseus.dreaming-worker.pilot1-receipt.v1",
+          "scope": "SYNTHETIC_FIXTURE",
+          "packetId": "fixture-pilot2-timeout-001",
+          "evidenceFingerprint": "sha256:f95a506f4894afc8de30c4f22c86c53016bb4472bc0ca7672499514c4b107cf7",
+          "requestFingerprint": "sha256:01290cc8529c1acc2d4af84545015a15568fcd209d9d1ee006ef2163c3e09af4",
+          "evidenceCount": 2,
+          "toolsUsed": 0,
+          "memoryUsed": false,
+          "canonicalWrites": 0,
+          "externalModelCalls": 1,
+          "runtimeWitness": "CALLER_OBSERVED",
+          "workspaceActionsObserved": null,
+          "provider": "DeepInfra",
+          "model": "mistralai/mistral-small-3.2-24b-instruct",
+          "finishReason": "stop",
+          "usage": {
+            "inputTokens": 1194,
+            "outputTokens": 342,
+            "totalTokens": 1536,
+            "reasoningTokens": 0,
+            "cachedInputTokens": 0
+          },
+          "runId": "gen-1795356617-pWbb0AbRa7ZRu9sSYOmv"
+        }
+      }
+    ],
+    "comparison": {
+      "mode": "EXACT_STRUCTURED_MATCH_V1",
+      "sharedProposalFingerprints": [],
+      "passAOnlyProposalFingerprints": [
+        "sha256:b4e18f0161f03fdca5bddb1796af35e74dc5db8d57134e581ad14cd01c059c0a",
+        "sha256:49ee6e99ab31989c24783e2cde5b0bed8bcc8afebcd32285d696cbb044241516"
+      ],
+      "passBOnlyProposalFingerprints": [
+        "sha256:f85c2730cf77cc62a9cb9ef844b7dbc2f89e3f7f44fb8fc3125aec865168b11b",
+        "sha256:8bfadf44fd1bb021881d7f94b34ea1d5441b5154cc81bbd1e52b4274a134022b"
+      ],
+      "semanticRelation": "UNRESOLVED_WITHOUT_CRITIQUE"
+    },
+    "terminalFailure": null,
+    "receipt": {
+      "schema": "theseus.dreaming-worker.pilot2-receipt.v1",
+      "scope": "SYNTHETIC_FIXTURE",
+      "packetId": "fixture-pilot2-timeout-001",
+      "evidenceFingerprint": "sha256:f95a506f4894afc8de30c4f22c86c53016bb4472bc0ca7672499514c4b107cf7",
+      "requestFingerprint": "sha256:01290cc8529c1acc2d4af84545015a15568fcd209d9d1ee006ef2163c3e09af4",
+      "evidenceCount": 2,
+      "plannedPasses": 2,
+      "canonicalWrites": 0,
+      "memoryUsed": false,
+      "attemptedPasses": 2,
+      "validPasses": 2,
+      "failedPasses": 0,
+      "confirmedExternalModelCalls": 2,
+      "unresolvedExternalCallAttempts": 0,
+      "independence": "CONFIGURED_DISTINCT"
+    }
+  },
+  "providerEvidence": [
+    {
+      "routeId": "groq-qwen3.8-27b",
+      "evidence": {
+        "configuredProvider": "groq",
+        "configuredModel": "qwen/qwen3.8-27b",
+        "configuredModelFamily": "qwen-3.8",
+        "requestFingerprint": "sha256:01290cc8529c1acc2d4af84545015a15568fcd209d9d1ee006ef2163c3e09af4",
+        "evidenceFingerprint": "sha256:f95a506f4894afc8de30c4f22c86c53016bb4472bc0ca7672499514c4b107cf7",
+        "latencyMs": 1591,
+        "observedProvider": "groq",
+        "observedModel": "qwen/qwen3.8-27b",
+        "requestId": "chatcmpl-ec164e05-1744-48b2-b394-44b186a78bd3",
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1098,
+          "outputTokens": 585,
+          "totalTokens": 1683
+        },
+        "outcome": "SUCCESS",
+        "usableArtifact": true
+      }
+    },
+    {
+      "routeId": "openrouter-mistral-small-3.2",
+      "evidence": {
+        "configuredProvider": "openrouter",
+        "configuredModel": "mistralai/mistral-small-3.2-24b-instruct",
+        "configuredModelFamily": "mistral-small-3.2",
+        "requestFingerprint": "sha256:01290cc8529c1acc2d4af84545015a15568fcd209d9d1ee006ef2163c3e09af4",
+        "evidenceFingerprint": "sha256:f95a506f4894afc8de30c4f22c86c53016bb4472bc0ca7672499514c4b107cf7",
+        "latencyMs": 8409,
+        "observedProvider": "DeepInfra",
+        "observedModel": "mistralai/mistral-small-3.2-24b-instruct",
+        "requestId": "gen-1795356617-pWbb0AbRa7ZRu9sSYOmv",
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1194,
+          "outputTokens": 342,
+          "totalTokens": 1536,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        },
+        "outcome": "SUCCESS",
+        "usableArtifact": true
+      }
+    }
+  ]
+}

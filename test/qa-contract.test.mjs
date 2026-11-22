@@ -38,15 +38,37 @@ test('targeted mutation workflow runs the repository mutation endpoint', () => {
   assert.match(workflow, /src\/dreaming\/dry-run\.ts/);
   assert.match(workflow, /src\/dreaming\/pilot1-runner\.ts/);
   assert.match(workflow, /src\/dreaming\/pilot2-runner\.ts/);
+  assert.match(workflow, /src\/dreaming\/pilot2-live-composition\.ts/);
   assert.match(workflow, /src\/dreaming\/proposal-schema\.ts/);
   assert.match(workflow, /src\/mastra\/observability-routing\.ts/);
   assert.match(workflow, /src\/mastra\/pilot1-tracing\.ts/);
   assert.match(workflow, /test\/dry-run\.test\.mjs/);
   assert.match(workflow, /test\/pilot1-runner\.test\.mjs/);
   assert.match(workflow, /test\/pilot2-runner\.test\.mjs/);
+  assert.match(workflow, /test\/pilot2-live-composition\.test\.mjs/);
   assert.match(workflow, /test\/proposal-schema\.test\.mjs/);
   assert.match(workflow, /test\/observability-routing\.test\.mjs/);
   assert.match(workflow, /test\/pilot1-tracing\.test\.mjs/);
   assert.match(workflow, /persist-credentials:\s*false/);
   assert.match(workflow, /pnpm-workspace\.yaml/);
+});
+
+test('Pilot 2 CLI stays a thin wrapper over the canonical live-composition seam', () => {
+  const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
+  const cli = readFileSync('tools/agent/run-pilot2.mjs', 'utf8');
+
+  assert.equal(packageJson.scripts.pilot2, 'node tools/agent/run-pilot2.mjs');
+  assert.match(cli, /runPilot2WithProviders/);
+  assert.match(cli, /resolvePilot2RouteSecrets/);
+  assert.doesNotMatch(cli, /pilot2-e2e\.ts/);
+  assert.doesNotMatch(cli, /exe\.xyz|int\.exe|cloudflare/i);
+});
+
+test('targeted mutation scope includes the canonical Pilot 2 live composition seam', () => {
+  const config = readFileSync('stryker.config.mjs', 'utf8');
+  const wrapper = readFileSync('tools/ci/mutation-test', 'utf8');
+
+  assert.match(config, /src\/dreaming\/pilot2-live-composition\.ts/);
+  assert.match(config, /test\/pilot2-live-composition\.test\.mjs/);
+  assert.match(wrapper, /src\/dreaming\/pilot2-live-composition\.ts/);
 });

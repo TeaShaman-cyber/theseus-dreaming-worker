@@ -216,3 +216,42 @@ test('preserves adapter empty-content and output-budget failure codes through li
 
   globalThis.fetch = originalFetch;
 });
+
+test('live composition passes optional JSON mode and bearer auth to the generic adapter', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({
+      url: String(url),
+      authorization: options.headers.authorization,
+      body: JSON.parse(options.body),
+    });
+    const model = String(url).includes('family-a') ? 'family-a-model' : 'family-b-model';
+    return responseFor(model, 'The retry budget is bounded to one attempt.');
+  };
+
+  try {
+    const result = await runPilot2WithProviders(
+      { scope: 'SYNTHETIC_FIXTURE', task: 'State what the evidence supports.', packet },
+      [
+        {
+          id: 'route-a', provider: 'provider-a', model: 'family-a-model', modelFamily: 'family-a',
+          baseURL: 'https://family-a.example/v1', timeoutMs: 1000, maxOutputTokens: 400,
+          responseFormat: 'json_object', apiKey: 'secret-a',
+        },
+        {
+          id: 'route-b', provider: 'provider-b', model: 'family-b-model', modelFamily: 'family-b',
+          baseURL: 'https://family-b.example/v1', timeoutMs: 1000, maxOutputTokens: 400,
+        },
+      ],
+    );
+
+    assert.equal(result.outcome, 'COMPLETE');
+    assert.equal(calls[0].authorization, 'Bearer secret-a');
+    assert.deepEqual(calls[0].body.response_format, { type: 'json_object' });
+    assert.equal(calls[1].authorization, undefined);
+    assert.equal(calls[1].body.response_format, undefined);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

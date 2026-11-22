@@ -21,7 +21,8 @@
     "cloudflare:dry-run": "cf deploy --dry-run --no-provision",
     "cloudflare:check": "tools/dev/cloudflare-check",
     "cloudflare:startup-check": "cf workers check",
-    "cloudflare:schema": "node tools/cloudflare/export-postgres-schema.mjs"
+    "cloudflare:schema": "node tools/cloudflare/export-postgres-schema.mjs",
+    "pilot2": "node tools/agent/run-pilot2.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "1.0.63",

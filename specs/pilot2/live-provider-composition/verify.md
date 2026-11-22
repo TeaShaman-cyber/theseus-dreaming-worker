@@ -58,3 +58,21 @@
 - **WHEN** live composition hands the failed pass to Pilot 2
 - **THEN** the corresponding Pilot 2 failure code is preserved
 - **AND** the pass does not degrade to generic `INFERENCE_FAILED`
+
+### Requirement: Model-facing schema has one source of truth
+
+#### Scenario: A live provider receives the Proposal v1 contract
+
+- **GIVEN** deterministic validation uses the canonical Zod `proposalSetSchema`
+- **WHEN** the provider adapter builds the system message
+- **THEN** the model-facing JSON Schema is generated from that same validator
+- **AND** handwritten field-type duplication is not the authority
+
+### Requirement: Transport options remain transport-only
+
+#### Scenario: JSON-object mode or bearer authentication is configured
+
+- **GIVEN** an explicit route requests JSON-object mode or supplies a runtime bearer credential
+- **WHEN** live composition delegates to the generic provider adapter
+- **THEN** those options are transmitted only at the transport boundary
+- **AND** Pilot 2 outcome, validation, comparison, and authority semantics remain unchanged

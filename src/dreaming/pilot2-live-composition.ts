@@ -17,6 +17,8 @@ export type Pilot2ProviderRouteConfig = {
   baseURL: string;
   timeoutMs?: number;
   maxOutputTokens: number;
+  responseFormat?: 'json_object';
+  apiKey?: string;
   stream?: boolean;
 };
 
@@ -54,10 +56,11 @@ function validateRouteConfigs(routes: Pilot2ProviderRouteConfig[]): void {
       !nonEmpty(route.modelFamily) ||
       !nonEmpty(route.baseURL) ||
       !Number.isInteger(route.maxOutputTokens) ||
-      route.maxOutputTokens <= 0
+      route.maxOutputTokens <= 0 ||
+      (route.responseFormat !== undefined && route.responseFormat !== 'json_object')
     ) {
       throw new Error(
-        'PILOT2_PROVIDER_ROUTES_INVALID: id/provider/model/modelFamily/baseURL must be non-empty and maxOutputTokens must be a positive integer',
+        'PILOT2_PROVIDER_ROUTES_INVALID: id/provider/model/modelFamily/baseURL must be non-empty, maxOutputTokens must be a positive integer, and responseFormat must be json_object when set',
       );
     }
   }
@@ -85,6 +88,8 @@ export async function runPilot2WithProviders(
           configuredModelFamily: route.modelFamily,
           timeoutMs: route.timeoutMs,
           maxOutputTokens: route.maxOutputTokens,
+          responseFormat: route.responseFormat,
+          apiKey: route.apiKey,
           stream: route.stream,
           onEvidence: evidence => onEvidence?.({ routeId: route.id, evidence }),
         });
