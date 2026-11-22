@@ -6,6 +6,7 @@ import { Hono, type ExecutionContext } from 'hono';
 
 import pilotConfig from '../../config/agents/dreaming-worker-pilot1.json';
 import { createObservability } from '../mastra/observability-routing';
+import { createPerInvocationHandler } from './cloudflare-lifecycle';
 import { createPilot1Agent } from './pilot1-agent';
 import {
   buildCloudflareRuntimePlan,
@@ -14,9 +15,7 @@ import {
 
 type WorkerBindings = CloudflareRuntimeBindings;
 
-let appPromise: Promise<Hono> | undefined;
-
-async function createApp(bindings: WorkerBindings): Promise<Hono> {
+async function createRuntime(bindings: WorkerBindings) {
   const plan = buildCloudflareRuntimePlan(bindings, pilotConfig);
   const storage = new PostgresStore(plan.storage);
   const model = createOpenAICompatible({
@@ -37,21 +36,17 @@ async function createApp(bindings: WorkerBindings): Promise<Hono> {
   const app = new Hono();
   const server = new MastraServer({ app, mastra });
   await server.init();
-  return app;
+
+  return {
+    fetch(request: Request, runtimeBindings: WorkerBindings, context: ExecutionContext) {
+      return app.fetch(request, runtimeBindings, context);
+    },
+    flush() {
+      return mastra.observability.flush();
+    },
+  };
 }
 
-function getApp(bindings: WorkerBindings): Promise<Hono> {
-  appPromise ??= createApp(bindings);
-  return appPromise;
-}
+const fetch = createPerInvocationHandler<WorkerBindings, ExecutionContext>(createRuntime);
 
-export default {
-  async fetch(
-    request: Request,
-    bindings: WorkerBindings,
-    context: ExecutionContext,
-  ): Promise<Response> {
-    const app = await getApp(bindings);
-    return app.fetch(request, bindings, context);
-  },
-};
+export default { fetch };

@@ -26,6 +26,13 @@ Cloudflare Worker
 The runtime storage plan is fixed to schema `dw_issue23` and sets `disableInit: true`.
 The Worker runtime therefore does **not** create or alter Postgres schema objects on first request.
 
+Cloudflare request lifecycle is also part of the storage contract:
+
+- each Worker invocation constructs a fresh Mastra/Postgres runtime; no `pg.Pool` is cached across requests;
+- Hyperdrive owns the reusable origin-side connection pool, while Worker-side database clients remain invocation-scoped;
+- observability `flush()` is registered with `ExecutionContext.waitUntil()` and is delayed until a streaming response completes (or is cancelled/errors), so Postgres/Grafana/Langfuse exporters are not abandoned when the response returns;
+- request-handler failures also schedule an observability flush before propagating the original error.
+
 Mastra DDL is exported deterministically with:
 
 ```bash
