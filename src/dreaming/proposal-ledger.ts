@@ -186,6 +186,7 @@ export function appendLedgerEvent(
 
     const records = new Set(
       ledger
+        // Stryker disable next-line ConditionalExpression: broadening this type guard is equivalent at runtime because SUPERSEDE events have no recordId; their undefined value cannot equal a nonempty string record reference.
         .filter((item): item is ProposalLedgerRecord => item.eventType === 'PROPOSAL')
         .map(item => item.recordId),
     );

@@ -237,9 +237,9 @@ test('multi-hop supersession cycle is rejected', () => {
 });
 
 
-test('branching and reconverging supersession history stays bounded during cycle checks', { timeout: 1000 }, () => {
+test('branching and reconverging supersession history stays bounded during cycle checks', { timeout: 1500 }, () => {
   const records = [];
-  for (let i = 0; i < 34; i += 1) {
+  for (let i = 0; i < 58; i += 1) {
     records.push(createProposalRecord({
       proposal: { ...hypothesisA, claim: `dag-${i}` },
       origin: origin(i % 2 === 0 ? 'route-a' : 'route-b', i % 2 === 0 ? routeA : routeB),
@@ -272,4 +272,21 @@ test('branching and reconverging supersession history stays bounded during cycle
   const view = materializeLedger(ledger);
   assert.equal(view.records.length, records.length);
   assert.equal(view.events.length, ledger.length);
+});
+
+
+test('cycle detection keeps every outgoing branch from the same superseded record', () => {
+  const a = createProposalRecord({ proposal: { ...hypothesisA, claim: 'branch-a' }, origin: origin('route-a', routeA) });
+  const b = createProposalRecord({ proposal: { ...hypothesisB, claim: 'branch-b' }, origin: origin('route-b', routeB) });
+  const c = createProposalRecord({ proposal: { ...hypothesisA, claim: 'branch-c' }, origin: origin('route-a', routeA) });
+  let ledger = appendLedgerEvent([], a);
+  ledger = appendLedgerEvent(ledger, b);
+  ledger = appendLedgerEvent(ledger, c);
+  ledger = appendLedgerEvent(ledger, createSupersessionEvent({ supersededRecordId: a.recordId, replacementRecordId: b.recordId, reason: 'A -> B first branch' }));
+  ledger = appendLedgerEvent(ledger, createSupersessionEvent({ supersededRecordId: a.recordId, replacementRecordId: c.recordId, reason: 'A -> C second branch' }));
+
+  assert.throws(
+    () => appendLedgerEvent(ledger, createSupersessionEvent({ supersededRecordId: c.recordId, replacementRecordId: a.recordId, reason: 'C -> A closes only the second branch' })),
+    /LEDGER_SUPERSESSION_CYCLE/,
+  );
 });
