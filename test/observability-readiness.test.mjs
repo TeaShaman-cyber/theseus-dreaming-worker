@@ -68,3 +68,17 @@ test('invalid Grafana protocol is reported without echoing the invalid value', (
   assert.equal(result.overall, 'INVALID');
   assert.equal(serialized.includes('grpc-secret-ish-value'), false);
 });
+
+
+test('invalid Grafana config does not downgrade complete Langfuse readiness', () => {
+  const result = summarizeObservabilityReadiness({
+    OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otel.example.test',
+    OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc-invalid',
+    LANGFUSE_PUBLIC_KEY: 'pk-complete',
+    LANGFUSE_SECRET_KEY: 'sk-complete',
+  });
+
+  assert.equal(result.grafana.status, 'INVALID');
+  assert.equal(result.langfuse.status, 'CONFIGURED');
+  assert.equal(result.overall, 'INVALID');
+});

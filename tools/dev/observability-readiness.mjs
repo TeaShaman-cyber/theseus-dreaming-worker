@@ -55,7 +55,9 @@ export function summarizeObservabilityReadiness(env) {
         ? 'PARTIAL'
         : 'UNCONFIGURED';
 
-  const langfuseStatus = plan.langfuse
+  const langfuseConfigured =
+    isPresent(env.LANGFUSE_PUBLIC_KEY) && isPresent(env.LANGFUSE_SECRET_KEY);
+  const langfuseStatus = langfuseConfigured
     ? 'CONFIGURED'
     : langfusePresent.length > 0
       ? 'PARTIAL'
