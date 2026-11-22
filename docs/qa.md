@@ -29,6 +29,10 @@ GitHub Actions calls the same `./tools/dev/check`. CI is therefore a hosted witn
 
 Expensive checks run by risk and changed surface rather than on every tiny edit.
 
+Heavy mutation QA is GitHub-runner-first. The governed exe.dev VM is the control/development plane: use it for editing, the fast gate, focused regression tests, and short diagnostics. Do not use it as the default executor for the blocking mutation suite. When heavy QA needs interactive investigation rather than a batch CI run, use a Codespace; only fall back to the smaller VM after an observed need.
+
+The hosted mutation workflow runs three independent shards in parallel: `dreaming-core`, `critique`, and `observability`. The repository wrapper requires an explicit shard name, so plain `npm run mutation` fails before Stryker starts instead of accidentally launching the whole heavy suite locally.
+
 `npm run cloudflare:startup-check` profiles Worker startup locally. It is an acceptance/diagnostic signal rather than a per-commit gate; local timing does not prove Cloudflare production startup time.
 
 The first targeted-heavy check is mutation testing for `src/dreaming/dry-run.ts`.
@@ -117,13 +121,13 @@ src/dreaming/proposal-schema.ts
 This still does **not** establish a project-wide 100% mutation requirement. New mutation scopes must earn their own baseline and classification before becoming blocking.
 
 
-Pilot 2 critique earned its first focused behavioral baseline separately from the combined hosted mutation job:
+Pilot 2 critique first earned a focused behavioral baseline:
 
 ```text
 pilot2 critique contract: 112 killed / 0 survived / mutation score 100.00%
 ```
 
-The critique run intentionally omits the per-mutant TypeScript checker because canonical `npm run typecheck` is already a separate required check and the checker showed memory-pressure restarts when repeated for every mutant. This focused critique baseline is evidence for the new critique contract; it is not yet added to the combined blocking mutation scope.
+That local run remains useful historical evidence, but it is no longer the permanent execution route. Critique mutation now runs as its own hosted shard with the normal TypeScript checker on a GitHub runner. This keeps the 4 GiB control VM out of heavy QA while preserving the same blocking mutation standard.
 
 ## Reverse tracing
 

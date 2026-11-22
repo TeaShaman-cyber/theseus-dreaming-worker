@@ -7,6 +7,18 @@ ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
 }
 cd "$ROOT"
 
+shard=${1:-}
+if [ -z "$shard" ]; then
+  printf '%s\n' 'MUTATION_SHARD_REQUIRED: use one of dreaming-core, critique, observability' >&2
+  exit 2
+fi
+
+export MUTATION_SHARD="$shard"
+node --input-type=module <<'JS'
+import { getMutationShard } from './scripts/mutation-shards.mjs';
+getMutationShard(process.env.MUTATION_SHARD);
+JS
+
 rm -rf reports/mutation
 mkdir -p reports/mutation
 
@@ -22,7 +34,10 @@ fi
 
 node --input-type=module <<'JS'
 import { readFileSync, writeFileSync } from 'node:fs';
+import { getMutationShard } from './scripts/mutation-shards.mjs';
 
+const shardName = process.env.MUTATION_SHARD;
+const shard = getMutationShard(shardName);
 const report = JSON.parse(readFileSync('reports/mutation/mutation.json', 'utf8'));
 const files = Object.values(report.files ?? {});
 const mutants = files.flatMap(file => file.mutants ?? []);
@@ -39,7 +54,8 @@ const score = scored === 0 ? null : ((killed + timeout) / scored) * 100;
 
 const receipt = {
   schema: 'theseus.dreaming-worker.mutation-receipt.v1',
-  scope: ['src/dreaming/dry-run.ts', 'src/dreaming/pilot1-runner.ts', 'src/dreaming/pilot2-runner.ts', 'src/dreaming/pilot2-live-composition.ts', 'src/dreaming/proposal-schema.ts', 'src/mastra/observability-routing.ts', 'src/mastra/pilot1-tracing.ts'],
+  shard: shardName,
+  scope: [...shard.mutate],
   totalMutants: mutants.length,
   killed,
   survived,
