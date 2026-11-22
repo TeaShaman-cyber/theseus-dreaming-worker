@@ -15,7 +15,7 @@ Mastra Agent Builder runs in development mode on the existing governed exe.dev V
 - ChatGPT reaches the Builder through exe.dev's official `mcp-gate` on port 8000 at `https://theseus-exe-shell-probe.exe.xyz/mcp`; the gate supplies OAuth and forwards `/mcp` to Mastra `/api/mcp`.
 - Setup, verification, security boundary, and troubleshooting: [`docs/exe-dev-remote-mcp.md`](docs/exe-dev-remote-mcp.md).
 - Local Builder state: ignored LibSQL files and `.mastra/` workspace; Git remains code/contract authority.
-- Production runtime is deliberately undecided and separate from this development surface.
+- Cloudflare Workers is the selected target runtime. The current Cloudflare state is pre-operational acceptance only: a technical version/deployment may exist, but Dreaming Worker has not been introduced into operation and is not a production service.
 
 Start on the governed VM with Node >=22.13:
 
