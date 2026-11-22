@@ -19,7 +19,7 @@
     "agent:apply": "node tools/agent/sync-pilot1.mjs --apply",
     "cloudflare:build": "cf build",
     "cloudflare:dry-run": "cf deploy --dry-run --no-provision",
-    "cloudflare:check": "cf build && node tools/dev/cloudflare-readiness.mjs && cf deploy --prebuilt --mode production --dry-run --no-provision",
+    "cloudflare:check": "tools/dev/cloudflare-check",
     "cloudflare:startup-check": "cf workers check",
     "cloudflare:schema": "node tools/cloudflare/export-postgres-schema.mjs"
   },

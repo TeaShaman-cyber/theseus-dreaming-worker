@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$repo_root"
+
+export THESEUS_RELEASE="${THESEUS_RELEASE:-$(git rev-parse HEAD)}"
+
+cf build
+node tools/dev/cloudflare-readiness.mjs
+cf deploy --prebuilt --mode production --dry-run --no-provision
