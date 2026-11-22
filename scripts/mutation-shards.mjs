@@ -29,6 +29,14 @@ export const MUTATION_SHARDS = Object.freeze({
       'test/pilot2-critique.test.mjs',
     ]),
   }),
+  'critique-live': Object.freeze({
+    mutate: Object.freeze([
+      'src/dreaming/pilot2-critique-live.ts',
+    ]),
+    tests: Object.freeze([
+      'test/pilot2-critique-live.test.mjs',
+    ]),
+  }),
   observability: Object.freeze({
     mutate: Object.freeze([
       'src/mastra/observability-routing.ts',

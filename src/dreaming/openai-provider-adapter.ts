@@ -78,6 +78,30 @@ export type OpenAIChatInferenceOptions = {
   onEvidence?: (evidence: ProviderCallEvidence) => void;
 };
 
+
+export type OpenAIChatMessage = {
+  role: string;
+  content: string;
+};
+
+export type OpenAIChatTransportOptions = {
+  baseURL: string;
+  configuredProvider: string;
+  configuredModel: string;
+  timeoutMs?: number;
+  maxOutputTokens?: number;
+  apiKey?: string;
+  responseFormat?: 'json_object';
+  stream?: boolean;
+  messages: readonly OpenAIChatMessage[];
+};
+
+export type OpenAIChatTransportResult = Pilot1InferenceResult & {
+  status: number;
+  observedProvider?: string;
+  observedModel?: string;
+};
+
 type OpenAIUsage = {
   prompt_tokens?: unknown;
   completion_tokens?: unknown;
@@ -195,7 +219,7 @@ function normalizeJsonResponse(
   status: number,
   configuredProvider: string,
   configuredModel: string,
-): Pilot1InferenceResult {
+): OpenAIChatTransportResult {
   const choice = firstChoice(payload);
   const finishReason =
     typeof choice.finish_reason === 'string' ? choice.finish_reason : undefined;
@@ -203,19 +227,25 @@ function normalizeJsonResponse(
     typeof choice.message?.content === 'string' ? choice.message.content : undefined;
   const usage = normalizeUsage(payload.usage);
 
+  const observedProvider =
+    typeof payload.provider === 'string' && payload.provider.trim().length > 0
+      ? payload.provider
+      : undefined;
+  const observedModel =
+    typeof payload.model === 'string' && payload.model.trim().length > 0
+      ? payload.model
+      : undefined;
+
   return {
     text: ensureUsableContent(text, finishReason, status, usage),
-    provider:
-      typeof payload.provider === 'string' && payload.provider.length > 0
-        ? payload.provider
-        : configuredProvider,
-    model:
-      typeof payload.model === 'string' && payload.model.length > 0
-        ? payload.model
-        : configuredModel,
+    provider: observedProvider ?? configuredProvider,
+    model: observedModel ?? configuredModel,
+    observedProvider,
+    observedModel,
     finishReason,
     usage,
     runId: typeof payload.id === 'string' ? payload.id : undefined,
+    status,
   };
 }
 
@@ -224,7 +254,7 @@ async function parseSse(
   configuredProvider: string,
   configuredModel: string,
   timeoutSignal: AbortSignal,
-): Promise<Pilot1InferenceResult> {
+): Promise<OpenAIChatTransportResult> {
   if (!response.body) {
     throw new ProviderAdapterError('STREAM_ERROR', 'Provider stream body is missing', {
       status: response.status,
@@ -237,6 +267,8 @@ async function parseSse(
   let text = '';
   let model = configuredModel;
   let provider = configuredProvider;
+  let observedModel: string | undefined;
+  let observedProvider: string | undefined;
   let finishReason: string | undefined;
   let runId: string | undefined;
   let usage: Pilot1InferenceResult['usage'] | undefined;
@@ -273,8 +305,12 @@ async function parseSse(
     }
     const responsePayload = payload as OpenAIResponse;
 
-    if (typeof responsePayload.model === 'string' && responsePayload.model.length > 0) model = responsePayload.model;
-    if (typeof responsePayload.provider === 'string' && responsePayload.provider.length > 0) {
+    if (typeof responsePayload.model === 'string' && responsePayload.model.trim().length > 0) {
+      observedModel = responsePayload.model;
+      model = responsePayload.model;
+    }
+    if (typeof responsePayload.provider === 'string' && responsePayload.provider.trim().length > 0) {
+      observedProvider = responsePayload.provider;
       provider = responsePayload.provider;
     }
     if (typeof responsePayload.id === 'string') runId = responsePayload.id;
@@ -307,9 +343,12 @@ async function parseSse(
               text: ensureUsableContent(text, finishReason, response.status, usage),
               provider,
               model,
+              observedProvider,
+              observedModel,
               finishReason,
               usage,
               runId,
+              status: response.status,
             };
           }
           boundary = buffer.indexOf('\n\n');
@@ -331,9 +370,12 @@ async function parseSse(
         text: ensureUsableContent(text, finishReason, response.status, usage),
         provider,
         model,
+        observedProvider,
+        observedModel,
         finishReason,
         usage,
         runId,
+        status: response.status,
       };
     } catch (error) {
       if (error instanceof ProviderAdapterError) throw error;
@@ -357,11 +399,109 @@ async function parseSse(
   }
 }
 
-export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): Pilot1Inference {
+export async function executeOpenAIChatTransport(
+  options: OpenAIChatTransportOptions,
+): Promise<OpenAIChatTransportResult> {
   const baseURL = options.baseURL.replace(/\/+$/, '');
   const timeoutMs = options.timeoutMs ?? 10_000;
   const stream = options.stream ?? false;
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
 
+  let response: Response;
+  try {
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (options.apiKey) headers.authorization = `Bearer ${options.apiKey}`;
+
+    response = await fetch(baseURL + '/chat/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: options.configuredModel,
+        messages: options.messages,
+        max_tokens: options.maxOutputTokens,
+        ...(options.responseFormat === undefined
+          ? {}
+          : { response_format: { type: options.responseFormat } }),
+        stream,
+      }),
+      signal: timeoutSignal,
+    });
+  } catch (error) {
+    if (timeoutSignal.aborted || (error instanceof Error && error.name === 'TimeoutError')) {
+      throw new ProviderAdapterError('TIMEOUT', 'Provider request timed out', {
+        providerState: 'UNKNOWN',
+        cause: error,
+      });
+    }
+    throw new ProviderAdapterError('HTTP_ERROR', 'Provider request failed before a response', {
+      providerState: 'UNKNOWN',
+      cause: error,
+    });
+  }
+
+  if (response.status === 429) {
+    throw new ProviderAdapterError('RATE_LIMITED', 'Provider rate limited the request', {
+      status: response.status,
+      retryAfterMs: retryAfterMs(response.headers.get('retry-after')),
+      providerState: 'RESPONDED',
+    });
+  }
+
+  if (!response.ok) {
+    throw new ProviderAdapterError(
+      'HTTP_ERROR',
+      'Provider returned HTTP ' + response.status,
+      { status: response.status, providerState: 'RESPONDED' },
+    );
+  }
+
+  const contentType = response.headers.get('content-type') ?? '';
+  let result: OpenAIChatTransportResult;
+
+  if (stream || contentType.includes('text/event-stream')) {
+    result = await parseSse(
+      response,
+      options.configuredProvider,
+      options.configuredModel,
+      timeoutSignal,
+    );
+  } else {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      if (timeoutSignal.aborted) {
+        throw new ProviderAdapterError('TIMEOUT', 'Provider response body timed out', {
+          status: response.status,
+          providerState: 'RESPONDED',
+          cause: error,
+        });
+      }
+      throw new ProviderAdapterError('MALFORMED_RESPONSE', 'Provider response is not valid JSON', {
+        status: response.status,
+        providerState: 'RESPONDED',
+        cause: error,
+      });
+    }
+    if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new ProviderAdapterError('MALFORMED_RESPONSE', 'Provider response is not a JSON object', {
+        status: response.status,
+        providerState: 'RESPONDED',
+      });
+    }
+
+    result = normalizeJsonResponse(
+      payload as OpenAIResponse,
+      response.status,
+      options.configuredProvider,
+      options.configuredModel,
+    );
+  }
+
+  return result;
+}
+
+export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): Pilot1Inference {
   return async (request, correlation) => {
     const startedAt = Date.now();
 
@@ -388,104 +528,23 @@ export function createOpenAIChatInference(options: OpenAIChatInferenceOptions): 
     };
 
     try {
-      let response: Response;
-      const timeoutSignal = AbortSignal.timeout(timeoutMs);
-
-      try {
-        const headers: Record<string, string> = { 'content-type': 'application/json' };
-        if (options.apiKey) headers.authorization = `Bearer ${options.apiKey}`;
-
-        response = await fetch(baseURL + '/chat/completions', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            model: options.configuredModel,
-            messages: transportMessages(request, correlation),
-            max_tokens: options.maxOutputTokens,
-            ...(options.responseFormat === undefined
-              ? {}
-              : { response_format: { type: options.responseFormat } }),
-            stream,
-          }),
-          signal: timeoutSignal,
-        });
-      } catch (error) {
-        if (timeoutSignal.aborted || (error instanceof Error && error.name === 'TimeoutError')) {
-          throw new ProviderAdapterError('TIMEOUT', 'Provider request timed out', {
-            providerState: 'UNKNOWN',
-            cause: error,
-          });
-        }
-        throw new ProviderAdapterError('HTTP_ERROR', 'Provider request failed before a response', {
-          providerState: 'UNKNOWN',
-          cause: error,
-        });
-      }
-
-      if (response.status === 429) {
-        throw new ProviderAdapterError('RATE_LIMITED', 'Provider rate limited the request', {
-          status: response.status,
-          retryAfterMs: retryAfterMs(response.headers.get('retry-after')),
-          providerState: 'RESPONDED',
-        });
-      }
-
-      if (!response.ok) {
-        throw new ProviderAdapterError(
-          'HTTP_ERROR',
-          'Provider returned HTTP ' + response.status,
-          { status: response.status, providerState: 'RESPONDED' },
-        );
-      }
-
-      const contentType = response.headers.get('content-type') ?? '';
-      let result: Pilot1InferenceResult;
-
-      if (stream || contentType.includes('text/event-stream')) {
-        result = await parseSse(
-          response,
-          options.configuredProvider,
-          options.configuredModel,
-          timeoutSignal,
-        );
-      } else {
-        let payload: unknown;
-        try {
-          payload = await response.json();
-        } catch (error) {
-          if (timeoutSignal.aborted) {
-            throw new ProviderAdapterError('TIMEOUT', 'Provider response body timed out', {
-              status: response.status,
-              providerState: 'RESPONDED',
-              cause: error,
-            });
-          }
-          throw new ProviderAdapterError('MALFORMED_RESPONSE', 'Provider response is not valid JSON', {
-            status: response.status,
-            providerState: 'RESPONDED',
-            cause: error,
-          });
-        }
-        if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
-          throw new ProviderAdapterError('MALFORMED_RESPONSE', 'Provider response is not a JSON object', {
-            status: response.status,
-            providerState: 'RESPONDED',
-          });
-        }
-
-        result = normalizeJsonResponse(
-          payload as OpenAIResponse,
-          response.status,
-          options.configuredProvider,
-          options.configuredModel,
-        );
-      }
+      const result = await executeOpenAIChatTransport({
+        baseURL: options.baseURL,
+        configuredProvider: options.configuredProvider,
+        configuredModel: options.configuredModel,
+        timeoutMs: options.timeoutMs,
+        maxOutputTokens: options.maxOutputTokens,
+        apiKey: options.apiKey,
+        responseFormat: options.responseFormat,
+        stream: options.stream,
+        messages: transportMessages(request, correlation),
+      });
 
       emitEvidence({
         observedProvider: result.provider,
         observedModel: result.model,
         requestId: result.runId,
-        status: response.status,
+        status: result.status,
         providerState: 'RESPONDED',
         usageState: result.usage ? 'PRESENT' : 'ABSENT',
         usage: result.usage,

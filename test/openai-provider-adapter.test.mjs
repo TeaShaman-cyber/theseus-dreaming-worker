@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import {
   ProviderAdapterError,
   createOpenAIChatInference,
+  executeOpenAIChatTransport,
 } from '../src/dreaming/openai-provider-adapter.ts';
 import { proposalSetJsonSchema } from '../src/dreaming/proposal-schema.ts';
 
@@ -1384,4 +1385,53 @@ test('adapter omits response_format when JSON-object mode is not configured', as
   });
 
   assert.equal(observedBody.response_format, undefined);
+});
+
+
+test('shared OpenAI chat transport accepts caller-supplied messages and preserves wire semantics', async () => {
+  let observedBody;
+  await withServer((req, res) => {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      observedBody = JSON.parse(body);
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({
+        id: 'shared-transport-run',
+        provider: 'observed-provider',
+        model: 'observed-model',
+        choices: [{ finish_reason: 'stop', message: { content: '{\"ok\":true}' } }],
+      }));
+    });
+  }, async baseURL => {
+    const result = await executeOpenAIChatTransport({
+      baseURL,
+      configuredProvider: 'configured-provider',
+      configuredModel: 'configured-model',
+      messages: [
+        { role: 'system', content: 'system-contract' },
+        { role: 'user', content: 'user-payload' },
+      ],
+      maxOutputTokens: 321,
+      responseFormat: 'json_object',
+      apiKey: 'secret',
+      stream: false,
+    });
+
+    assert.equal(result.text, '{\"ok\":true}');
+    assert.equal(result.provider, 'observed-provider');
+    assert.equal(result.model, 'observed-model');
+    assert.equal(result.finishReason, 'stop');
+    assert.equal(result.runId, 'shared-transport-run');
+    assert.equal(result.status, 200);
+  });
+
+  assert.deepEqual(observedBody.messages, [
+    { role: 'system', content: 'system-contract' },
+    { role: 'user', content: 'user-payload' },
+  ]);
+  assert.equal(observedBody.max_tokens, 321);
+  assert.deepEqual(observedBody.response_format, { type: 'json_object' });
+  assert.equal(observedBody.stream, false);
 });

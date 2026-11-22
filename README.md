@@ -87,3 +87,23 @@ A bounded two-family acceptance run has reached `COMPLETE` with strict Proposal 
 
 Implementation: `src/dreaming/pilot2-live-composition.ts`.
 CLI: `tools/agent/run-pilot2.mjs`.
+
+
+## Pilot 2 bounded live critique
+
+The critique layer runs exactly one bounded model call over frozen Pilot 2 perspectives. It receives only deterministic `CritiqueInput`, returns a `DERIVED_ONLY` artifact, and cannot add retrieval, tools, memory, canonical writes, or publication authority.
+
+The first synthetic acceptance sequence preserved failure semantics before success:
+
+- attempt 1: the model echoed the JSON Schema itself; deterministic validation returned `CRITIQUE_SCHEMA_INVALID`;
+- attempt 2: the provider responded but the body exceeded the explicit deadline; result stayed `TIMEOUT_UNKNOWN_PROVIDER_STATE`;
+- attempt 3: Qwen 3.8 27B returned a valid `DERIVED_ONLY` critique with `AGREEMENT` and `UNRESOLVED` relations, accepted only after frozen proposal/evidence reference validation.
+
+Publication-safe receipts are stored at:
+
+- `artifacts/acceptance/pilot2-live-critique-attempt-1-schema-echo.json`;
+- `artifacts/acceptance/pilot2-live-critique-attempt-2-timeout.json`;
+- `artifacts/acceptance/pilot2-first-live-critique.json`.
+
+Implementation: `src/dreaming/pilot2-critique-live.ts`.
+Contract: `specs/pilot2/live-critique/`.
