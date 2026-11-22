@@ -1,11 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import {
   compareMutationReports,
   summarizeMutationReport,
   buildExecutionReceipt,
   isSupportedNodeVersion,
+  loadBaselineSnapshot,
+  runLogged,
+  focusedTestArgs,
 } from '../tools/dev/provider-adapter-readiness.mjs';
 
 function report(mutants) {
@@ -90,4 +96,39 @@ test('readiness runner requires the repository Node 22.13+ runtime', () => {
   assert.equal(isSupportedNodeVersion('22.23.5'), true);
   assert.equal(isSupportedNodeVersion('22.12.9'), false);
   assert.equal(isSupportedNodeVersion('18.19.1'), false);
+});
+
+
+test('baseline receipt is snapshotted before its mutation report can be overwritten', () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'readiness-baseline-'));
+  const mutationPath = path.join(dir, 'mutation.json');
+  const receiptPath = path.join(dir, 'receipt.json');
+  writeFileSync(mutationPath, JSON.stringify(report([{ id: '1', status: 'Killed' }])), 'utf8');
+  writeFileSync(receiptPath, JSON.stringify({
+    schema: 'theseus.dreaming-worker.provider-adapter-readiness.v1',
+    artifacts: { mutationReport: 'mutation.json' },
+  }), 'utf8');
+
+  const snapshot = loadBaselineSnapshot(receiptPath);
+  writeFileSync(mutationPath, JSON.stringify(report([{ id: '1', status: 'Survived' }])), 'utf8');
+
+  assert.equal(snapshot.report.files['src/dreaming/openai-provider-adapter.ts'].mutants[0].status, 'Killed');
+});
+
+test('missing subprocess executable is returned as a failed result instead of rejecting receipt flow', async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'readiness-spawn-'));
+  const logPath = path.join(dir, 'spawn.log');
+  const result = await runLogged(process.cwd(), '/definitely/missing/provider-adapter-readiness-command', [], logPath);
+
+  assert.equal(result.exitCode, 127);
+  assert.match(result.spawnError, /ENOENT|not found/i);
+  assert.match(readFileSync(logPath, 'utf8'), /spawn/i);
+});
+
+test('focused provider-adapter tests explicitly select TAP reporter', () => {
+  assert.deepEqual(focusedTestArgs(), [
+    '--test',
+    '--test-reporter=tap',
+    'test/openai-provider-adapter.test.mjs',
+  ]);
 });

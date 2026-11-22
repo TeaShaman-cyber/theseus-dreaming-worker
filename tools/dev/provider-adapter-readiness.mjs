@@ -8,6 +8,7 @@ import {
   openSync,
   readFileSync,
   writeFileSync,
+  writeSync,
 } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -112,29 +113,51 @@ function gitText(root, args) {
   return result.stdout.trim();
 }
 
-async function runLogged(root, command, args, logPath, env = process.env) {
+export async function runLogged(root, command, args, logPath, env = process.env) {
   mkdirSync(path.dirname(logPath), { recursive: true });
   const fd = openSync(logPath, 'w');
-  try {
-    return await new Promise((resolve, reject) => {
-      const child = spawn(command, args, {
+
+  return await new Promise(resolve => {
+    let settled = false;
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      closeSync(fd);
+      resolve(result);
+    };
+
+    let child;
+    try {
+      child = spawn(command, args, {
         cwd: root,
         env,
         stdio: ['ignore', fd, fd],
       });
-      child.once('error', reject);
-      child.once('close', code => resolve(code ?? 1));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      writeSync(fd, `spawn error: ${message}\n`);
+      finish({ exitCode: 127, spawnError: message });
+      return;
+    }
+
+    child.once('error', error => {
+      const message = error instanceof Error ? error.message : String(error);
+      writeSync(fd, `spawn error: ${message}\n`);
+      finish({ exitCode: 127, spawnError: message });
     });
-  } finally {
-    closeSync(fd);
-  }
+    child.once('close', code => finish({ exitCode: code ?? 1, spawnError: null }));
+  });
+}
+
+export function focusedTestArgs() {
+  return ['--test', '--test-reporter=tap', 'test/openai-provider-adapter.test.mjs'];
 }
 
 function relativeToRoot(root, filePath) {
   return path.relative(root, filePath) || '.';
 }
 
-function resolveBaselineReport(baselinePath) {
+export function loadBaselineSnapshot(baselinePath) {
   const absolute = path.resolve(baselinePath);
   const parsed = JSON.parse(readFileSync(absolute, 'utf8'));
   if (parsed?.files) return { report: parsed, source: absolute };
@@ -187,8 +210,16 @@ async function main() {
     mutation: { status: 'NOT_RUN', exitCode: null, log: 'mutation.log' },
   };
   let baseline = null;
+  let baselineSnapshot = null;
 
   const preflightProblems = [];
+  if (options.baseline) {
+    try {
+      baselineSnapshot = loadBaselineSnapshot(options.baseline);
+    } catch (error) {
+      preflightProblems.push(`baseline: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
   if (!isSupportedNodeVersion(process.versions.node)) {
     preflightProblems.push(`Node ${process.versions.node} is unsupported; package.json requires >=22.13.0`);
   }
@@ -213,39 +244,51 @@ async function main() {
   }
 
   const focusedLog = path.join(outputDir, steps.focusedTests.log);
-  const focusedExit = await runLogged(root, process.execPath, ['--test', 'test/openai-provider-adapter.test.mjs'], focusedLog);
+  const focusedResult = await runLogged(root, process.execPath, focusedTestArgs(), focusedLog);
+  const focusedExit = focusedResult.exitCode;
   const focusedCounts = parseTapCounts(readFileSync(focusedLog, 'utf8'));
   steps.focusedTests = {
     status: focusedExit === 0 ? 'PASS' : 'FAIL',
     exitCode: focusedExit,
     ...focusedCounts,
     log: steps.focusedTests.log,
+    ...(focusedResult.spawnError ? { spawnError: focusedResult.spawnError } : {}),
   };
 
   if (focusedExit === 0) {
     const qaLog = path.join(outputDir, steps.canonicalQa.log);
-    const qaExit = await runLogged(root, 'npm', ['run', 'check'], qaLog);
-    steps.canonicalQa = { status: qaExit === 0 ? 'PASS' : 'FAIL', exitCode: qaExit, log: steps.canonicalQa.log };
+    const qaResult = await runLogged(root, 'npm', ['run', 'check'], qaLog);
+    const qaExit = qaResult.exitCode;
+    steps.canonicalQa = {
+      status: qaExit === 0 ? 'PASS' : 'FAIL',
+      exitCode: qaExit,
+      log: steps.canonicalQa.log,
+      ...(qaResult.spawnError ? { spawnError: qaResult.spawnError } : {}),
+    };
   }
 
   if (steps.canonicalQa.status === 'PASS') {
     const mutationLog = path.join(outputDir, steps.mutation.log);
     const mutationEnv = { ...process.env, PROVIDER_ADAPTER_MUTATION_REPORT: mutationReportPath };
     const stryker = path.join(root, 'node_modules', '.bin', 'stryker');
-    const mutationExit = await runLogged(root, stryker, ['run', 'stryker.provider-adapter.config.mjs'], mutationLog, mutationEnv);
+    const mutationResult = await runLogged(root, stryker, ['run', 'stryker.provider-adapter.config.mjs'], mutationLog, mutationEnv);
+    const mutationExit = mutationResult.exitCode;
     const mutationExists = existsSync(mutationReportPath);
     steps.mutation = {
       status: mutationExit === 0 && mutationExists ? 'PASS' : 'FAIL',
       exitCode: mutationExists ? mutationExit : (mutationExit || 1),
       log: steps.mutation.log,
+      ...(mutationResult.spawnError ? { spawnError: mutationResult.spawnError } : {}),
       ...(mutationExists ? summarizeMutationReport(JSON.parse(readFileSync(mutationReportPath, 'utf8'))) : {}),
     };
 
-    if (mutationExists && options.baseline) {
-      const previous = resolveBaselineReport(options.baseline);
+    if (mutationExists && baselineSnapshot) {
       baseline = {
-        source: relativeToRoot(root, previous.source),
-        delta: compareMutationReports(previous.report, JSON.parse(readFileSync(mutationReportPath, 'utf8'))),
+        source: relativeToRoot(root, baselineSnapshot.source),
+        delta: compareMutationReports(
+          baselineSnapshot.report,
+          JSON.parse(readFileSync(mutationReportPath, 'utf8')),
+        ),
       };
     }
   }
