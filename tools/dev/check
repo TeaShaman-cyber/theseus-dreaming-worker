@@ -25,6 +25,9 @@ npm run typecheck
 printf '%s\n' '== build =='
 npm run build:check
 
+printf '%s\n' '== Cloudflare build and deploy dry-run =='
+npm run cloudflare:check
+
 printf '%s\n' '== goal contract =='
 python3 tools/check_goal_contract.py
 

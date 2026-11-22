@@ -19,6 +19,7 @@ It checks:
 | `npm run test` | Unit and regression tests still describe the intended behavior. |
 | `npm run typecheck` | TypeScript relationships are internally consistent. |
 | `npm run build:check` | The Mastra application can actually be assembled in an isolated temporary copy, without disturbing a running Studio/dev server. |
+| `npm run cloudflare:check` | The Cloudflare Worker candidate builds, emits a non-secret readiness receipt, and passes a prebuilt `cf deploy --dry-run --no-provision` without creating cloud resources. |
 | `python3 tools/check_goal_contract.py` | The explicit dreaming-worker authority contract is still present. |
 | `git diff --check` | The patch has no whitespace damage. |
 
@@ -27,6 +28,8 @@ GitHub Actions calls the same `./tools/dev/check`. CI is therefore a hosted witn
 ## Targeted-heavy lane
 
 Expensive checks run by risk and changed surface rather than on every tiny edit.
+
+`npm run cloudflare:startup-check` profiles Worker startup locally. It is an acceptance/diagnostic signal rather than a per-commit gate; local timing does not prove Cloudflare production startup time.
 
 The first targeted-heavy check is mutation testing for `src/dreaming/dry-run.ts`.
 

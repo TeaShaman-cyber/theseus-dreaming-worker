@@ -12,7 +12,8 @@
     ],
     "noEmit": true,
     "outDir": "dist",
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true
   },
   "include": [
     "src/**/*"
