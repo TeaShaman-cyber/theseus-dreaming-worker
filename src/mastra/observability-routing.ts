@@ -148,6 +148,14 @@ export function createObservability(
             headers: plan.otel.headers,
           },
         },
+        resourceAttributes: {
+          ...(env.THESEUS_ENVIRONMENT?.trim()
+            ? { 'deployment.environment.name': env.THESEUS_ENVIRONMENT.trim() }
+            : {}),
+          ...(env.THESEUS_RELEASE?.trim()
+            ? { 'service.version': env.THESEUS_RELEASE.trim() }
+            : {}),
+        },
         signals: {
           traces: true,
           logs: false,
