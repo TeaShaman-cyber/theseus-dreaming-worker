@@ -24,7 +24,7 @@ export function prepareStructuredOutput(
     throw new Error('PILOT1_OUTPUT_TRUNCATED');
   }
 
-  const fenced = rawText.match(/^\s*```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```\s*$/i);
+  const fenced = rawText.match(/^\s*```json\r?\n([\s\S]*?)\r?\n```\s*$/i);
   if (!fenced) return { text: rawText };
 
   const normalized = fenced[1];
