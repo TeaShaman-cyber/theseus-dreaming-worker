@@ -216,6 +216,7 @@ function classifyFailure(error: unknown): Pilot2PassFailure {
 function classifyRecovery(
   failure: Pilot2PassFailure,
   rawModelOutput: string | null,
+  finishReason?: string,
 ): Pilot2Recovery | null {
   if (!rawModelOutput) return null;
 
@@ -223,6 +224,7 @@ function classifyRecovery(
     'sha256:' + createHash('sha256').update(rawModelOutput).digest('hex');
 
   if (failure.code === 'INVALID_JSON') {
+    if (finishReason !== 'stop') return null;
     return {
       classification: 'UNSTRUCTURED_COMPLETE',
       serializerEligible: true,
@@ -232,6 +234,7 @@ function classifyRecovery(
   }
 
   if (failure.code === 'INVALID_SCHEMA') {
+    if (finishReason !== 'stop') return null;
     return {
       classification: 'SCHEMA_MISMATCH_COMPLETE',
       serializerEligible: true,
@@ -299,16 +302,18 @@ async function runPass(
   route: Pilot2Route,
 ): Promise<Pilot2Pass> {
   let observed: Pilot2ObservedInference | null = null;
+  let observedFinishReason: string | undefined;
   let rawModelOutput: string | null = null;
 
   try {
     const result = await runPilot1(request, async (innerRequest, correlation) => {
       const inference = await route.infer(innerRequest, correlation);
       rawModelOutput = inference.text ?? null;
+      observedFinishReason = inference.finishReason;
       observed = {
         provider: inference.provider,
         model: inference.model,
-        finishReason: inference.finishReason,
+        finishReason: observedFinishReason,
       };
       if (!inference.text?.trim()) {
         if (inference.finishReason === 'length') {
@@ -341,7 +346,7 @@ async function runPass(
       route: publicRoute(route),
       observed,
       failure,
-      recovery: classifyRecovery(failure, rawModelOutput),
+      recovery: classifyRecovery(failure, rawModelOutput, observedFinishReason),
     };
   }
 }

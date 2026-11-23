@@ -884,6 +884,58 @@ test('Pilot 2 preserves valid JSON with the wrong schema as a serializer candida
   assert.equal(failed.recovery.rawModelOutput, raw);
 });
 
+
+test('Pilot 2 does not call invalid JSON complete without normal finish evidence', async () => {
+  const raw = 'Complete-looking prose without a provider finish reason.';
+  const result = await runPilot2(request, [
+    qwenRoute(async () => ({
+      text: factOutput('The valid perspective survives.'),
+      provider: 'groq',
+      model: 'qwen/qwen3.8-27b',
+      toolCalls: [],
+    })),
+    mistralRoute(async () => ({
+      text: raw,
+      provider: 'openrouter',
+      model: 'mistralai/mistral-small-3.2-24b-instruct',
+      toolCalls: [],
+    })),
+  ]);
+
+  const failed = result.passes[1];
+  assert.equal(failed.status, 'FAILED');
+  assert.equal(failed.failure.code, 'INVALID_JSON');
+  assert.equal(failed.observed.finishReason, undefined);
+  assert.equal(failed.recovery, null);
+});
+
+test('Pilot 2 does not call schema-invalid output complete without normal finish evidence', async () => {
+  const raw = JSON.stringify({
+    schema: 'theseus.dreaming-worker.proposals.v1',
+    proposals: [{ type: 'FACT', claim: 'Missing source refs.' }],
+  });
+  const result = await runPilot2(request, [
+    qwenRoute(async () => ({
+      text: factOutput('The valid perspective survives.'),
+      provider: 'groq',
+      model: 'qwen/qwen3.8-27b',
+      toolCalls: [],
+    })),
+    mistralRoute(async () => ({
+      text: raw,
+      provider: 'openrouter',
+      model: 'mistralai/mistral-small-3.2-24b-instruct',
+      toolCalls: [],
+    })),
+  ]);
+
+  const failed = result.passes[1];
+  assert.equal(failed.status, 'FAILED');
+  assert.equal(failed.failure.code, 'INVALID_SCHEMA');
+  assert.equal(failed.observed.finishReason, undefined);
+  assert.equal(failed.recovery, null);
+});
+
 test('Pilot 2 never offers provenance-invalid output to a serializer', async () => {
   const raw = JSON.stringify({
     schema: 'theseus.dreaming-worker.proposals.v1',
