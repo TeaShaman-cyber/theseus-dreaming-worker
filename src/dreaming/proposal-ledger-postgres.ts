@@ -149,9 +149,11 @@ export function createPostgresProposalLedger(options: PostgresProposalLedgerOpti
     async appendEvent(eventInput: ProposalLedgerEvent): Promise<void> {
       const event = proposalLedgerEventSchema.parse(structuredClone(eventInput));
       const client = clientFactory(options.connectionString);
-      await client.connect();
+      let transactionStarted = false;
       try {
+        await client.connect();
         await client.query('BEGIN');
+        transactionStarted = true;
         await client.query("SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))");
         const existing = await readEventsWithClient(client);
         appendLedgerEvent(existing, event);
@@ -193,10 +195,12 @@ export function createPostgresProposalLedger(options: PostgresProposalLedgerOpti
 
         await client.query('COMMIT');
       } catch (error) {
-        try {
-          await client.query('ROLLBACK');
-        } catch {
-          // Preserve the original storage/validation failure.
+        if (transactionStarted) {
+          try {
+            await client.query('ROLLBACK');
+          } catch {
+            // Preserve the original storage/validation failure.
+          }
         }
         throw error;
       } finally {

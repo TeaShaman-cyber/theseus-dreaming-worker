@@ -86,7 +86,7 @@ function rowFor(event, eventSeq) {
   };
 }
 
-function fakeClient({ rows = [], failOnInsert = null } = {}) {
+function fakeClient({ rows = [], failOnInsert = null, failOnConnect = null } = {}) {
   const calls = [];
   let connected = false;
   let ended = false;
@@ -94,7 +94,10 @@ function fakeClient({ rows = [], failOnInsert = null } = {}) {
     calls,
     get connected() { return connected; },
     get ended() { return ended; },
-    async connect() { connected = true; },
+    async connect() {
+      if (failOnConnect) throw failOnConnect;
+      connected = true;
+    },
     async query(text, values = []) {
       calls.push({ text, values: structuredClone(values) });
       if (failOnInsert && /INSERT INTO dw_ledger\./.test(text)) throw failOnInsert;
@@ -215,4 +218,19 @@ test('readEvents rejects persisted proposal rows whose fingerprint no longer mat
 
   await assert.rejects(() => ledger.readEvents(), /LEDGER_PROPOSAL_FINGERPRINT_MISMATCH/);
   assert.equal(client.ended, true);
+});
+
+
+test('appendEvent closes the client when connection establishment fails', async () => {
+  const { a } = events();
+  const expected = new Error('synthetic connect failure');
+  const client = fakeClient({ failOnConnect: expected });
+  const ledger = createPostgresProposalLedger({
+    connectionString: 'postgresql://runtime:secret@example.invalid/dreaming_issue23',
+    clientFactory: () => client,
+  });
+
+  await assert.rejects(() => ledger.appendEvent(a), expected);
+  assert.equal(client.ended, true);
+  assert.equal(client.calls.some(call => /^ROLLBACK$/i.test(call.text.trim())), false);
 });
