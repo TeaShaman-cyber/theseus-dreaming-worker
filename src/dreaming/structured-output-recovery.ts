@@ -28,11 +28,6 @@ export function prepareStructuredOutput(
   if (!fenced) return { text: rawText };
 
   const normalized = fenced[1];
-  try {
-    JSON.parse(normalized);
-  } catch {
-    return { text: rawText };
-  }
 
   return {
     text: normalized,
