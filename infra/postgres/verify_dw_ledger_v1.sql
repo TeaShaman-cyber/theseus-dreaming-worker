@@ -64,7 +64,9 @@ BEGIN
   WHERE d.adrelid = 'dw_ledger.supersession_events'::regclass
     AND a.attname = 'event_seq';
 
-  IF proposal_seq_default NOT LIKE '%dw_ledger.event_seq%'
+  IF proposal_seq_default IS NULL
+     OR supersession_seq_default IS NULL
+     OR proposal_seq_default NOT LIKE '%dw_ledger.event_seq%'
      OR supersession_seq_default NOT LIKE '%dw_ledger.event_seq%' THEN
     RAISE EXCEPTION 'DW_LEDGER_SHARED_EVENT_SEQUENCE_INVALID';
   END IF;
