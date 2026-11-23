@@ -23,6 +23,7 @@ test('heavy mutation is split into explicit hosted shards', () => {
     'src/dreaming/proposal-ledger.ts',
   ]);
   assert.ok(MUTATION_SHARDS['pilot0-1'].mutate.includes('src/dreaming/pilot1-runner.ts'));
+  assert.ok(MUTATION_SHARDS['pilot0-1'].mutate.includes('src/dreaming/structured-output-recovery.ts'));
   assert.ok(MUTATION_SHARDS.pilot2.mutate.includes('src/dreaming/pilot2-live-composition.ts'));
   assert.ok(MUTATION_SHARDS.observability.mutate.includes('src/mastra/observability-routing.ts'));
 });
