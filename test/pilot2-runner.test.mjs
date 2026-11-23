@@ -529,6 +529,7 @@ test('Pilot 2 normalizes Pilot 1 policy violation as a typed pass failure', asyn
 
   assert.equal(result.outcome, 'PARTIAL');
   assert.equal(result.passes[1].failure.code, 'POLICY_VIOLATION');
+  assert.equal(result.passes[1].recovery, null);
 });
 
 test('Pilot 2 distinguishes empty final content from output-budget exhaustion', async () => {

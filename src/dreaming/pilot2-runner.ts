@@ -217,7 +217,7 @@ function classifyRecovery(
   failure: Pilot2PassFailure,
   rawModelOutput: string | null,
 ): Pilot2Recovery | null {
-  if (!rawModelOutput?.trim()) return null;
+  if (!rawModelOutput) return null;
 
   const rawOutputFingerprint =
     'sha256:' + createHash('sha256').update(rawModelOutput).digest('hex');
