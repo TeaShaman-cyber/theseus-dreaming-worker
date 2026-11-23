@@ -135,12 +135,13 @@ test('Neon ledger preview workflow is project-scoped, data-free, ephemeral, and 
   assert.doesNotMatch(workflow, /ALTER\s+ROLE|connection_uri/is);
 });
 
-test('hosted PostgreSQL contract lane exercises ledger SQL and adapter on PostgreSQL 17', () => {
+test('hosted PostgreSQL contract lane uses the runner PostgreSQL service without registry pulls', () => {
   const workflow = readFileSync('.github/workflows/heavy-postgres.yml', 'utf8');
   const runner = readFileSync('tools/ci/heavy-postgres', 'utf8');
 
-  assert.match(workflow, /public\.ecr\.aws\/docker\/library\/postgres@sha256:/);
-  assert.match(workflow, /postgresql-client/);
+  assert.match(workflow, /systemctl start postgresql\.service/);
+  assert.match(workflow, /PG_EXPECTED_MAJOR:\s*'18'/);
+  assert.doesNotMatch(workflow, /docker\/library\/postgres|services:\s*[\s\S]*postgres:/);
   assert.match(workflow, /tools\/ci\/heavy-postgres/);
   assert.match(workflow, /node-version:\s*'22'/);
   assert.match(workflow, /persist-credentials:\s*false/);

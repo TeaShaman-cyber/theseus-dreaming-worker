@@ -11,7 +11,8 @@ cd "$ROOT"
 : "${PGPORT:=5432}"
 : "${PGUSER:=postgres}"
 : "${PGDATABASE:=dreaming_worker_contract}"
-export PGHOST PGPORT PGUSER PGDATABASE
+: "${PG_EXPECTED_MAJOR:=18}"
+export PGHOST PGPORT PGUSER PGDATABASE PG_EXPECTED_MAJOR
 
 command -v psql >/dev/null 2>&1 || {
   printf '%s\n' 'heavy-postgres: psql not found' >&2
@@ -20,13 +21,12 @@ command -v psql >/dev/null 2>&1 || {
 
 printf '%s\n' '== PostgreSQL server ==' 
 server_version_num=$(psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_setting('server_version_num');")
-case "$server_version_num" in
-  17????) ;;
-  *)
-    printf 'heavy-postgres: expected PostgreSQL 17, got server_version_num=%s\n' "$server_version_num" >&2
-    exit 2
-    ;;
-esac
+server_major=$((server_version_num / 10000))
+if [ "$server_major" -ne "$PG_EXPECTED_MAJOR" ]; then
+  printf 'heavy-postgres: expected PostgreSQL major %s, got server_version_num=%s\n' \
+    "$PG_EXPECTED_MAJOR" "$server_version_num" >&2
+  exit 2
+fi
 
 printf '%s\n' '== ledger role fixture ==' 
 psql -X -v ON_ERROR_STOP=1 -f qa/postgres/bootstrap-ledger-roles.sql
@@ -42,4 +42,4 @@ printf '%s\n' '== ledger adapter integration =='
 LEDGER_DATABASE_URL="postgresql://dw_runtime_issue23:runtime-test@${PGHOST}:${PGPORT}/${PGDATABASE}" \
   node qa/postgres/ledger-adapter-integration.mjs
 
-printf '%s\n' 'HEAVY_POSTGRES_PASS substrate=postgresql-17 migration=double-replay grants=append-only adapter=read-write-order-validation'
+printf '%s\n' 'HEAVY_POSTGRES_PASS substrate=postgresql-${PG_EXPECTED_MAJOR} migration=double-replay grants=append-only adapter=read-write-order-validation'

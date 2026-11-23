@@ -233,7 +233,7 @@ This design follows current Neon guidance for GitHub Actions, schema diff, proje
 
 Generic PostgreSQL correctness is tested separately from Neon-specific compatibility.
 
-`.github/workflows/heavy-postgres.yml` starts an ephemeral PostgreSQL 17 service on a GitHub-hosted runner and executes the repository-owned `tools/ci/heavy-postgres` contract. The lane:
+`.github/workflows/heavy-postgres.yml` starts an runner-provided PostgreSQL 18 service on a GitHub-hosted runner and executes the repository-owned `tools/ci/heavy-postgres` contract. The lane:
 
 - creates only the minimal owner/runtime roles required by the ledger schema;
 - applies `infra/postgres/dw_ledger_v1.sql` twice to prove replay safety;

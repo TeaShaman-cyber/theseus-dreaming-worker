@@ -30,7 +30,7 @@ Persisted rows therefore do not gain authority merely by being stored in Postgre
 
 Fast unit tests use a small client fake for SQL mapping, rollback, cleanup and validation boundaries.
 
-Hosted Heavy PostgreSQL starts an ephemeral PostgreSQL 17 instance, replays the migration twice, verifies grants/FKs/shared sequence, and exercises the real adapter.
+Hosted Heavy PostgreSQL starts the PostgreSQL 18 service already present on the current GitHub runner, replays the migration twice, verifies grants/FKs/shared sequence, and exercises the real adapter.
 
 Neon schema-only preview remains a separate provider-specific compatibility check.
 

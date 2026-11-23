@@ -16,7 +16,7 @@ This directory is the durable map from project intent to implementation work.
 ### Designed, not applied
 
 - `ledger/neon-persistence` — dedicated `dw_ledger` Neon/Postgres persistence boundary and future Session Search read seam; SQL is versioned but not applied.
-- `ledger/postgres-storage` — `pg` storage adapter plus hosted PostgreSQL 17 contract lane over the existing Hyperdrive boundary.
+- `ledger/postgres-storage` — `pg` storage adapter plus hosted PostgreSQL contract lane over the existing Hyperdrive boundary.
 
 ### Recovered core design
 
