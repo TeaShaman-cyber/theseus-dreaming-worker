@@ -1,0 +1,13 @@
+{
+  "schema": { "name": "schema-std", "version": 1 },
+  "dependsOn": [
+    "default:ledger/append-only-proposals",
+    "default:worker/core-contract"
+  ],
+  "implementation": [
+    {
+      "file": "default:infra/postgres/dw_ledger_v1.sql",
+      "symbols": []
+    }
+  ]
+}

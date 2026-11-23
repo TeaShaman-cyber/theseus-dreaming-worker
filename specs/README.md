@@ -13,6 +13,10 @@ This directory is the durable map from project intent to implementation work.
 - `pilot2/live-critique` — one bounded live critique call over frozen perspectives with deterministic `DERIVED_ONLY` validation.
 - `ledger/append-only-proposals` — append-only proposal history contract with content-addressed records and explicit supersession semantics.
 
+### Designed, not applied
+
+- `ledger/neon-persistence` — dedicated `dw_ledger` Neon/Postgres persistence boundary and future Session Search read seam; SQL is versioned but not applied.
+
 ### Recovered core design
 
 - `worker/core-contract` — what Dreaming Worker is and is not.
@@ -26,12 +30,12 @@ The general worker contract and the real Session Search intake boundary remain s
 
 ## Immediate next coding task
 
-After bounded live critique, define the append-only proposal-ledger contract before choosing a durable database:
+The append-only proposal-ledger contract is implemented. The next persistence step is to implement a narrow storage adapter against the versioned `dw_ledger` contract, keeping these boundaries:
 
-1. preserve exact Proposal v1 content, fingerprints and source provenance;
-2. represent revision only through explicit supersession events; never overwrite history;
-3. keep every ledger entry `DERIVED_ONLY`; active/superseded state is not truth promotion;
-4. fail closed on forged IDs, broken references, self-links and cycles;
-5. keep durable storage selection, private Session Search intake, scheduler/checkpoint and canonical-memory promotion out of this increment.
+1. reuse the existing Dreaming Worker Hyperdrive/Neon boundary;
+2. write only validated ledger events; never mutate or delete history;
+3. keep Session Search access read-only and separate from source/shard search hits;
+4. validate the migration on a disposable database branch before any production DDL;
+5. do not add scheduler/checkpoint, private Session Search intake or production release authority as part of the storage adapter.
 
 Clef remains a separate researched decision/relevance layer candidate and is not counted as one of the two analytical perspectives.
