@@ -96,3 +96,41 @@ test('hosted mutation uses parallel named shards instead of one monolithic job',
   assert.match(workflow, /mutation-receipt-\$\{\{ matrix\.shard \}\}-\$\{\{ github\.sha \}\}/);
   assert.match(wrapper, /MUTATION_SHARD_REQUIRED/);
 });
+
+test('Neon ledger preview workflow is project-scoped, data-free, ephemeral, and cannot promote production', () => {
+  const workflow = readFileSync('.github/workflows/neon-ledger-preview.yml', 'utf8');
+
+  assert.match(workflow, /pull_request:/);
+  assert.doesNotMatch(workflow, /^\s*push:/m);
+  assert.doesNotMatch(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /infra\/postgres\/\*\*/);
+  assert.match(workflow, /vars\.NEON_PREVIEW_ENABLED\s*==\s*'true'/);
+  assert.match(workflow, /github\.event\.pull_request\.head\.repo\.full_name\s*==\s*github\.repository/);
+  assert.match(workflow, /vars\.NEON_PROJECT_ID/);
+  assert.match(workflow, /secrets\.NEON_API_KEY/);
+
+  assert.match(workflow, /neondatabase\/create-branch-action@72ed4f69a12b6be9c16aebfad893f6a21e9aba8b/);
+  assert.doesNotMatch(workflow, /neondatabase\/reset-branch-action@/);
+  assert.match(workflow, /neondatabase\/schema-diff-action@80cfa8521628e890015b60f5291a7738926617dc/);
+  assert.match(workflow, /neondatabase\/delete-branch-action@4468d825d5a88ef4012f1705a82f02ec3072f776/);
+  assert.match(workflow, /actions\/checkout@11d5960a326750d5838078e36cf38b85af677262/);
+
+  assert.match(workflow, /preview\/dw-ledger-pr-\$\{\{ github\.event\.number \}\}-\$\{\{ github\.run_id \}\}/);
+  assert.match(workflow, /parent_branch:\s*main/);
+  assert.match(workflow, /branch_type:\s*schema-only/);
+  assert.match(workflow, /database:\s*dreaming_issue23/);
+  assert.match(workflow, /role:\s*dreaming_issue23_owner/);
+  assert.match(workflow, /expires_at:/);
+
+  const createIndex = workflow.indexOf('neondatabase/create-branch-action@');
+  const checkoutIndex = workflow.indexOf('actions/checkout@');
+  const migrateIndex = workflow.indexOf('Apply ledger migration twice');
+  assert.ok(createIndex >= 0 && checkoutIndex > createIndex && migrateIndex > checkoutIndex);
+
+  assert.match(workflow, /DATABASE_URL:\s*\$\{\{ steps\.create_branch\.outputs\.db_url \}\}/);
+  assert.match(workflow, /infra\/postgres\/dw_ledger_v1\.sql/);
+  assert.match(workflow, /infra\/postgres\/verify_dw_ledger_v1\.sql/);
+  assert.match(workflow, /needs:\s*\[preview, schema_diff\]/);
+  assert.match(workflow, /continue-on-error:\s*true/);
+  assert.doesNotMatch(workflow, /ALTER\s+ROLE|connection_uri/is);
+});
