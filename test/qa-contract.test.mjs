@@ -157,3 +157,15 @@ test('ledger mutation shard covers the Postgres storage adapter', () => {
   assert.match(manifest, /src\/dreaming\/proposal-ledger-postgres\.ts/);
   assert.match(manifest, /test\/proposal-ledger-postgres\.test\.mjs/);
 });
+
+
+test('hosted PostgreSQL remains a path-scoped database QA lane, not a global PR gate', () => {
+  const workflow = readFileSync('.github/workflows/heavy-postgres.yml', 'utf8');
+
+  assert.match(workflow, /pull_request:\s*\n\s+paths:/);
+  assert.match(workflow, /infra\/postgres\/\*\*/);
+  assert.match(workflow, /src\/dreaming\/proposal-ledger-postgres\.ts/);
+  assert.doesNotMatch(workflow, /- ['"]src\/\*\*['"]/);
+  assert.doesNotMatch(workflow, /- ['"]docs\/\*\*['"]/);
+  assert.doesNotMatch(workflow, /^\s*push:/m);
+});
