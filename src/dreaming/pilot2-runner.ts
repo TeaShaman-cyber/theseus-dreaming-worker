@@ -35,6 +35,19 @@ export type Pilot2PassFailure = {
   message: string;
 };
 
+export type Pilot2RecoveryClassification =
+  | 'UNSTRUCTURED_COMPLETE'
+  | 'SCHEMA_MISMATCH_COMPLETE'
+  | 'SEMANTIC_INVALID'
+  | 'TRUNCATED_OUTPUT';
+
+export type Pilot2Recovery = {
+  classification: Pilot2RecoveryClassification;
+  serializerEligible: boolean;
+  rawOutputFingerprint: string;
+  rawModelOutput: string | null;
+};
+
 type Pilot1ProposedResult = Extract<Pilot1Result, { outcome: 'PROPOSED' }>;
 
 export type Pilot2PassSuccess = {
@@ -56,6 +69,7 @@ export type Pilot2PassFailed = {
   route: Omit<Pilot2Route, 'infer'>;
   observed: Pilot2ObservedInference | null;
   failure: Pilot2PassFailure;
+  recovery: Pilot2Recovery | null;
 };
 
 export type Pilot2Pass = Pilot2PassSuccess | Pilot2PassFailed;
@@ -199,6 +213,54 @@ function classifyFailure(error: unknown): Pilot2PassFailure {
   return { code: 'INFERENCE_FAILED', message };
 }
 
+function classifyRecovery(
+  failure: Pilot2PassFailure,
+  rawModelOutput: string | null,
+): Pilot2Recovery | null {
+  if (!rawModelOutput?.trim()) return null;
+
+  const rawOutputFingerprint =
+    'sha256:' + createHash('sha256').update(rawModelOutput).digest('hex');
+
+  if (failure.code === 'INVALID_JSON') {
+    return {
+      classification: 'UNSTRUCTURED_COMPLETE',
+      serializerEligible: true,
+      rawOutputFingerprint,
+      rawModelOutput,
+    };
+  }
+
+  if (failure.code === 'INVALID_SCHEMA') {
+    return {
+      classification: 'SCHEMA_MISMATCH_COMPLETE',
+      serializerEligible: true,
+      rawOutputFingerprint,
+      rawModelOutput,
+    };
+  }
+
+  if (failure.code === 'PROVENANCE_REJECTED') {
+    return {
+      classification: 'SEMANTIC_INVALID',
+      serializerEligible: false,
+      rawOutputFingerprint,
+      rawModelOutput: null,
+    };
+  }
+
+  if (failure.code === 'TRUNCATED_OUTPUT') {
+    return {
+      classification: 'TRUNCATED_OUTPUT',
+      serializerEligible: false,
+      rawOutputFingerprint,
+      rawModelOutput: null,
+    };
+  }
+
+  return null;
+}
+
 function proposalFingerprint(proposal: ProposalSet['proposals'][number]): string {
   return 'sha256:' + createHash('sha256').update(JSON.stringify(proposal)).digest('hex');
 }
@@ -237,10 +299,12 @@ async function runPass(
   route: Pilot2Route,
 ): Promise<Pilot2Pass> {
   let observed: Pilot2ObservedInference | null = null;
+  let rawModelOutput: string | null = null;
 
   try {
     const result = await runPilot1(request, async (innerRequest, correlation) => {
       const inference = await route.infer(innerRequest, correlation);
+      rawModelOutput = inference.text ?? null;
       observed = {
         provider: inference.provider,
         model: inference.model,
@@ -271,11 +335,13 @@ async function runPass(
       receipt: proposed.receipt,
     };
   } catch (error) {
+    const failure = classifyFailure(error);
     return {
       status: 'FAILED',
       route: publicRoute(route),
       observed,
-      failure: classifyFailure(error),
+      failure,
+      recovery: classifyRecovery(failure, rawModelOutput),
     };
   }
 }

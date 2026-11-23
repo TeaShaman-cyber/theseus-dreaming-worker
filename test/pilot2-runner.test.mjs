@@ -826,3 +826,123 @@ test('Pilot 2 preserves non-empty length-truncated output as TRUNCATED_OUTPUT', 
   assert.equal(result.passes[1].failure.code, 'TRUNCATED_OUTPUT');
   assert.equal(result.passes[1].observed.finishReason, 'length');
 });
+
+test('Pilot 2 preserves complete invalid JSON as a bounded serializer candidate', async () => {
+  const raw = 'The model answered in prose instead of JSON.';
+  const result = await runPilot2(request, [
+    qwenRoute(async () => ({
+      text: factOutput('The valid perspective survives.'),
+      provider: 'groq',
+      model: 'qwen/qwen3.8-27b',
+      toolCalls: [],
+    })),
+    mistralRoute(async () => ({
+      text: raw,
+      provider: 'openrouter',
+      model: 'mistralai/mistral-small-3.2-24b-instruct',
+      finishReason: 'stop',
+      toolCalls: [],
+    })),
+  ]);
+
+  const failed = result.passes[1];
+  assert.equal(failed.status, 'FAILED');
+  assert.equal(failed.failure.code, 'INVALID_JSON');
+  assert.equal(failed.recovery.classification, 'UNSTRUCTURED_COMPLETE');
+  assert.equal(failed.recovery.serializerEligible, true);
+  assert.equal(failed.recovery.rawModelOutput, raw);
+  assert.match(failed.recovery.rawOutputFingerprint, /^sha256:[a-f0-9]{64}$/);
+});
+
+test('Pilot 2 preserves valid JSON with the wrong schema as a serializer candidate', async () => {
+  const raw = JSON.stringify({
+    schema: 'theseus.dreaming-worker.proposals.v1',
+    proposals: [{ type: 'FACT', claim: 'Missing source refs.' }],
+  });
+  const result = await runPilot2(request, [
+    qwenRoute(async () => ({
+      text: factOutput('The valid perspective survives.'),
+      provider: 'groq',
+      model: 'qwen/qwen3.8-27b',
+      toolCalls: [],
+    })),
+    mistralRoute(async () => ({
+      text: raw,
+      provider: 'openrouter',
+      model: 'mistralai/mistral-small-3.2-24b-instruct',
+      finishReason: 'stop',
+      toolCalls: [],
+    })),
+  ]);
+
+  const failed = result.passes[1];
+  assert.equal(failed.status, 'FAILED');
+  assert.equal(failed.failure.code, 'INVALID_SCHEMA');
+  assert.equal(failed.recovery.classification, 'SCHEMA_MISMATCH_COMPLETE');
+  assert.equal(failed.recovery.serializerEligible, true);
+  assert.equal(failed.recovery.rawModelOutput, raw);
+});
+
+test('Pilot 2 never offers provenance-invalid output to a serializer', async () => {
+  const raw = JSON.stringify({
+    schema: 'theseus.dreaming-worker.proposals.v1',
+    proposals: [{
+      type: 'FACT',
+      claim: 'Invented evidence.',
+      source_refs: [{
+        source_ref: 'fixture:invented',
+        evidence_hash: 'sha256:not-accepted',
+      }],
+    }],
+  });
+  const result = await runPilot2(request, [
+    qwenRoute(async () => ({
+      text: factOutput('The valid perspective survives.'),
+      provider: 'groq',
+      model: 'qwen/qwen3.8-27b',
+      toolCalls: [],
+    })),
+    mistralRoute(async () => ({
+      text: raw,
+      provider: 'openrouter',
+      model: 'mistralai/mistral-small-3.2-24b-instruct',
+      finishReason: 'stop',
+      toolCalls: [],
+    })),
+  ]);
+
+  const failed = result.passes[1];
+  assert.equal(failed.status, 'FAILED');
+  assert.equal(failed.failure.code, 'PROVENANCE_REJECTED');
+  assert.equal(failed.recovery.classification, 'SEMANTIC_INVALID');
+  assert.equal(failed.recovery.serializerEligible, false);
+  assert.equal(failed.recovery.rawModelOutput, null);
+  assert.match(failed.recovery.rawOutputFingerprint, /^sha256:[a-f0-9]{64}$/);
+});
+
+test('Pilot 2 never exposes truncated output as a serializer candidate', async () => {
+  const raw = '{"schema":"theseus.dreaming-worker.proposals.v1","proposals":[';
+  const result = await runPilot2(request, [
+    qwenRoute(async () => ({
+      text: factOutput('The valid perspective survives.'),
+      provider: 'groq',
+      model: 'qwen/qwen3.8-27b',
+      toolCalls: [],
+    })),
+    mistralRoute(async () => ({
+      text: raw,
+      provider: 'openrouter',
+      model: 'mistralai/mistral-small-3.2-24b-instruct',
+      finishReason: 'length',
+      toolCalls: [],
+    })),
+  ]);
+
+  const failed = result.passes[1];
+  assert.equal(failed.status, 'FAILED');
+  assert.equal(failed.failure.code, 'TRUNCATED_OUTPUT');
+  assert.equal(failed.recovery.classification, 'TRUNCATED_OUTPUT');
+  assert.equal(failed.recovery.serializerEligible, false);
+  assert.equal(failed.recovery.rawModelOutput, null);
+  assert.match(failed.recovery.rawOutputFingerprint, /^sha256:[a-f0-9]{64}$/);
+});
