@@ -3,8 +3,10 @@ BEGIN;
 CREATE SCHEMA IF NOT EXISTS dw_ledger AUTHORIZATION dreaming_issue23_owner;
 REVOKE ALL ON SCHEMA dw_ledger FROM PUBLIC;
 
+CREATE SEQUENCE IF NOT EXISTS dw_ledger.event_seq;
+
 CREATE TABLE IF NOT EXISTS dw_ledger.proposal_records (
-  seq bigint GENERATED ALWAYS AS IDENTITY UNIQUE,
+  event_seq bigint NOT NULL DEFAULT nextval('dw_ledger.event_seq') UNIQUE,
   record_id text PRIMARY KEY
     CHECK (record_id ~ '^sha256:[0-9a-f]{64}$'),
   schema_name text NOT NULL DEFAULT 'theseus.dreaming-worker.proposal-ledger-record.v1'
@@ -37,7 +39,7 @@ CREATE INDEX IF NOT EXISTS dw_ledger_proposal_records_type_idx
   ON dw_ledger.proposal_records (proposal_type);
 
 CREATE TABLE IF NOT EXISTS dw_ledger.supersession_events (
-  seq bigint GENERATED ALWAYS AS IDENTITY UNIQUE,
+  event_seq bigint NOT NULL DEFAULT nextval('dw_ledger.event_seq') UNIQUE,
   event_id text PRIMARY KEY
     CHECK (event_id ~ '^sha256:[0-9a-f]{64}$'),
   schema_name text NOT NULL DEFAULT 'theseus.dreaming-worker.proposal-ledger-supersession.v1'

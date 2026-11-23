@@ -21,6 +21,7 @@ test('heavy mutation is split into explicit hosted shards', () => {
   ]);
   assert.deepEqual(MUTATION_SHARDS.ledger.mutate, [
     'src/dreaming/proposal-ledger.ts',
+    'src/dreaming/proposal-ledger-postgres.ts',
   ]);
   assert.ok(MUTATION_SHARDS['pilot0-1'].mutate.includes('src/dreaming/pilot1-runner.ts'));
   assert.ok(MUTATION_SHARDS.pilot2.mutate.includes('src/dreaming/pilot2-live-composition.ts'));

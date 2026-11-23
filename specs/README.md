@@ -16,6 +16,7 @@ This directory is the durable map from project intent to implementation work.
 ### Designed, not applied
 
 - `ledger/neon-persistence` — dedicated `dw_ledger` Neon/Postgres persistence boundary and future Session Search read seam; SQL is versioned but not applied.
+- `ledger/postgres-storage` — `pg` storage adapter plus hosted PostgreSQL 17 contract lane over the existing Hyperdrive boundary.
 
 ### Recovered core design
 
@@ -30,12 +31,12 @@ The general worker contract and the real Session Search intake boundary remain s
 
 ## Immediate next coding task
 
-The append-only proposal-ledger contract is implemented. The next persistence step is to implement a narrow storage adapter against the versioned `dw_ledger` contract, keeping these boundaries:
+After the storage adapter is accepted, connect it to one bounded Dreaming Worker persistence call in the cloud development/test runtime:
 
-1. reuse the existing Dreaming Worker Hyperdrive/Neon boundary;
-2. write only validated ledger events; never mutate or delete history;
-3. keep Session Search access read-only and separate from source/shard search hits;
-4. validate the migration on a disposable database branch before any production DDL;
-5. do not add scheduler/checkpoint, private Session Search intake or production release authority as part of the storage adapter.
+1. reuse the existing Hyperdrive binding;
+2. persist only already-validated ledger events;
+3. keep the call internal/bounded rather than adding a broad external API;
+4. prove the path on the cloud development/test environment before adding Session Search read access;
+5. keep scheduler, private Session Search intake, automatic promotion and real production deployment out of scope.
 
 Clef remains a separate researched decision/relevance layer candidate and is not counted as one of the two analytical perspectives.

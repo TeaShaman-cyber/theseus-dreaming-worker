@@ -134,3 +134,25 @@ test('Neon ledger preview workflow is project-scoped, data-free, ephemeral, and 
   assert.match(workflow, /continue-on-error:\s*true/);
   assert.doesNotMatch(workflow, /ALTER\s+ROLE|connection_uri/is);
 });
+
+test('hosted PostgreSQL contract lane exercises ledger SQL and adapter on PostgreSQL 17', () => {
+  const workflow = readFileSync('.github/workflows/heavy-postgres.yml', 'utf8');
+  const runner = readFileSync('tools/ci/heavy-postgres', 'utf8');
+
+  assert.match(workflow, /public\.ecr\.aws\/docker\/library\/postgres@sha256:/);
+  assert.match(workflow, /postgresql-client/);
+  assert.match(workflow, /tools\/ci\/heavy-postgres/);
+  assert.match(workflow, /node-version:\s*'22'/);
+  assert.match(workflow, /persist-credentials:\s*false/);
+
+  assert.match(runner, /infra\/postgres\/dw_ledger_v1\.sql/);
+  assert.match(runner, /infra\/postgres\/verify_dw_ledger_v1\.sql/);
+  assert.match(runner, /qa\/postgres\/ledger-adapter-integration\.mjs/);
+  assert.match(runner, /server_version_num/);
+});
+
+test('ledger mutation shard covers the Postgres storage adapter', () => {
+  const manifest = readFileSync('scripts/mutation-shards.mjs', 'utf8');
+  assert.match(manifest, /src\/dreaming\/proposal-ledger-postgres\.ts/);
+  assert.match(manifest, /test\/proposal-ledger-postgres\.test\.mjs/);
+});

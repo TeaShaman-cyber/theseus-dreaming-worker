@@ -1,0 +1,66 @@
+name: Heavy PostgreSQL contract
+
+on:
+  pull_request:
+    paths:
+      - 'infra/postgres/**'
+      - 'qa/postgres/**'
+      - 'src/dreaming/proposal-ledger.ts'
+      - 'src/dreaming/proposal-ledger-postgres.ts'
+      - 'test/proposal-ledger-postgres.test.mjs'
+      - 'test/neon-ledger-ddl.test.mjs'
+      - 'test/qa-contract.test.mjs'
+      - 'tools/ci/heavy-postgres'
+      - 'scripts/mutation-shards.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/heavy-postgres.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  heavy-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: public.ecr.aws/docker/library/postgres@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dreaming_worker_contract
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dreaming_worker_contract"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Install locked dependencies
+        run: npx --yes pnpm@11.3.0 install --frozen-lockfile
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Run repository PostgreSQL contract
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: dreaming_worker_contract
+        run: tools/ci/heavy-postgres

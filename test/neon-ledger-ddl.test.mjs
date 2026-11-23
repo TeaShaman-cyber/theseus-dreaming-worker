@@ -32,3 +32,10 @@ test('ledger event ids and proposal fingerprints retain sha256 wire shape', () =
   const shaCheckCount = (sql.match(/\^sha256:\[0-9a-f\]\{64\}\$/g) ?? []).length;
   assert.ok(shaCheckCount >= 3);
 });
+
+
+test('proposal and supersession tables share one global event sequence', () => {
+  assert.match(sql, /CREATE SEQUENCE IF NOT EXISTS dw_ledger\.event_seq/i);
+  const defaults = sql.match(/event_seq\s+bigint\s+NOT NULL\s+DEFAULT nextval\('dw_ledger\.event_seq'/gi) ?? [];
+  assert.equal(defaults.length, 2);
+});

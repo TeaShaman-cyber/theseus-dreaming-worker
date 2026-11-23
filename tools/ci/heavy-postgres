@@ -1,0 +1,45 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
+  printf '%s\n' 'heavy-postgres: not inside a Git worktree' >&2
+  exit 2
+}
+cd "$ROOT"
+
+: "${PGHOST:=127.0.0.1}"
+: "${PGPORT:=5432}"
+: "${PGUSER:=postgres}"
+: "${PGDATABASE:=dreaming_worker_contract}"
+export PGHOST PGPORT PGUSER PGDATABASE
+
+command -v psql >/dev/null 2>&1 || {
+  printf '%s\n' 'heavy-postgres: psql not found' >&2
+  exit 2
+}
+
+printf '%s\n' '== PostgreSQL server ==' 
+server_version_num=$(psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_setting('server_version_num');")
+case "$server_version_num" in
+  17????) ;;
+  *)
+    printf 'heavy-postgres: expected PostgreSQL 17, got server_version_num=%s\n' "$server_version_num" >&2
+    exit 2
+    ;;
+esac
+
+printf '%s\n' '== ledger role fixture ==' 
+psql -X -v ON_ERROR_STOP=1 -f qa/postgres/bootstrap-ledger-roles.sql
+
+printf '%s\n' '== ledger migration replay ==' 
+psql -X -v ON_ERROR_STOP=1 -f infra/postgres/dw_ledger_v1.sql
+psql -X -v ON_ERROR_STOP=1 -f infra/postgres/dw_ledger_v1.sql
+
+printf '%s\n' '== ledger database contract ==' 
+psql -X -v ON_ERROR_STOP=1 -f infra/postgres/verify_dw_ledger_v1.sql
+
+printf '%s\n' '== ledger adapter integration ==' 
+LEDGER_DATABASE_URL="postgresql://dw_runtime_issue23:runtime-test@${PGHOST}:${PGPORT}/${PGDATABASE}" \
+  node qa/postgres/ledger-adapter-integration.mjs
+
+printf '%s\n' 'HEAVY_POSTGRES_PASS substrate=postgresql-17 migration=double-replay grants=append-only adapter=read-write-order-validation'

@@ -228,3 +228,17 @@ The lane is deliberately narrower than production deployment:
 The workflow is intentionally committed before credential enablement. Creating the project-scoped key, storing it in GitHub, and setting `NEON_PREVIEW_ENABLED=true` are separate permission-bearing actions.
 
 This design follows current Neon guidance for GitHub Actions, schema diff, project-scoped API keys, and schema-only branches rather than installing the default GitHub integration with a broader account/organization key.
+
+## Hosted PostgreSQL ledger contract
+
+Generic PostgreSQL correctness is tested separately from Neon-specific compatibility.
+
+`.github/workflows/heavy-postgres.yml` starts an ephemeral PostgreSQL 17 service on a GitHub-hosted runner and executes the repository-owned `tools/ci/heavy-postgres` contract. The lane:
+
+- creates only the minimal owner/runtime roles required by the ledger schema;
+- applies `infra/postgres/dw_ledger_v1.sql` twice to prove replay safety;
+- runs the SQL grant/FK/schema readback;
+- exercises the real TypeScript Postgres ledger adapter against the database;
+- verifies duplicate/cycle rejection and the runtime no-UPDATE boundary.
+
+This is the fast generic PostgreSQL lane. The Neon schema-only preview remains a separate provider-specific compatibility check. No Codespace or long-lived PostgreSQL test host is required.
