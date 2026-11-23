@@ -21,6 +21,7 @@ export type Pilot2Route = {
 export type Pilot2PassFailureCode =
   | 'TIMEOUT_UNKNOWN_PROVIDER_STATE'
   | 'OUTPUT_BUDGET_EXHAUSTED'
+  | 'TRUNCATED_OUTPUT'
   | 'EMPTY_FINAL_CONTENT'
   | 'JSON_VALIDATE_FAILED'
   | 'INVALID_JSON'
@@ -172,6 +173,9 @@ function classifyFailure(error: unknown): Pilot2PassFailure {
   }
   if (message.startsWith('PILOT2_EMPTY_FINAL_CONTENT')) {
     return { code: 'EMPTY_FINAL_CONTENT', message };
+  }
+  if (message.includes('PILOT1_OUTPUT_TRUNCATED')) {
+    return { code: 'TRUNCATED_OUTPUT', message };
   }
   if (/json_validate_failed/i.test(message)) {
     return { code: 'JSON_VALIDATE_FAILED', message };

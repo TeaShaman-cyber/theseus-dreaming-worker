@@ -803,3 +803,26 @@ test('Pilot 2 records two attempted passes and a non-empty terminal diagnostic w
   assert.equal(result.receipt.attemptedPasses, 2);
   assert.ok(result.terminalFailure.message.length > 0);
 });
+
+test('Pilot 2 preserves non-empty length-truncated output as TRUNCATED_OUTPUT', async () => {
+  const result = await runPilot2(request, [
+    qwenRoute(async () => ({
+      text: factOutput('The valid perspective survives.'),
+      provider: 'groq',
+      model: 'qwen/qwen3.8-27b',
+      toolCalls: [],
+    })),
+    mistralRoute(async () => ({
+      text: '{"schema":"theseus.dreaming-worker.proposals.v1","proposals":[',
+      provider: 'openrouter',
+      model: 'mistralai/mistral-small-3.2-24b-instruct',
+      finishReason: 'length',
+      toolCalls: [],
+    })),
+  ]);
+
+  assert.equal(result.outcome, 'PARTIAL');
+  assert.equal(result.passes[1].status, 'FAILED');
+  assert.equal(result.passes[1].failure.code, 'TRUNCATED_OUTPUT');
+  assert.equal(result.passes[1].observed.finishReason, 'length');
+});

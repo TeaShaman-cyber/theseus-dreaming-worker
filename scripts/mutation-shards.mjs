@@ -4,6 +4,7 @@ export const MUTATION_SHARDS = Object.freeze({
       'src/dreaming/dry-run.ts',
       'src/dreaming/pilot1-runner.ts',
       'src/dreaming/proposal-schema.ts',
+      'src/dreaming/structured-output-recovery.ts',
     ]),
     tests: Object.freeze([
       'test/dry-run.test.mjs',

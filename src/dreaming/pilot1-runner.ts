@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { runPilot0, type EvidencePacket } from './dry-run.ts';
 import { parseProposalSet, type ProposalSet } from './proposal-schema.ts';
+import { prepareStructuredOutput, type OutputNormalization } from './structured-output-recovery.ts';
 
 export type Pilot1Scope = 'SYNTHETIC_FIXTURE' | 'PUBLICATION_SAFE';
 
@@ -67,6 +68,7 @@ type Pilot1Receipt = {
   traceId?: string;
   runtimeWitness: 'NOT_RUN' | 'CALLER_OBSERVED' | 'TRACE_VERIFIED';
   workspaceActionsObserved: number | null;
+  outputNormalization?: OutputNormalization;
 };
 
 export type Pilot1Result =
@@ -179,7 +181,8 @@ export async function runPilot1(
   }
 
   const externalModelCalls: 1 = 1;
-  const proposalSet = parseProposalSet(inference.text, request.packet);
+  const preparedOutput = prepareStructuredOutput(inference.text, inference.finishReason);
+  const proposalSet = parseProposalSet(preparedOutput.text, request.packet);
 
   return {
     outcome: 'PROPOSED',
@@ -198,6 +201,7 @@ export async function runPilot1(
       usage: inference.usage,
       runId: inference.runId,
       traceId: inference.traceId,
+      outputNormalization: preparedOutput.normalization,
     },
   };
 }
