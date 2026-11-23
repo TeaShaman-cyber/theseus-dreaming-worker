@@ -1,0 +1,106 @@
+name: Neon ledger preview
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'infra/postgres/**'
+      - '.github/workflows/neon-ledger-preview.yml'
+      - 'test/neon-ledger-ddl.test.mjs'
+      - 'test/qa-contract.test.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neon-ledger-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NEON_PREVIEW_BRANCH: preview/dw-ledger-pr-${{ github.event.number }}-${{ github.run_id }}
+
+jobs:
+  preview:
+    name: Apply ledger migration on disposable Neon branch
+    if: >-
+      vars.NEON_PREVIEW_ENABLED == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute preview expiration
+        id: preview_meta
+        shell: bash
+        run: echo "expires_at=$(date -u -d '+2 hours' '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
+      - name: Create or reuse Neon preview branch
+        id: create_branch
+        uses: neondatabase/create-branch-action@72ed4f69a12b6be9c16aebfad893f6a21e9aba8b # v6.4.0
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: ${{ env.NEON_PREVIEW_BRANCH }}
+          parent_branch: main
+          branch_type: schema-only
+          database: dreaming_issue23
+          role: dreaming_issue23_owner
+          expires_at: ${{ steps.preview_meta.outputs.expires_at }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      # Checkout comes after the API-key-bearing branch creation step.
+      # The branch is schema-only, so PR-controlled SQL receives neither production rows nor the Neon API key.
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Verify psql client
+        run: psql --version
+
+      - name: Apply ledger migration twice
+        env:
+          DATABASE_URL: ${{ steps.create_branch.outputs.db_url }}
+        run: |
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f infra/postgres/dw_ledger_v1.sql
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f infra/postgres/dw_ledger_v1.sql
+
+      - name: Verify ledger schema and runtime grants
+        env:
+          DATABASE_URL: ${{ steps.create_branch.outputs.db_url }}
+        run: psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f infra/postgres/verify_dw_ledger_v1.sql
+
+  schema_diff:
+    name: Post Neon schema diff
+    needs: preview
+    if: >-
+      vars.NEON_PREVIEW_ENABLED == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      # No checkout here: the Neon API key is only handed to the pinned diff action.
+      - name: Post schema diff comment
+        uses: neondatabase/schema-diff-action@80cfa8521628e890015b60f5291a7738926617dc # v1.0.1
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          base_branch: main
+          compare_branch: ${{ env.NEON_PREVIEW_BRANCH }}
+          database: dreaming_issue23
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+  cleanup:
+    name: Delete Neon preview branch
+    needs: [preview, schema_diff]
+    if: >-
+      always() &&
+      vars.NEON_PREVIEW_ENABLED == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete preview branch
+        continue-on-error: true # The 2-hour Neon expiry is the cleanup backstop.
+        uses: neondatabase/delete-branch-action@4468d825d5a88ef4012f1705a82f02ec3072f776 # v3.2.1
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: ${{ env.NEON_PREVIEW_BRANCH }}
+          api_key: ${{ secrets.NEON_API_KEY }}

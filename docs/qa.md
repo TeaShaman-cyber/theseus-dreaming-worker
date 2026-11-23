@@ -207,3 +207,24 @@ The existence of `spec-lock.json` does not prove that implementation satisfies t
 This slice follows the verified brownfield adoption pattern from current Session Search main. No custom SpecD review bot or permanent SpecD graph CI is introduced here. Local SpecD override configuration belongs in `specd.local.yaml` and is not canonical.
 
 The native reverse-trace contract remains in place for promises not yet represented as durable SpecD specs. As coverage grows, redundant hand-maintained mappings may be retired only after equivalent SpecD links and review behavior are verified.
+
+## Neon ledger migration preview lane
+
+PostgreSQL IaC under `infra/postgres/**` has a dedicated hosted preview lane in `.github/workflows/neon-ledger-preview.yml`.
+
+The lane is deliberately narrower than production deployment:
+
+- it is disabled unless repository variable `NEON_PREVIEW_ENABLED` is exactly `true`;
+- it expects `NEON_PROJECT_ID` plus a **project-scoped** `NEON_API_KEY` for the single Dreaming Worker Neon project;
+- it skips fork pull requests;
+- it creates a short-lived **schema-only** Neon branch, so the PR job receives database structure but no copied production rows;
+- all Neon and GitHub Actions are pinned to immutable commit SHAs;
+- the Neon API key is consumed only by pinned branch-management/schema-diff actions; checked-out PR SQL receives only the disposable branch database URL;
+- the migration is replayed twice to prove idempotence, then an independent SQL readback checks ledger tables, foreign keys, and append-only runtime grants;
+- schema diff runs in a separate job with no checkout and posts the comparison to the PR;
+- the preview branch is deleted after validation, with a two-hour Neon expiry as cleanup backstop;
+- no step applies DDL to Neon `main`.
+
+The workflow is intentionally committed before credential enablement. Creating the project-scoped key, storing it in GitHub, and setting `NEON_PREVIEW_ENABLED=true` are separate permission-bearing actions.
+
+This design follows current Neon guidance for GitHub Actions, schema diff, project-scoped API keys, and schema-only branches rather than installing the default GitHub integration with a broader account/organization key.
