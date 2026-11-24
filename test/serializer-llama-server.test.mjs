@@ -87,6 +87,8 @@ test('local llama serializer sends only frozen raw output plus schema and return
   assert.equal(serializedRequest.includes('goldenOutput'), false);
   assert.equal(serializedRequest.includes('Synthetic observation'), false);
   assert.ok(serializedRequest.includes('/no_think'));
+  assert.ok(serializedRequest.includes('Copy every explicit proposal type exactly'));
+  assert.ok(serializedRequest.includes('Never substitute a simpler proposal type'));
 
   assert.equal(result.finishReason, 'stop');
   assert.equal(result.text, '{"schema":"theseus.dreaming-worker.proposals.v1","proposals":[]}');
