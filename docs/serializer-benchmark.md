@@ -41,3 +41,33 @@ Canonical repo gate: `./tools/dev/check`.
 
 Out of scope: selecting a model, calling an API, retrying, repairing missing
 semantic evidence, relaxing provenance, or promoting an output to truth.
+
+## Candidate execution receipt
+
+`runSerializerCandidateBenchmark` in
+`src/dreaming/serializer-benchmark-runner.ts` is the bounded execution seam
+used before any route-specific benchmark adapter is added.
+
+It enforces these mechanics:
+
+- an ineligible reasoner result causes zero candidate executor invocations;
+- an eligible result permits exactly one executor invocation and no retry;
+- the serializer input contains only the frozen raw reasoner output and the
+  target Proposal v1 JSON Schema — not the evidence packet or golden oracle;
+- the runner measures wall time around that one invocation;
+- candidate-reported cold-start, peak RSS, token usage, and monetary cost are
+  separately validated observations, not inferred values;
+- absent monetary cost remains `UNKNOWN`, never an assumed zero;
+- truncated or completion-unknown candidate output is fingerprinted but never
+  sent to the deterministic benchmark evaluator;
+- executor failure receipts deliberately omit raw exception text;
+- every receipt fixes `canonicalWrites: 0`.
+
+`LOCAL_MODEL` and `EXTERNAL_PROVIDER` are distinct candidate kinds. The host
+(`EXE_DEV`, `GITHUB_RUNNER`, `LOCAL_RUNTIME`, `CLOUDFLARE`, or `OTHER`) is
+recorded separately so execution location is not confused with provider
+identity.
+
+This layer still does not select, download, start, or call a real model.
+A route-specific adapter must independently prove its own model invocation,
+resource measurement, and any monetary-cost source.
