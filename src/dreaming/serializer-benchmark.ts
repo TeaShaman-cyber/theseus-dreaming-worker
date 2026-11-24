@@ -34,7 +34,7 @@ export type SerializerBenchmarkResult = {
   canonicalWrites: 0;
 };
 
-function isEligible(fixture: SerializerFixture): boolean {
+export function isSerializerFixtureEligible(fixture: SerializerFixture): boolean {
   const { reasoner } = fixture;
   return (
     reasoner.finishReason === 'stop' &&
@@ -57,7 +57,7 @@ export function evaluateSerializerFixture(
     canonicalWrites: 0 as const,
   };
 
-  if (!isEligible(fixture)) {
+  if (!isSerializerFixtureEligible(fixture)) {
     return {
       ...base,
       outcome: 'NOT_ELIGIBLE',
