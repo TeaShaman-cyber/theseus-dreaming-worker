@@ -93,6 +93,29 @@ test('serializer benchmark refuses semantic invalid, truncation, and missing com
   }
 });
 
+test('serializer benchmark requires independent agreement of eligibility flag and recovery classification', () => {
+  const contradictory = [
+    { classification: 'UNSTRUCTURED_COMPLETE', serializerEligible: false },
+    { classification: 'SCHEMA_MISMATCH_COMPLETE', serializerEligible: false },
+    { classification: 'SEMANTIC_INVALID', serializerEligible: true },
+    { classification: 'TRUNCATED_OUTPUT', serializerEligible: true },
+  ];
+  for (const { classification, serializerEligible } of contradictory) {
+    const reasoner = {
+      rawOutput: 'One synthetic request timed out.',
+      finishReason: 'stop',
+      recovery: {
+        classification,
+        serializerEligible,
+        rawModelOutput: 'One synthetic request timed out.',
+      },
+    };
+    const result = evaluateSerializerFixture(fixture({ reasoner }), golden);
+    assert.equal(result.outcome, 'NOT_ELIGIBLE', classification);
+    assert.equal(result.candidateOutputFingerprint, null, classification);
+  }
+});
+
 test('serializer benchmark declines to assert semantic preservation if no golden oracle exists', () => {
   const result = evaluateSerializerFixture(fixture({ goldenOutput: null }), golden);
   assert.equal(result.outcome, 'SCHEMA_VALID_UNREVIEWED');
