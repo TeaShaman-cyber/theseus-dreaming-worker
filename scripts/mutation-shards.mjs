@@ -16,10 +16,12 @@ export const MUTATION_SHARDS = Object.freeze({
     mutate: Object.freeze([
       'src/dreaming/pilot2-runner.ts',
       'src/dreaming/pilot2-live-composition.ts',
+      'src/dreaming/serializer-benchmark.ts',
     ]),
     tests: Object.freeze([
       'test/pilot2-runner.test.mjs',
       'test/pilot2-live-composition.test.mjs',
+      'test/serializer-benchmark.test.mjs',
     ]),
   }),
   critique: Object.freeze({
