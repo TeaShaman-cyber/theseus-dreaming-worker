@@ -24,6 +24,13 @@ then serves as a *test oracle*, not an assertion of real-world truth:
 - `GOLDEN_MISMATCH`: the output passes the schema/reference checks but differs;
 - `SCHEMA_VALID_UNREVIEWED`: no oracle; **semantic preservation UNKNOWN**.
 
+The positive v1 synthetic cases explicitly contain the claim, proposal type,
+and every expected source-ref/hash pair in the frozen raw answer. The missing-
+original-provenance case has no oracle: even an output with a packet-valid
+reference is only SCHEMA_VALID_UNREVIEWED, never a benchmark success.
+The literal-field fixture regression is a corpus consistency test, not a
+general semantic proof or production provenance verifier.
+
 The evaluator records raw/candidate fingerprints and zero evaluator-side
 external calls/writes. Candidate inference time, tokens, cold start, memory,
 transport, and provider cost must be recorded independently by the future

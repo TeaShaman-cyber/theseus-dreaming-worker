@@ -4,7 +4,10 @@
     "schema": "theseus-evidence-packet-v1",
     "packetId": "serializer-synthetic-packet-v1",
     "acceptedNewEvidence": true,
-    "coverage": { "state": "PARTIAL", "currentness": "UNKNOWN" },
+    "coverage": {
+      "state": "PARTIAL",
+      "currentness": "UNKNOWN"
+    },
     "evidence": [
       {
         "sourceRef": "fixture:source:1",
@@ -17,7 +20,7 @@
   "cases": [
     {
       "id": "prose-complete",
-      "reasonerRaw": "One synthetic request timed out.",
+      "reasonerRaw": "FACT: One synthetic request timed out. Source ref: fixture:source:1. Evidence hash: sha256:fixture-source-1.",
       "finishReason": "stop",
       "classification": "UNSTRUCTURED_COMPLETE",
       "serializerEligible": true,
@@ -26,7 +29,7 @@
     },
     {
       "id": "schema-mismatch-complete",
-      "reasonerRaw": "{\"observation\":\"One synthetic request timed out.\"}",
+      "reasonerRaw": "{\"kind\":\"FACT\",\"observation\":\"One synthetic request timed out.\",\"source\":\"fixture:source:1\",\"hash\":\"sha256:fixture-source-1\"}",
       "finishReason": "stop",
       "classification": "SCHEMA_MISMATCH_COMPLETE",
       "serializerEligible": true,
@@ -35,7 +38,7 @@
     },
     {
       "id": "invented-source",
-      "reasonerRaw": "One synthetic request timed out.",
+      "reasonerRaw": "FACT: One synthetic request timed out. Source ref: fixture:source:1. Evidence hash: sha256:fixture-source-1.",
       "finishReason": "stop",
       "classification": "UNSTRUCTURED_COMPLETE",
       "serializerEligible": true,
@@ -44,7 +47,7 @@
     },
     {
       "id": "changed-claim",
-      "reasonerRaw": "One synthetic request timed out.",
+      "reasonerRaw": "FACT: One synthetic request timed out. Source ref: fixture:source:1. Evidence hash: sha256:fixture-source-1.",
       "finishReason": "stop",
       "classification": "UNSTRUCTURED_COMPLETE",
       "serializerEligible": true,
@@ -76,6 +79,16 @@
       "serializerEligible": false,
       "candidate": "golden",
       "expected": "NOT_ELIGIBLE"
+    },
+    {
+      "id": "missing-original-provenance",
+      "reasonerRaw": "FACT: One synthetic request timed out.",
+      "finishReason": "stop",
+      "classification": "UNSTRUCTURED_COMPLETE",
+      "serializerEligible": true,
+      "oracle": "none",
+      "candidate": "golden",
+      "expected": "SCHEMA_VALID_UNREVIEWED"
     }
   ]
 }
