@@ -12,6 +12,7 @@ test('heavy mutation is split into explicit hosted shards', () => {
     'pilot0-1',
     'pilot2',
     'serializer',
+    'serializer-local',
   ]);
 
   assert.deepEqual(MUTATION_SHARDS.critique.mutate, [
@@ -34,6 +35,15 @@ test('heavy mutation is split into explicit hosted shards', () => {
     'test/serializer-benchmark.test.mjs',
     'test/serializer-benchmark-runner.test.mjs',
   ]);
+  assert.deepEqual(MUTATION_SHARDS['serializer-local'].mutate, [
+    'src/dreaming/serializer-llama-server.ts',
+    'src/dreaming/serializer-candidate-suite.ts',
+  ]);
+  assert.deepEqual(MUTATION_SHARDS['serializer-local'].tests, [
+    'test/serializer-llama-server.test.mjs',
+    'test/serializer-candidate-corpus.test.mjs',
+    'test/serializer-candidate-suite.test.mjs',
+  ]);
   assert.ok(MUTATION_SHARDS.observability.mutate.includes('src/mastra/observability-routing.ts'));
 });
 
@@ -42,4 +52,5 @@ test('mutation shard selection fails closed when no explicit shard is supplied',
   assert.throws(() => getMutationShard(''), /MUTATION_SHARD_REQUIRED/);
   assert.throws(() => getMutationShard('all'), /MUTATION_SHARD_UNKNOWN: all/);
   assert.equal(getMutationShard('serializer'), MUTATION_SHARDS.serializer);
+  assert.equal(getMutationShard('serializer-local'), MUTATION_SHARDS['serializer-local']);
 });

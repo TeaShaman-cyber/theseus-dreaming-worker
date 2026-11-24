@@ -9,7 +9,7 @@ cd "$ROOT"
 
 shard=${1:-}
 if [ -z "$shard" ]; then
-  printf '%s\n' 'MUTATION_SHARD_REQUIRED: use one of pilot0-1, pilot2, serializer, critique, critique-live, ledger, observability' >&2
+  printf '%s\n' 'MUTATION_SHARD_REQUIRED: use one of pilot0-1, pilot2, serializer, serializer-local, critique, critique-live, ledger, observability' >&2
   exit 2
 fi
 
