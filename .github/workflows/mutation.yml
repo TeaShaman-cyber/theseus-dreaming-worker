@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [pilot0-1, pilot2, serializer, critique, critique-live, ledger, observability]
+        shard: [pilot0-1, pilot2, serializer, serializer-local, critique, critique-live, ledger, observability]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:

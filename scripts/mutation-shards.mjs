@@ -32,6 +32,17 @@ export const MUTATION_SHARDS = Object.freeze({
       'test/serializer-benchmark-runner.test.mjs',
     ]),
   }),
+  'serializer-local': Object.freeze({
+    mutate: Object.freeze([
+      'src/dreaming/serializer-llama-server.ts',
+      'src/dreaming/serializer-candidate-suite.ts',
+    ]),
+    tests: Object.freeze([
+      'test/serializer-llama-server.test.mjs',
+      'test/serializer-candidate-corpus.test.mjs',
+      'test/serializer-candidate-suite.test.mjs',
+    ]),
+  }),
   critique: Object.freeze({
     mutate: Object.freeze([
       'src/dreaming/pilot2-critique.ts',

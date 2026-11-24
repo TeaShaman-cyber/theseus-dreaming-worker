@@ -71,3 +71,25 @@ identity.
 This layer still does not select, download, start, or call a real model.
 A route-specific adapter must independently prove its own model invocation,
 resource measurement, and any monetary-cost source.
+
+## Local CPU baseline
+
+The first local serializer baseline uses a loopback-only `llama-server` route.
+The committed benchmark config is
+`fixtures/serializer/qwen3-0.6b-q8_0-exe-dev.json`; the candidate corpus is
+`fixtures/serializer/candidate-v1.json`.
+
+The adapter in `src/dreaming/serializer-llama-server.ts` accepts only HTTP
+loopback endpoints (`127.0.0.1` or `::1`), makes one bounded POST, never retries,
+uses temperature 0 and strict JSON Schema response formatting, and sends only
+the frozen raw reasoner output plus the Proposal v1 schema. It does not receive
+the evidence packet or golden oracle.
+
+`npm run serializer:local -- <corpus.json> <config.json>` runs the corpus through
+the canonical candidate suite. Optional observed runtime metrics are supplied
+as `SERIALIZER_COLD_START_MS` and `SERIALIZER_PEAK_RSS_BYTES`; absence remains
+unknown rather than being replaced with zero.
+
+The committed config pins the model/runtime identity and artifact hashes, but
+does not contain mutable runtime measurements. The runtime/model binaries remain
+outside Git under the issue-owned temporary cache described in #54.
