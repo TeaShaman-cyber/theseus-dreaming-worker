@@ -42,4 +42,9 @@ printf '%s\n' '== ledger adapter integration =='
 LEDGER_DATABASE_URL="postgresql://dw_runtime_issue23:runtime-test@${PGHOST}:${PGPORT}/${PGDATABASE}" \
   node qa/postgres/ledger-adapter-integration.mjs
 
+printf '%s\n' '== research work atomicity probe =='
+psql -X -v ON_ERROR_STOP=1 -f qa/postgres/work-atomicity-probe.sql
+LEDGER_DATABASE_URL="postgresql://dw_runtime_issue23:runtime-test@${PGHOST}:${PGPORT}/${PGDATABASE}" \
+  node qa/postgres/work-atomicity-probe.mjs
+
 printf '%s\n' 'HEAVY_POSTGRES_PASS substrate=postgresql-${PG_EXPECTED_MAJOR} migration=double-replay grants=append-only adapter=read-write-order-validation'
