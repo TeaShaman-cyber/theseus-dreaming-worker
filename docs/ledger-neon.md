@@ -67,3 +67,44 @@ recovery. Observed absence permits one completion transaction followed by
 independent readback. No inference, new reservation or automatic takeover
 occurs. A lost candidate or incomplete analysis still requires a separate
 recovery policy; this is not crash recovery if the envelope itself is lost.
+
+### Source-batch acknowledgement reference (issue #65)
+
+A work completion is not a source checkpoint. A source refresh may require
+several independent work items; a worker that crashes after the first
+completed item must not advance the entire source checkpoint.
+
+The disposable PostgreSQL contract now tests one append-only successor
+record per scope and previous checkpoint, alongside the existing
+`createPostgresWorkStore` and actual durable Pilot 2 composition. The
+fixture roots its chain explicitly, reads every required work completion
+using the existing validator, then inserts the successor. The unique
+predecessor constraint and self-FK prevent forks and missing parents.
+Readback independently binds the receipt to its fingerprint (ordered
+tuple, not JSONB key order). Competing successors, incomplete work,
+corrupt completion, restart, lost acknowledgement, scope isolation and
+append-only grants are exercised. Empty work sets deliberately block in
+this fixture; a production non-work disposition needs its own verified
+source contract. All inference adapters are synthetic.
+
+This is a reference in `qa/postgres/work-atomicity-probe.sql` and
+`qa/postgres/work-atomicity-probe.mjs`, **not** a runtime migration.
+The expected work list, scope and source digest are trusted fixture
+inputs; the test does not authenticate them, prove exhaustive source
+membership, verify actual generation readback, or store a reconstructible
+Session Search membership receipt. The competing candidates are synthetic
+storage contenders, not two independently validated source transitions.
+Verification of immutable work completions precedes the checkpoint
+insert; a production design must preserve that invariant and address
+corruption/concurrent additions at the storage boundary. No claim that a
+database constraint alone establishes evidence authority.
+
+The next implementation can reuse the same database and existing
+append-only work completion records. It needs the exact verified source
+handoff and stable scoped work identities from Session Search, a
+reconstructible predecessor receipt (not just its digest), explicit
+no-work/removed-source disposition and independently verified checkpoint
+readback. Bind analysis scope/version as well as accepted source and
+serving provenance. Do not introduce a new queue or database unless
+existing constraints prove insufficient. Do not deploy this fixture or
+grant real source access.

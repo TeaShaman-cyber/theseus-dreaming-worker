@@ -284,3 +284,140 @@ assert.equal((await runDurablePilot2(failedInput, makeRoutes(), store)).decision
 assert.equal(partial.recovery, null);
 assert.equal(calls.length, 8);
 console.log('COMPLETION_ONLY_RECOVERY_PASS wrong_owner=rejected rollback=recovered concurrent_recovery=verified inference_repeated=0');
+
+// Reference for source-level acknowledgement, not production schema or intake.
+// Source membership, exact promoted catalog and complete expected work list
+// are trusted synthetic fixture inputs. No private source or external model.
+const { prepareCheckpointedPilot2 } = await import('../../src/dreaming/checkpoint-pilot2.ts');
+const { readVerifiedCompletion } = await import('../../src/dreaming/durable-pilot2.ts');
+const batchScope = 'synthetic:source-checkpoint:v1';
+const rootReceipt = { scope: batchScope, previous: null, acceptedSet: fingerprint('initial-set'), work: [] };
+// Hash an ordered tuple, not JSONB object insertion order.
+const checkpointKey = receipt => fingerprint([receipt.scope, receipt.previous, receipt.acceptedSet, receipt.work]);
+const rootKey = checkpointKey(rootReceipt);
+const sourceClient = new Client({ connectionString });
+const peerClient = new Client({ connectionString });
+const sourceReader = new Client({ connectionString });
+const sourceClients = [sourceClient, peerClient, sourceReader];
+
+function batchWork(name) {
+  const item = { ...durableInput, acceptedSourceFingerprint: fingerprint('scope:' + name) };
+  const prepared = prepareCheckpointedPilot2({ ...item, checkpoint: { status: 'AVAILABLE', committed: null } });
+  return { item, key: prepared.workFingerprint };
+}
+const firstWork = batchWork('first'), secondWork = batchWork('second');
+const batch = {
+  scope: batchScope, previous: rootKey, acceptedSet: fingerprint('refreshed-set'),
+  work: [firstWork.key, secondWork.key].sort(),
+};
+const batchKey = checkpointKey(batch);
+async function readSuccessor(previous, scope = batchScope) {
+  const { rows } = await sourceReader.query(
+    'SELECT checkpoint_fingerprint, receipt FROM dw_work_probe.source_checkpoints WHERE scope=$1 AND previous_checkpoint=$2',
+    [scope, previous],
+  );
+  if (rows.length === 0) return null;
+  assert.equal(rows.length, 1);
+  const row = rows[0];
+  assert.equal(row.receipt.scope, scope);
+  assert.equal(row.receipt.previous, previous);
+  assert.equal(row.checkpoint_fingerprint, checkpointKey(row.receipt));
+  return row;
+}
+async function appendCheckpoint(client, candidate, { loseAck = false } = {}) {
+  // Reference only: the caller supplies the complete expected set. Empty
+  // batches require an independent non-work proof and are not admitted here.
+  assert.equal(candidate.scope, batchScope);
+  assert.ok(candidate.work.length > 0);
+  assert.deepEqual(candidate.work, [...new Set(candidate.work)].sort());
+  const key = checkpointKey(candidate);
+  const existing = await readSuccessor(candidate.previous);
+  if (existing) {
+    return existing.checkpoint_fingerprint === key ? 'ALREADY_ACKNOWLEDGED' : 'CONFLICT';
+  }
+  for (const work of candidate.work) {
+    if (!await readVerifiedCompletion(store, work)) return 'PENDING';
+  }
+  await client.query(
+    'INSERT INTO dw_work_probe.source_checkpoints (scope,checkpoint_fingerprint,previous_checkpoint,receipt) VALUES ($1,$2,$3,$4::jsonb) ON CONFLICT DO NOTHING',
+    [candidate.scope, key, candidate.previous, JSON.stringify(candidate)],
+  );
+  if (loseAck) throw Error('SIMULATED_BATCH_ACK_LOST');
+  const persisted = await readSuccessor(candidate.previous);
+  return persisted?.checkpoint_fingerprint === key ? 'ACKNOWLEDGED' : 'CONFLICT';
+}
+try {
+  await Promise.all(sourceClients.map(client => client.connect()));
+  await sourceClient.query(
+    'INSERT INTO dw_work_probe.source_checkpoints (scope,checkpoint_fingerprint,previous_checkpoint,receipt) VALUES ($1,$2,NULL,$3::jsonb)',
+    [batchScope, rootKey, JSON.stringify(rootReceipt)],
+  );
+  const beforeCalls = calls.length;
+  assert.equal(await appendCheckpoint(sourceClient, batch), 'PENDING');
+  assert.equal(await readSuccessor(rootKey), null);
+  assert.equal((await runDurablePilot2(firstWork.item, makeRoutes(), store)).decision, 'COMMITTED');
+  assert.equal(await appendCheckpoint(sourceClient, batch), 'PENDING');
+  assert.equal(await readSuccessor(rootKey), null);
+
+  // Restart: exact work identity is retained; first completion skips inference.
+  assert.equal((await runDurablePilot2(firstWork.item, makeRoutes(), store)).decision, 'ALREADY_PROCESSED');
+  assert.equal(calls.length, beforeCalls + 2);
+  assert.equal((await runDurablePilot2(secondWork.item, makeRoutes(), store)).decision, 'COMMITTED');
+  assert.equal(calls.length, beforeCalls + 4);
+
+  // Two competing successor receipts from the same source checkpoint: the
+  // database, not a read-then-write race, enforces one winner.
+  const competing = { ...batch, acceptedSet: fingerprint('different-refreshed-set') };
+  const lost = appendCheckpoint(sourceClient, batch, { loseAck: true });
+  const conflict = appendCheckpoint(peerClient, competing);
+  const outcomes = await Promise.allSettled([lost, conflict]);
+  assert.ok(outcomes.every(outcome => outcome.status === 'fulfilled'
+    || outcome.reason.message === 'SIMULATED_BATCH_ACK_LOST'));
+  const persisted = await readSuccessor(rootKey);
+  const winner = persisted.checkpoint_fingerprint === batchKey ? batch : competing;
+  const loser = winner === batch ? competing : batch;
+  assert.equal(persisted.checkpoint_fingerprint, checkpointKey(winner));
+  assert.deepEqual(persisted.receipt, winner);
+  assert.equal(await appendCheckpoint(sourceClient, winner), 'ALREADY_ACKNOWLEDGED');
+  assert.equal(await appendCheckpoint(peerClient, loser), 'CONFLICT');
+  const counts = await sourceReader.query(
+    'SELECT count(*)::int AS count FROM dw_work_probe.source_checkpoints WHERE scope=$1', [batchScope],
+  );
+  assert.equal(counts.rows[0].count, 2);
+  assert.equal(await readSuccessor(rootKey, 'different-scope'), null);
+  await assert.rejects(() => sourceClient.query(
+    'UPDATE dw_work_probe.source_checkpoints SET receipt=receipt WHERE scope=$1', [batchScope],
+  ), { code: '42501' });
+  await assert.rejects(() => sourceClient.query(
+    'DELETE FROM dw_work_probe.source_checkpoints WHERE scope=$1', [batchScope],
+  ), { code: '42501' });
+  assert.equal(calls.length, beforeCalls + 4);
+
+  // Lost acknowledgement on a single deterministic successor: new connection
+  // reads exact stored receipt and repeats zero inference.
+  const next = { ...winner, previous: checkpointKey(winner), acceptedSet: fingerprint('next-set') };
+  await assert.rejects(() => appendCheckpoint(sourceClient, next, { loseAck: true }), /SIMULATED_BATCH_ACK_LOST/);
+  assert.deepEqual((await readSuccessor(next.previous)).receipt, next);
+  assert.equal(await appendCheckpoint(peerClient, next), 'ALREADY_ACKNOWLEDGED');
+  assert.equal(calls.length, beforeCalls + 4);
+  // The existing test deliberately corrupted done's completion membership.
+  // A batch cannot use this corrupt record as evidence of completion.
+  const bad = { ...next, previous: checkpointKey(next), work: [done.workFingerprint] };
+  await assert.rejects(() => appendCheckpoint(sourceClient, bad), /WORK_PROJECTION_MISMATCH/);
+  assert.equal(await readSuccessor(bad.previous), null);
+  await assert.rejects(() => appendCheckpoint(sourceClient, { ...bad, work: [] }));
+  assert.equal(await readSuccessor(bad.previous), null);
+
+  // Even direct competing insert cannot create a second successor.
+  await assert.rejects(() => sourceClient.query(
+    'INSERT INTO dw_work_probe.source_checkpoints (scope,checkpoint_fingerprint,previous_checkpoint,receipt) VALUES ($1,$2,$3,$4::jsonb)',
+    [loser.scope, checkpointKey(loser), loser.previous, JSON.stringify(loser)],
+  ), { code: '23505' });
+  const orphan = { ...next, previous: fingerprint('missing-parent') };
+  await assert.rejects(() => appendCheckpoint(sourceClient, orphan), { code: '23503' });
+  assert.equal(await readSuccessor(orphan.previous), null);
+  assert.equal(calls.length, beforeCalls + 4);
+  console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
+} finally {
+  await Promise.allSettled(sourceClients.map(client => client.end()));
+}
