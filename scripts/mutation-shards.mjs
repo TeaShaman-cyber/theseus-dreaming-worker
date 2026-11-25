@@ -25,9 +25,11 @@ export const MUTATION_SHARDS = Object.freeze({
   checkpoint: Object.freeze({
     mutate: Object.freeze([
       'src/dreaming/checkpoint-pilot2.ts',
+      'src/dreaming/durable-pilot2.ts',
     ]),
     tests: Object.freeze([
       'test/checkpoint-pilot2.test.mjs',
+      'test/durable-pilot2.test.mjs',
     ]),
   }),
   serializer: Object.freeze({
@@ -64,6 +66,7 @@ export const MUTATION_SHARDS = Object.freeze({
     tests: Object.freeze([
       'test/proposal-ledger.test.mjs',
       'test/proposal-ledger-postgres.test.mjs',
+      'test/durable-pilot2.test.mjs',
     ]),
   }),
   observability: Object.freeze({

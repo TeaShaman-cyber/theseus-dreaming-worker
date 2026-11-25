@@ -1,0 +1,342 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { createHash } from 'node:crypto';
+import { Client } from 'pg';
+import { createPostgresWorkStore } from '../src/dreaming/proposal-ledger-postgres.ts';
+import { runDurablePilot2, validateWorkCompletion } from '../src/dreaming/durable-pilot2.ts';
+
+const input = {
+  acceptedSourceFingerprint: 'sha256:' + 'a'.repeat(64),
+  analysisVersion: 'v1',
+  request: {
+    scope: 'SYNTHETIC_FIXTURE',
+    task: 'Analyze synthetic evidence.',
+    packet: {
+      schema: 'theseus-evidence-packet-v1',
+      packetId: 'fixture-durable',
+      acceptedNewEvidence: true,
+      coverage: { state: 'PARTIAL', currentness: 'UNKNOWN' },
+      evidence: [{ sourceRef: 'fixture:1', evidenceHash: 'sha256:fixture', text: 'Synthetic observation.' }],
+    },
+  },
+};
+const proposal = {
+  type: 'FACT', claim: 'Synthetic observation.',
+  source_refs: [{ source_ref: 'fixture:1', evidence_hash: 'sha256:fixture' }],
+};
+function routes({ fail = false, duplicate = false, finish = 'stop' } = {}) {
+  const calls = [];
+  return {
+    calls,
+    adapters: ['a', 'b'].map(id => ({
+      id, provider: 'configured-' + id, model: 'configured-' + id, modelFamily: id,
+      infer: async request => {
+        calls.push({ id, text: request.packet.evidence[0].text });
+        if (fail && id === 'b') throw Error('fixture failure');
+        return {
+          provider: 'observed-' + id, model: 'observed-model-' + id, finishReason: finish,
+          text: JSON.stringify({
+            schema: 'theseus.dreaming-worker.proposals.v1',
+            proposals: duplicate ? [proposal, proposal] : [proposal],
+          }),
+        };
+      },
+    })),
+  };
+}
+function memoryStore({ failReserve = false, failCommit = false, loseAck = false, corrupt = false } = {}) {
+  const reserved = new Map();
+  const completions = new Map();
+  let writes = 0;
+  return {
+    reserved, completions,
+    get writes() { return writes; },
+    async reserve(work, owner) {
+      if (failReserve) throw Error('unknown reservation');
+      if (reserved.has(work)) return false;
+      reserved.set(work, owner);
+      return true;
+    },
+    async complete(owner, completion) {
+      assert.equal(reserved.get(completion.checkpoint.workFingerprint), owner);
+      writes++;
+      if (failCommit) throw Error('transaction failed');
+      completions.set(completion.checkpoint.workFingerprint, structuredClone(completion));
+      if (loseAck) throw Error('lost acknowledgement');
+    },
+    async readCompletion(work) {
+      const value = structuredClone(completions.get(work) ?? null);
+      if (value && corrupt) value.records[0].proposal.claim = 'changed';
+      return value;
+    },
+  };
+}
+test('concurrent callers reserve once, preserve both perspectives and replay without calls', async () => {
+  const store = memoryStore();
+  const { calls, adapters } = routes();
+  const outcomes = await Promise.all([runDurablePilot2(input, adapters, store), runDurablePilot2(input, adapters, store)]);
+  const done = outcomes.find(result => result.decision === 'COMMITTED');
+  assert.ok(done);
+  assert.equal(calls.length, 2);
+  assert.equal(store.writes, 1);
+  assert.equal(done.attemptedPasses, 2);
+  assert.equal(done.analysis.outcome, 'COMPLETE');
+  assert.deepEqual(done.completionCandidate, done.completion);
+  assert.equal(done.completion.records.length, 2);
+  assert.notEqual(done.completion.records[0].recordId, done.completion.records[1].recordId);
+  assert.equal(done.completion.records[0].proposalFingerprint, done.completion.records[1].proposalFingerprint);
+  assert.deepEqual(done.completion.observed.map(item => item.model), ['observed-model-a', 'observed-model-b']);
+  assert.equal(validateWorkCompletion(done.completion).projectionFingerprint, done.completion.projectionFingerprint);
+  const again = await runDurablePilot2({
+    ...input, request: { ...input.request, packet: { ...input.request.packet, packetId: 'transient-2' } },
+  }, adapters, store);
+  assert.equal(again.decision, 'ALREADY_PROCESSED');
+  assert.equal(again.attemptedPasses, 0);
+  assert.equal(again.analysis, null);
+  assert.equal(again.completionCandidate, null);
+  assert.deepEqual(again.completion, done.completion);
+  assert.equal(calls.length, 2);
+  const changed = await runDurablePilot2({ ...input, analysisVersion: 'v2' }, adapters, store);
+  assert.equal(changed.decision, 'COMMITTED');
+  assert.notEqual(changed.completion.records[0].recordId, done.completion.records[0].recordId);
+  assert.equal(calls.length, 4);
+});
+test('no evidence, invalid input or ambiguous reservation causes no inference', async () => {
+  const { calls, adapters } = routes();
+  const store = memoryStore({ failReserve: true });
+  const empty = { ...input, request: { ...input.request, packet: { ...input.request.packet, evidence: [], acceptedNewEvidence: false } } };
+  assert.equal((await runDurablePilot2(empty, adapters, store)).decision, 'INTAKE_UNKNOWN');
+  await assert.rejects(runDurablePilot2({ ...input, analysisVersion: ' ' }, adapters, store));
+  const unknown = await runDurablePilot2(input, adapters, store);
+  assert.equal(unknown.decision, 'STORAGE_UNKNOWN');
+  assert.equal(unknown.completion, null);
+  assert.equal(unknown.attemptedPasses, 0);
+  assert.equal(calls.length, 0);
+});
+test('partial or unknown-finish analysis cannot complete or automatically retry', async () => {
+  for (const options of [{ fail: true }, { finish: null }, { duplicate: true }]) {
+    const { calls, adapters } = routes(options);
+    const store = memoryStore();
+    const result = await runDurablePilot2(input, adapters, store);
+    assert.equal(result.decision, 'ANALYSIS_INCOMPLETE');
+    assert.equal(result.completion, null);
+    assert.equal(store.writes, 0);
+    assert.ok(result.analysis);
+    assert.equal(result.completionCandidate, null);
+    if (options.fail) assert.equal(result.analysis.outcome, 'PARTIAL');
+    assert.equal((await runDurablePilot2(input, adapters, store)).decision, 'RESERVATION_UNRESOLVED');
+    assert.equal(calls.length, 2);
+  }
+});
+test('completion is independently read back after a commit error, without re-executing', async () => {
+  for (const [options, expected] of [
+    [{ loseAck: true }, 'COMMITTED'],
+    [{ failCommit: true }, 'STORAGE_UNKNOWN'],
+    [{ corrupt: true }, 'STORAGE_UNKNOWN'],
+  ]) {
+    const { calls, adapters } = routes();
+    const store = memoryStore(options);
+    const result = await runDurablePilot2(input, adapters, store);
+    assert.equal(result.decision, expected);
+    assert.equal(result.completion !== null, expected === 'COMMITTED');
+    assert.equal(result.analysis.outcome, 'COMPLETE');
+    assert.ok(result.completionCandidate);
+    assert.equal(calls.length, 2);
+    const replay = await runDurablePilot2(input, adapters, store);
+    assert.equal(replay.decision, options.loseAck ? 'ALREADY_PROCESSED' : options.corrupt ? 'STORAGE_UNKNOWN' : 'RESERVATION_UNRESOLVED');
+    assert.equal(calls.length, 2);
+  }
+});
+test('admitted snapshot cannot drift while reservation is being acquired', async () => {
+  const raw = structuredClone(input);
+  const { calls, adapters } = routes();
+  const store = memoryStore();
+  const reserve = store.reserve.bind(store);
+  store.reserve = async (...args) => {
+    raw.request.packet.evidence[0].text = 'mutated after admission';
+    return reserve(...args);
+  };
+  const result = await runDurablePilot2(raw, adapters, store);
+  assert.equal(result.decision, 'COMMITTED');
+  assert.deepEqual(calls.map(call => call.text), ['Synthetic observation.', 'Synthetic observation.']);
+});
+
+async function completedFixture() {
+  const { adapters } = routes();
+  const result = await runDurablePilot2(input, adapters, memoryStore());
+  assert.equal(result.decision, 'COMMITTED');
+  return result.completion;
+}
+
+function rehash(value) {
+  const { projectionFingerprint: _old, ...payload } = value;
+  return { ...payload, projectionFingerprint: 'sha256:' + createHash('sha256').update(JSON.stringify(payload)).digest('hex') };
+}
+
+test('completion validation rejects wrong perspective, origin, absent perspective and corrupt identity even with a new digest', async () => {
+  const valid = await completedFixture();
+  for (const [mutate, expected] of [
+    [v => { v.observed.reverse(); }, /WORK_PERSPECTIVE_MISMATCH/],
+    [v => { v.records[0].origin.requestFingerprint = 'wrong'; }, /WORK_RECORD_ORIGIN_MISMATCH/],
+    [v => { v.records[0].origin.perspectiveId = 'wrong'; }, /WORK_RECORD_ORIGIN_MISMATCH/],
+    [v => { v.records[0].recordId = 'wrong'; }, /LEDGER_EVENT_ID_MISMATCH/],
+  ]) {
+    const candidate = structuredClone(valid);
+    mutate(candidate);
+    assert.throws(() => validateWorkCompletion(rehash(candidate)), expected);
+  }
+  const missing = structuredClone(valid);
+  const record = missing.records[0];
+  // Two distinct valid records in one perspective cannot substitute for two perspectives.
+  const { createProposalRecord } = await import('../src/dreaming/proposal-ledger.ts');
+  missing.records[1] = createProposalRecord({ origin: record.origin, proposal: { ...record.proposal, claim: 'Another claim.' } });
+  assert.throws(() => validateWorkCompletion(rehash(missing)), /WORK_PERSPECTIVE_MISSING/);
+});
+
+test('a valid completion for another work key is not a valid readback', async () => {
+  const existing = await completedFixture();
+  const { calls, adapters } = routes();
+  const store = memoryStore();
+  store.reserve = async () => false;
+  store.readCompletion = async () => existing;
+  const result = await runDurablePilot2({ ...input, analysisVersion: 'different' }, adapters, store);
+  assert.equal(result.decision, 'STORAGE_UNKNOWN');
+  assert.equal(result.completion, null);
+  assert.equal(calls.length, 0);
+});
+
+const connectionString = 'postgresql://fixture_user:fixture_password@fixture.invalid:54329/fixture_db';
+const token = '01234567-89ab-4def-8123-456789abcdef';
+
+function clientWith(query) {
+  const calls = [];
+  let opened = false;
+  let closed = false;
+  return {
+    calls,
+    get opened() { return opened; },
+    get closed() { return closed; },
+    async connect() { opened = true; },
+    async query(sql, values = []) {
+      assert.equal(opened, true);
+      calls.push({ sql, values });
+      return { rows: await query(sql, values) };
+    },
+    async end() { closed = true; },
+  };
+}
+function asStore(client) {
+  return createPostgresWorkStore({ connectionString, clientFactory: url => {
+    assert.equal(url, connectionString);
+    return client;
+  } });
+}
+
+test('PostgreSQL reservation only succeeds on the exact returned token', async () => {
+  const work = (await completedFixture()).checkpoint.workFingerprint;
+  for (const [rows, expected] of [
+    [[], false],
+    [[{ owner_token: token }], true],
+    [[{ owner_token: 'another' }], 'invalid'],
+    [[{ owner_token: token }, { owner_token: token }], 'invalid'],
+  ]) {
+    const client = clientWith((sql, values) => {
+      assert.match(sql, /INSERT INTO dw_ledger\.work_reservations.*ON CONFLICT.*DO NOTHING RETURNING owner_token/);
+      assert.deepEqual(values, [work, token]);
+      return rows;
+    });
+    const store = asStore(client);
+    if (expected === 'invalid') await assert.rejects(store.reserve(work, token), /WORK_RESERVATION_RESPONSE_INVALID/);
+    else assert.equal(await store.reserve(work, token), expected);
+    assert.equal(client.closed, true);
+  }
+});
+
+test('work store default client uses supplied connection and closes on failure', async t => {
+  const captured = [];
+  t.mock.method(Client.prototype, 'connect', async function () {
+    const { host, port, user, database } = this.connectionParameters;
+    captured.push({ host, port, user, database });
+    throw Error('fixture connect error');
+  });
+  t.mock.method(Client.prototype, 'end', async () => { captured.push('closed'); });
+  const store = createPostgresWorkStore({ connectionString });
+  await assert.rejects(store.readCompletion('unused'), /fixture connect error/);
+  assert.deepEqual(captured, [{ host: 'fixture.invalid', port: 54329, user: 'fixture_user', database: 'fixture_db' }, 'closed']);
+});
+
+test('PostgreSQL completion uses one transaction with exact records, receipt and ordered membership', async () => {
+  const completion = await completedFixture();
+  const { checkpoint, observed, records, projectionFingerprint } = completion;
+  const client = clientWith(() => []);
+  await asStore(client).complete(token, completion);
+  assert.equal(client.closed, true);
+  assert.deepEqual(client.calls.map(({ sql }) => {
+    if (sql.includes('pg_advisory_xact_lock')) return 'LOCK';
+    if (sql.includes('UNION ALL')) return 'READ';
+    if (sql.includes('INSERT INTO dw_ledger.proposal_records')) return 'RECORD';
+    if (sql.includes('INSERT INTO dw_ledger.work_completions')) return 'COMPLETION';
+    if (sql.includes('INSERT INTO dw_ledger.work_membership')) return 'MEMBER';
+    return sql;
+  }), ['BEGIN', 'LOCK', 'READ', 'RECORD', 'RECORD', 'COMPLETION', 'MEMBER', 'MEMBER', 'COMMIT']);
+  assert.deepEqual(client.calls[5].values, [checkpoint.workFingerprint, token, checkpoint.requestFingerprint, checkpoint.resultFingerprint, projectionFingerprint, JSON.stringify(observed)]);
+  assert.deepEqual(client.calls.slice(6, 8).map(call => call.values), records.map((record, i) => [checkpoint.workFingerprint, i, record.recordId]));
+  for (const sql of ['INSERT INTO dw_ledger.proposal_records', 'INSERT INTO dw_ledger.work_completions', 'INSERT INTO dw_ledger.work_membership', 'COMMIT']) {
+    const faulty = clientWith(query => {
+      if (query.includes(sql)) throw Error('fixture write failed');
+      if (query === 'ROLLBACK') throw Error('fixture rollback failed');
+      return [];
+    });
+    await assert.rejects(asStore(faulty).complete(token, completion), /fixture write failed/);
+    assert.equal(faulty.calls.at(-1).sql, 'ROLLBACK');
+    assert.equal(faulty.closed, true);
+  }
+  const invalid = clientWith(() => { throw Error('unexpected SQL'); });
+  await assert.rejects(asStore(invalid).complete(token, { ...completion, projectionFingerprint: 'invalid' }));
+  assert.equal(invalid.opened, false);
+});
+
+function completionRows(completion) {
+  const { checkpoint, records, observed, projectionFingerprint } = completion;
+  return records.map((record, ordinal) => ({
+    work_fingerprint: checkpoint.workFingerprint,
+    request_fingerprint: checkpoint.requestFingerprint,
+    result_fingerprint: checkpoint.resultFingerprint,
+    projection_fingerprint: projectionFingerprint,
+    observed, ordinal,
+    record: {
+      schema_name: record.schema, authority: record.authority, record_id: record.recordId,
+      proposal_fingerprint: record.proposalFingerprint, packet_id: record.origin.packetId,
+      evidence_fingerprint: record.origin.evidenceFingerprint, request_fingerprint: record.origin.requestFingerprint,
+      perspective_id: record.origin.perspectiveId, route_id: record.origin.route.id,
+      route_provider: record.origin.route.provider, route_model: record.origin.route.model,
+      route_model_family: record.origin.route.modelFamily, proposal: record.proposal,
+    },
+  }));
+}
+
+test('PostgreSQL readback reconstructs exact committed projection and rejects missing or reordered members', async () => {
+  const completion = await completedFixture();
+  const work = completion.checkpoint.workFingerprint;
+  const good = completionRows(completion);
+  for (const [rows, expected] of [
+    [good, completion],
+    [[], null],
+    [[{ ...good[0], work_fingerprint: 'different' }, good[1]], /WORK_READBACK_IDENTITY_MISMATCH/],
+    [[{ ...good[0], ordinal: 1 }, good[1]], /WORK_MEMBERSHIP_INVALID/],
+    [[{ ...good[0], record: null }, good[1]], /WORK_MEMBERSHIP_INVALID/],
+    [[good[0]], /records/],
+    [[{ ...good[0], projection_fingerprint: 'sha256:' + 'b'.repeat(64) }, good[1]], /WORK_PROJECTION_MISMATCH/],
+  ]) {
+    const client = clientWith((sql, values) => {
+      assert.match(sql, /LEFT JOIN dw_ledger\.work_membership/);
+      assert.match(sql, /ORDER BY m.ordinal/);
+      assert.deepEqual(values, [work]);
+      return rows;
+    });
+    const operation = asStore(client).readCompletion(work);
+    if (expected instanceof RegExp) await assert.rejects(operation, expected);
+    else assert.deepEqual(await operation, expected);
+    assert.equal(client.closed, true);
+  }
+});

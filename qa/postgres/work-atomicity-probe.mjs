@@ -153,3 +153,111 @@ try {
 } finally {
   await Promise.allSettled(clients.map(client => client.end()));
 }
+
+// End-to-end lab integration: real PostgreSQL store, actual Pilot 2 logic,
+// only the external inference boundary is synthetic.
+const { runDurablePilot2 } = await import('../../src/dreaming/durable-pilot2.ts');
+const { createPostgresWorkStore } = await import('../../src/dreaming/proposal-ledger-postgres.ts');
+const store = createPostgresWorkStore({ connectionString });
+const durableInput = {
+  acceptedSourceFingerprint: fingerprint('durable-accepted-source'),
+  analysisVersion: 'v1',
+  request: {
+    scope: 'SYNTHETIC_FIXTURE', task: 'Analyze work atomicity.',
+    packet: {
+      schema: 'theseus-evidence-packet-v1', packetId: 'durable-work-fixture',
+      acceptedNewEvidence: true, coverage: { state: 'PARTIAL', currentness: 'UNKNOWN' },
+      evidence: [{ sourceRef: 'fixture:atomicity', evidenceHash: 'sha256:fixture', text: 'Synthetic observation.' }],
+    },
+  },
+};
+const calls = [];
+function makeRoutes(fail = false) {
+  return ['a', 'b'].map(id => ({
+    id, provider: 'fixture-configured', model: id, modelFamily: id,
+    infer: async () => {
+      calls.push(id);
+      if (fail && id === 'b') throw Error('synthetic provider failure');
+      return {
+        provider: 'fixture-observed', model: 'observed-' + id, finishReason: 'stop',
+        text: JSON.stringify({ schema: 'theseus.dreaming-worker.proposals.v1', proposals: [{
+          type: 'FACT', claim: 'Synthetic observation.',
+          source_refs: [{ source_ref: 'fixture:atomicity', evidence_hash: 'sha256:fixture' }],
+        }] }),
+      };
+    },
+  }));
+}
+
+const pair = await Promise.all([
+  runDurablePilot2(durableInput, makeRoutes(), store),
+  runDurablePilot2(durableInput, makeRoutes(), store),
+]);
+const done = pair.find(item => item.decision === 'COMMITTED');
+assert.ok(done, JSON.stringify(pair.map(item => item.decision)));
+assert.equal(pair.filter(item => item.decision === 'COMMITTED').length, 1);
+assert.equal(calls.length, 2);
+assert.deepEqual(await store.readCompletion(done.workFingerprint), done.completion);
+assert.deepEqual(done.completion.observed.map(item => item.model), ['observed-a', 'observed-b']);
+assert.notEqual(done.completion.records[0].recordId, done.completion.records[1].recordId);
+assert.equal(done.completion.records[0].proposalFingerprint, done.completion.records[1].proposalFingerprint);
+assert.equal((await runDurablePilot2(durableInput, makeRoutes(), store)).decision, 'ALREADY_PROCESSED');
+assert.equal(calls.length, 2);
+
+function faultStore(mode) {
+  return createPostgresWorkStore({
+    connectionString,
+    clientFactory: url => {
+      const client = new Client({ connectionString: url });
+      return {
+        connect: () => client.connect(),
+        end: () => client.end(),
+        query: async (sql, values) => {
+          if (mode === 'rollback' && sql.includes('INSERT INTO dw_ledger.work_membership')) {
+            throw Error('fixture transaction interruption');
+          }
+          const result = await client.query(sql, values);
+          if (mode === 'ack' && sql === 'COMMIT') throw Error('simulated acknowledgement loss');
+          return result;
+        },
+      };
+    },
+  });
+}
+const ackInput = { ...durableInput, analysisVersion: 'ack-v2' };
+const ack = await runDurablePilot2(ackInput, makeRoutes(), faultStore('ack'));
+assert.equal(ack.decision, 'COMMITTED');
+assert.deepEqual(await store.readCompletion(ack.workFingerprint), ack.completion);
+assert.notEqual(ack.completion.records[0].recordId, done.completion.records[0].recordId);
+const failedInput = { ...durableInput, analysisVersion: 'rollback-v3' };
+const failed = await runDurablePilot2(failedInput, makeRoutes(), faultStore('rollback'));
+assert.equal(failed.decision, 'STORAGE_UNKNOWN');
+assert.equal(await store.readCompletion(failed.workFingerprint), null);
+assert.equal((await runDurablePilot2(failedInput, makeRoutes(), store)).decision, 'RESERVATION_UNRESOLVED');
+const partialInput = { ...durableInput, analysisVersion: 'partial-v4' };
+const partial = await runDurablePilot2(partialInput, makeRoutes(true), store);
+assert.equal(partial.decision, 'ANALYSIS_INCOMPLETE');
+assert.equal(await store.readCompletion(partial.workFingerprint), null);
+assert.equal((await runDurablePilot2(partialInput, makeRoutes(), store)).decision, 'RESERVATION_UNRESOLVED');
+assert.equal(calls.length, 8);
+const independent = new Client({ connectionString });
+try {
+  await independent.connect();
+  const { rows } = await independent.query(
+    'SELECT count(*)::int AS count FROM dw_ledger.proposal_records WHERE perspective_id=ANY($1::text[])',
+    [[failed.workFingerprint + ':pass-1', failed.workFingerprint + ':pass-2', partial.workFingerprint + ':pass-1', partial.workFingerprint + ':pass-2']],
+  );
+  assert.equal(rows[0].count, 0);
+  // An append-only client can add an unrelated membership row. The FK alone
+  // is insufficient: independent readback must detect changed membership.
+  await independent.query(
+    'INSERT INTO dw_ledger.work_membership (work_fingerprint, ordinal, record_id) VALUES ($1,$2,$3)',
+    [done.workFingerprint, 2, ack.completion.records[0].recordId],
+  );
+  await assert.rejects(() => store.readCompletion(done.workFingerprint), /WORK_PROJECTION_MISMATCH/);
+  assert.equal((await runDurablePilot2(durableInput, makeRoutes(), store)).decision, 'STORAGE_UNKNOWN');
+  assert.equal(calls.length, 8);
+} finally {
+  await independent.end();
+}
+console.log('DURABLE_PILOT2_INTEGRATION_PASS concurrent=one_execution replay=zero_calls rollback=verified ack_loss=simulated_readback partial=blocked tampered_membership=rejected');

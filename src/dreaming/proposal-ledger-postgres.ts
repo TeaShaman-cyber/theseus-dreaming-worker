@@ -1,4 +1,5 @@
 import { Client } from 'pg';
+import { validateWorkCompletion, type WorkCompletion, type WorkStore } from './durable-pilot2.ts';
 
 import {
   appendLedgerEvent,
@@ -132,6 +133,43 @@ async function readEventsWithClient(client: LedgerPgClient): Promise<ProposalLed
   return validated;
 }
 
+async function insertEvent(client: LedgerPgClient, event: ProposalLedgerEvent): Promise<void> {
+  if (event.eventType === 'PROPOSAL') {
+    await client.query(
+      `INSERT INTO dw_ledger.proposal_records (
+        record_id, schema_name, authority, proposal_fingerprint,
+        packet_id, evidence_fingerprint, request_fingerprint, perspective_id,
+        route_id, route_provider, route_model, route_model_family,
+        proposal_type, proposal
+      ) VALUES (
+        $1, $2, $3, $4,
+        $5, $6, $7, $8,
+        $9, $10, $11, $12,
+        $13, $14::jsonb
+      )`,
+      [
+        event.recordId, event.schema, event.authority, event.proposalFingerprint,
+        event.origin.packetId, event.origin.evidenceFingerprint,
+        event.origin.requestFingerprint, event.origin.perspectiveId,
+        event.origin.route.id, event.origin.route.provider,
+        event.origin.route.model, event.origin.route.modelFamily,
+        event.proposal.type, JSON.stringify(event.proposal),
+      ],
+    );
+  } else {
+    await client.query(
+      `INSERT INTO dw_ledger.supersession_events (
+        event_id, schema_name, authority,
+        superseded_record_id, replacement_record_id, reason
+      ) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        event.eventId, event.schema, event.authority,
+        event.supersededRecordId, event.replacementRecordId, event.reason,
+      ],
+    );
+  }
+}
+
 export function createPostgresProposalLedger(options: PostgresProposalLedgerOptions) {
   const clientFactory = options.clientFactory ?? defaultClientFactory;
 
@@ -158,40 +196,7 @@ export function createPostgresProposalLedger(options: PostgresProposalLedgerOpti
         const existing = await readEventsWithClient(client);
         appendLedgerEvent(existing, event);
 
-        if (event.eventType === 'PROPOSAL') {
-          await client.query(
-            `INSERT INTO dw_ledger.proposal_records (
-              record_id, schema_name, authority, proposal_fingerprint,
-              packet_id, evidence_fingerprint, request_fingerprint, perspective_id,
-              route_id, route_provider, route_model, route_model_family,
-              proposal_type, proposal
-            ) VALUES (
-              $1, $2, $3, $4,
-              $5, $6, $7, $8,
-              $9, $10, $11, $12,
-              $13, $14::jsonb
-            )`,
-            [
-              event.recordId, event.schema, event.authority, event.proposalFingerprint,
-              event.origin.packetId, event.origin.evidenceFingerprint,
-              event.origin.requestFingerprint, event.origin.perspectiveId,
-              event.origin.route.id, event.origin.route.provider,
-              event.origin.route.model, event.origin.route.modelFamily,
-              event.proposal.type, JSON.stringify(event.proposal),
-            ],
-          );
-        } else {
-          await client.query(
-            `INSERT INTO dw_ledger.supersession_events (
-              event_id, schema_name, authority,
-              superseded_record_id, replacement_record_id, reason
-            ) VALUES ($1, $2, $3, $4, $5, $6)`,
-            [
-              event.eventId, event.schema, event.authority,
-              event.supersededRecordId, event.replacementRecordId, event.reason,
-            ],
-          );
-        }
+        await insertEvent(client, event);
 
         await client.query('COMMIT');
       } catch (error) {
@@ -206,6 +211,100 @@ export function createPostgresProposalLedger(options: PostgresProposalLedgerOpti
       } finally {
         await client.end();
       }
+    },
+  };
+}
+
+// Work completion shares the existing ledger validation and insert path.
+// The work key admits a single caller; its token is correlation, not an ACL.
+export function createPostgresWorkStore(options: PostgresProposalLedgerOptions): WorkStore {
+  const clientFactory = options.clientFactory ?? defaultClientFactory;
+  async function withClient<T>(action: (client: LedgerPgClient) => Promise<T>): Promise<T> {
+    const client = clientFactory(options.connectionString);
+    try {
+      await client.connect();
+      return await action(client);
+    } finally {
+      await client.end();
+    }
+  }
+
+  return {
+    async reserve(workFingerprint, ownerToken) {
+      return withClient(async client => {
+        const { rows } = await client.query<{ owner_token: string }>(
+          'INSERT INTO dw_ledger.work_reservations (work_fingerprint, owner_token) VALUES ($1,$2) ON CONFLICT (work_fingerprint) DO NOTHING RETURNING owner_token',
+          [workFingerprint, ownerToken],
+        );
+        if (rows.length === 0) return false;
+        if (rows.length !== 1 || rows[0].owner_token !== ownerToken) throw Error('WORK_RESERVATION_RESPONSE_INVALID');
+        return true;
+      });
+    },
+
+    async complete(ownerToken, raw) {
+      const completion = validateWorkCompletion(raw);
+      const { checkpoint, observed, records, projectionFingerprint } = completion;
+      await withClient(async client => {
+        await client.query('BEGIN');
+        try {
+          await client.query("SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))");
+          let existing = await readEventsWithClient(client);
+          for (const record of records) {
+            existing = appendLedgerEvent(existing, record);
+            await insertEvent(client, record);
+          }
+          await client.query(
+            `INSERT INTO dw_ledger.work_completions (work_fingerprint, owner_token, request_fingerprint, result_fingerprint, projection_fingerprint, observed)
+             VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
+            [checkpoint.workFingerprint, ownerToken, checkpoint.requestFingerprint, checkpoint.resultFingerprint, projectionFingerprint, JSON.stringify(observed)],
+          );
+          for (const [ordinal, record] of records.entries()) {
+            await client.query('INSERT INTO dw_ledger.work_membership (work_fingerprint, ordinal, record_id) VALUES ($1,$2,$3)',
+              [checkpoint.workFingerprint, ordinal, record.recordId]);
+          }
+          await client.query('COMMIT');
+        } catch (error) {
+          try { await client.query('ROLLBACK'); } catch { /* preserve original failure */ }
+          throw error;
+        }
+      });
+    },
+
+    async readCompletion(workFingerprint) {
+      return withClient(async client => {
+        // A single statement provides a consistent snapshot of header and membership.
+        const { rows } = await client.query<{
+          work_fingerprint: string; request_fingerprint: string; result_fingerprint: string;
+          projection_fingerprint: string; observed: unknown; ordinal: number | null; record: LedgerRow | null;
+        }>(
+          `SELECT c.work_fingerprint, c.request_fingerprint, c.result_fingerprint,
+            c.projection_fingerprint, c.observed, m.ordinal,
+            CASE WHEN p.record_id IS NULL THEN NULL ELSE to_jsonb(p) END AS record
+           FROM dw_ledger.work_completions c
+           LEFT JOIN dw_ledger.work_membership m USING (work_fingerprint)
+           LEFT JOIN dw_ledger.proposal_records p ON p.record_id=m.record_id
+           WHERE c.work_fingerprint=$1 ORDER BY m.ordinal`,
+          [workFingerprint],
+        );
+        if (rows.length === 0) return null;
+        const first = rows[0];
+        if (first.work_fingerprint !== workFingerprint) throw Error('WORK_READBACK_IDENTITY_MISMATCH');
+        const records = rows.map((row, index) => {
+          if (row.ordinal !== index || !row.record) throw Error('WORK_MEMBERSHIP_INVALID');
+          return rowToEvent({ ...row.record, event_type: 'PROPOSAL' });
+        });
+        return validateWorkCompletion({
+          schema: 'theseus.dreaming-worker.work-completion.v1',
+          checkpoint: {
+            schema: 'theseus.dreaming-worker.checkpoint.v1',
+            workFingerprint: first.work_fingerprint,
+            requestFingerprint: first.request_fingerprint,
+            resultFingerprint: first.result_fingerprint,
+          },
+          observed: first.observed, records, projectionFingerprint: first.projection_fingerprint,
+        });
+      });
     },
   };
 }

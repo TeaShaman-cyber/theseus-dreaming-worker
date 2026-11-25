@@ -81,3 +81,20 @@ BEGIN
   END IF;
 END
 $$;
+
+DO $$
+DECLARE
+  t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['work_reservations','work_completions','work_membership'] LOOP
+    IF to_regclass('dw_ledger.' || t) IS NULL
+      OR NOT has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'SELECT')
+      OR NOT has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'INSERT')
+      OR has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'UPDATE')
+      OR has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'DELETE')
+      OR has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'TRUNCATE')
+    THEN RAISE EXCEPTION 'WORK_TABLE_GRANTS_INVALID: %', t;
+    END IF;
+  END LOOP;
+END
+$$;
