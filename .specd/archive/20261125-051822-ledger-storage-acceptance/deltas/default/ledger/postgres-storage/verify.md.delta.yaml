@@ -1,0 +1,22 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Hosted PostgreSQL validates real behavior$'
+  content: |
+    ### Requirement: Connection and transaction boundaries are independently verified
+
+    #### Scenario: Construct the default client
+
+    - **GIVEN** an explicitly supplied synthetic connection string
+    - **WHEN** the default adapter client is created
+    - **THEN** its actual connection parameters match the supplied string without contacting a live service
+
+    #### Scenario: Transaction order and invalid rows
+
+    - **WHEN** append executes or a required persisted field is null
+    - **THEN** BEGIN precedes lock, read and INSERT, and COMMIT follows INSERT
+    - **AND** a null required field reports the offending field and fails closed

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { Client } from 'pg';
 
 import { createProposalRecord, createSupersessionEvent } from '../src/dreaming/proposal-ledger.ts';
 import { createPostgresProposalLedger } from '../src/dreaming/proposal-ledger-postgres.ts';
@@ -233,4 +234,61 @@ test('appendEvent closes the client when connection establishment fails', async 
   await assert.rejects(() => ledger.appendEvent(a), expected);
   assert.equal(client.ended, true);
   assert.equal(client.calls.some(call => /^ROLLBACK$/i.test(call.text.trim())), false);
+});
+
+test('default client receives exact connection parameters without network I/O', async (t) => {
+  const seen = [];
+  t.mock.method(Client.prototype, 'connect', async function () {
+    const { host, port, user, database, password } = this.connectionParameters;
+    seen.push({ host, port, user, database, password });
+  });
+  t.mock.method(Client.prototype, 'query', async () => ({ rows: [] }));
+  t.mock.method(Client.prototype, 'end', async () => {});
+  const ledger = createPostgresProposalLedger({
+    connectionString: 'postgresql://fixture_user:fixture_password@fixture.invalid:54329/fixture_db',
+  });
+  assert.deepEqual(await ledger.readEvents(), []);
+  assert.deepEqual(seen, [{
+    host: 'fixture.invalid', port: 54329, user: 'fixture_user',
+    database: 'fixture_db', password: 'fixture_password',
+  }]);
+});
+
+test('transaction starts before the lock and read, then commits after INSERT', async () => {
+  const { a } = events();
+  const client = fakeClient();
+  const ledger = createPostgresProposalLedger({
+    connectionString: 'postgresql://fixture.invalid/fixture', clientFactory: () => client,
+  });
+  await ledger.appendEvent(a);
+  const stages = client.calls.map(({ text }) => {
+    const sql = text.trim();
+    if (sql === 'BEGIN' || sql === 'COMMIT') return sql;
+    if (sql.startsWith('SELECT pg_advisory_xact_lock(')) return 'LOCK';
+    if (sql.includes('UNION ALL')) return 'READ';
+    if (sql.startsWith('INSERT INTO dw_ledger.proposal_records')) return 'INSERT';
+    return 'UNEXPECTED';
+  });
+  assert.deepEqual(stages, ['BEGIN', 'LOCK', 'READ', 'INSERT', 'COMMIT']);
+});
+
+test('all required null row fields fail closed with exact field diagnostics', async () => {
+  const { a, b, supersede } = events();
+  const cases = [
+    [a, ['record_id', 'proposal_fingerprint', 'packet_id', 'evidence_fingerprint',
+      'request_fingerprint', 'perspective_id', 'route_id', 'route_provider', 'route_model', 'route_model_family']],
+    [supersede, ['event_id', 'superseded_record_id', 'replacement_record_id', 'reason']],
+  ];
+  for (const [event, fields] of cases) {
+    for (const field of fields) {
+      const row = { ...rowFor(event, 3), [field]: null };
+      const rows = event.eventType === 'PROPOSAL' ? [row] : [rowFor(a, 1), rowFor(b, 2), row];
+      const client = fakeClient({ rows });
+      const ledger = createPostgresProposalLedger({
+        connectionString: 'postgresql://fixture.invalid/fixture', clientFactory: () => client,
+      });
+      await assert.rejects(() => ledger.readEvents(), { message: 'LEDGER_STORAGE_ROW_INVALID: ' + field });
+      assert.equal(client.ended, true);
+    }
+  }
 });
