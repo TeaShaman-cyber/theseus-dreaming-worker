@@ -20,3 +20,12 @@ unresolved task, deterministic baseline limitation, comparative evidence, and
 bounded call policy. An experimental model result alone cannot justify acceptance.
 Use the existing #54 research boundary for serialization. Canonical QA must pass;
 native change state and structural validation do not replace semantic review.
+
+Protected runtime diffs require a fresh native archived change in the PR.
+Under its validated design's Affected areas section, list each affected runtime
+file with an exact backtick path bullet and scope the change to the applicable
+canonical spec. Use native no-op deltas for behavior-preserving refactors;
+do not reuse old archives as evidence of new work. Local diff check:
+`SPECD_DIFF_BASE=$(git merge-base HEAD origin/main) ./tools/dev/specd-check`
+after committing the candidate. This coverage check does not establish semantic
+conformance or replace exact-head review.

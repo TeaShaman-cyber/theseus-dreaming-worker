@@ -9,3 +9,7 @@ node -e 'if (require("./tools/specd/node_modules/@specd/schema-std/package.json"
 "$CLI" --config specd.yaml spec validate --all
 
 python3 tools/specd/check-changes.py
+
+if [ -n "${SPECD_DIFF_BASE:-}" ]; then
+  python3 tools/specd/check-diff.py "$SPECD_DIFF_BASE"
+fi
