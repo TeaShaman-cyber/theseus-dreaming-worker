@@ -48,6 +48,12 @@
       ]
     },
     {
+      "requirement": "Source acknowledgement retains original plan",
+      "rules": [
+        "A durable source acknowledgement MUST require the exact current staged plan and verify each completion against its immutable original reservation plan under the existing transaction lock. An unbound completion MUST NOT advance source progress. The durable receipt MUST bind both the current plan and each original plan pointer, and verify the original packet, request and evidence identities against the completion. A later witness MUST NOT relabel the original work origin."
+      ]
+    },
+    {
       "requirement": "Read behavior",
       "rules": [
         "Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.\n\nPersisted rows therefore do not gain authority merely by being stored in PostgreSQL."
@@ -273,11 +279,25 @@
         "one reservation is bound to the original plan before inference",
         "AND replay does not repeat inference or change the original plan"
       ]
+    },
+    {
+      "requirement": "Source acknowledgement retains original plan",
+      "name": "Distinct original and current plans",
+      "given": [
+        "a verified completion bound to its original staged plan and an equivalent later staged witness"
+      ],
+      "when": [
+        "the batch is acknowledged"
+      ],
+      "then": [
+        "the receipt preserves both identities and exact readback",
+        "AND an unbound generic completion cannot advance the chain"
+      ]
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:fdb75ded963a4a50b40cf02460aed1204efa7efcb1cb20b280277d883f203318",
-    "verify.md": "sha256:aa90874d343fe43fa7b02096c628e60c9da6e2c7fae3ff9f8e0b6e3e91ab2354"
+    "spec.md": "sha256:aba337b0aa7b2c06647c3a0fe04c3062516508c5fafba33c01e507d0622df15a",
+    "verify.md": "sha256:e1170aa71104678ee178dd6ff78f21284aa018f47f8dce7e898c776f36765f19"
   },
   "generatedBy": "core"
 }

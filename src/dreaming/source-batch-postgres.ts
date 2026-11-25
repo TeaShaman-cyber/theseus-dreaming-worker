@@ -2,7 +2,7 @@ import { Client } from 'pg';
 import { z } from 'zod';
 import { decodeSourceHandoff } from './source-handoff.ts';
 import { prepareSourceBatchExecution, prepareSourceBatchPlan, prepareSourceBatchReceipt, sourceReceiptFingerprint, type BatchInput } from './source-batch-receipt.ts';
-import { runDurablePilot2 } from './durable-pilot2.ts';
+import { readVerifiedCompletion, runDurablePilot2 } from './durable-pilot2.ts';
 import type { Pilot2Route } from './pilot2-runner.ts';
 import { createPostgresWorkStore, type LedgerPgClient, type LedgerPgClientFactory } from './proposal-ledger-postgres.ts';
 
@@ -25,7 +25,17 @@ function context(raw: Intent) {
 
 type Root = ReturnType<typeof context>['root'];
 type Receipt = NonNullable<Awaited<ReturnType<typeof prepareSourceBatchReceipt>>['receipt']>;
-type Stored = Root | Receipt;
+type OriginPointer = {
+  workFingerprint: string;
+  previousCheckpoint: string;
+  planFingerprint: string;
+};
+type BoundReceipt = Omit<Receipt, 'schema'> & {
+  schema: 'theseus.dreaming-worker.source-batch-receipt.v2';
+  currentPlanFingerprint: string;
+  origins: OriginPointer[];
+};
+type Stored = Root | Receipt | BoundReceipt;
 type Plan = ReturnType<typeof prepareSourceBatchPlan>;
 type PlanRow = { plan_fingerprint: string; plan: unknown };
 type PlanResult =
@@ -66,7 +76,7 @@ type Row = { checkpoint_fingerprint: string; previous_checkpoint: string | null;
 
 function checkRow(row: Row, chain: string): Stored {
   const envelope = z.object({
-    schema: z.enum(['theseus.dreaming-worker.source-root.v1', 'theseus.dreaming-worker.source-batch-receipt.v1']),
+    schema: z.enum(['theseus.dreaming-worker.source-root.v1', 'theseus.dreaming-worker.source-batch-receipt.v1', 'theseus.dreaming-worker.source-batch-receipt.v2']),
     task: text, analysisVersion: text, receiptFingerprint: fingerprint,
     previousCheckpoint: fingerprint.nullable(),
   }).passthrough().parse(row.receipt);
@@ -166,6 +176,22 @@ export function createPostgresSourceBatchStore(options: {
     return rows.length ? checkPlan(rows[0], chain, parent) : null;
   }
 
+  async function readOrigin(client: LedgerPgClient, chain: string, workFingerprint: string) {
+    const { rows } = await client.query<{
+      chain_id: string; previous_checkpoint: string; plan_fingerprint: string;
+    }>('SELECT chain_id,previous_checkpoint,plan_fingerprint FROM dw_ledger.source_work_origins WHERE work_fingerprint=$1', [workFingerprint]);
+    if (rows.length !== 1 || rows[0].chain_id !== chain) throw Error('SOURCE_EXECUTION_ORIGIN_REQUIRED');
+    const origin = rows[0];
+    const originalParent = await readParent(client, chain, origin.previous_checkpoint);
+    const original = originalParent && await readPlan(client, chain, originalParent, origin.plan_fingerprint);
+    const matches = original?.work.filter(w => w.workFingerprint === workFingerprint);
+    if (!matches || matches.length !== 1) throw Error('SOURCE_EXECUTION_ORIGIN_INVALID');
+    return {
+      pointer: { workFingerprint, previousCheckpoint: origin.previous_checkpoint, planFingerprint: origin.plan_fingerprint },
+      work: matches[0],
+    };
+  }
+
   return {
     /** Explicit source-specific execution. Generic synthetic work is unchanged. */
     async runSelected(raw: BatchInput, sessionId: string, routes: Pilot2Route[]) {
@@ -202,14 +228,7 @@ export function createPostgresSourceBatchStore(options: {
                   [workFingerprint,chain,plan.previousCheckpoint,plan.planFingerprint],
                 );
               } else {
-                const { rows } = await client.query<{
-                  chain_id: string; previous_checkpoint: string; plan_fingerprint: string;
-                }>('SELECT chain_id,previous_checkpoint,plan_fingerprint FROM dw_ledger.source_work_origins WHERE work_fingerprint=$1', [workFingerprint]);
-                if (rows.length !== 1 || rows[0].chain_id !== chain) throw Error('SOURCE_EXECUTION_ORIGIN_REQUIRED');
-                const origin = rows[0];
-                const originalParent = await readParent(client,chain,origin.previous_checkpoint);
-                const original = originalParent && await readPlan(client,chain,originalParent,origin.plan_fingerprint);
-                if (!original || !original.work.some(w => w.workFingerprint === workFingerprint)) throw Error('SOURCE_EXECUTION_ORIGIN_INVALID');
+                await readOrigin(client, chain, workFingerprint);
               }
               await client.query('COMMIT');
               return acquired;
@@ -310,7 +329,30 @@ export function createPostgresSourceBatchStore(options: {
           }),
         });
         const result = await prepareSourceBatchReceipt(input, reader);
-        return result.receipt ?? (result.status === 'PENDING' ? 'PENDING' : 'STORAGE_UNKNOWN');
+        if (!result.receipt) return result.status === 'PENDING' ? 'PENDING' : 'STORAGE_UNKNOWN';
+        const current = prepareSourceBatchPlan(input);
+        if (!await readPlan(client, chain, parent, current.planFingerprint)) return 'STORAGE_UNKNOWN';
+        const origins: OriginPointer[] = [];
+        for (const item of result.receipt.work) {
+          const original = await readOrigin(client, chain, item.workFingerprint);
+          const completion = await readVerifiedCompletion(reader, item.workFingerprint);
+          if (!completion || completion.projectionFingerprint !== item.completionFingerprint
+            || completion.checkpoint.requestFingerprint !== original.work.requestFingerprint
+            || item.originalPacketId !== original.work.packetId
+            || completion.records.some(record => record.origin.packetId !== original.work.packetId
+              || record.origin.evidenceFingerprint !== original.work.evidenceFingerprint
+              || record.origin.requestFingerprint !== original.work.requestFingerprint)) {
+            return 'STORAGE_UNKNOWN';
+          }
+          origins.push(original.pointer);
+        }
+        const { receiptFingerprint: _candidateFingerprint, ...candidate } = result.receipt;
+        const payload = {
+          ...candidate,
+          schema: 'theseus.dreaming-worker.source-batch-receipt.v2' as const,
+          currentPlanFingerprint: current.planFingerprint, origins,
+        };
+        return { ...payload, receiptFingerprint: sourceReceiptFingerprint(payload) };
       });
     },
     /** Returns the observed chain tip; absence is not permission to bootstrap. */

@@ -1,0 +1,17 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Staged source work admission$'
+  content: |
+    ### Requirement: Source acknowledgement retains original plan
+
+    #### Scenario: Distinct original and current plans
+
+    - **GIVEN** a verified completion bound to its original staged plan and an equivalent later staged witness
+    - **WHEN** the batch is acknowledged
+    - **THEN** the receipt preserves both identities and exact readback
+    - **AND** an unbound generic completion cannot advance the chain

@@ -292,3 +292,24 @@ read real history. Source receipt linkage to the original plan is still
 open; source checkpoint acknowledgement is separate. No live migration
 or model calls. Hosted PostgreSQL tests cover missing plan, staged
 execution and restart with the original association and no extra calls.
+
+### Original plan binding in source acknowledgement
+
+The durable acknowledgement now requires an exact current staged plan
+and the original source-work association for every independently verified
+completion. Within the existing ledger transaction lock it validates
+the original plan's packet, request and evidence fingerprints against
+the completion. Generic pilot completions without a source-work origin
+cannot advance this source chain. No schema change is needed.
+
+The portable receipt remains a v1 candidate. The stored v2 receipt
+adds the current plan fingerprint and ordered original plan pointers
+(work identity, original predecessor and original plan fingerprint).
+A later equivalent witness cannot replace the original plan. Existing
+v1 stored receipts remain readable as historical receipts without a
+claim of this stronger binding. All new acknowledgements use v2.
+The complete receipt digest and independent readback remain required.
+The PostgreSQL regression covers different staged witnesses, unbound
+completion rejection, exact readback and commit acknowledgement loss.
+It uses synthetic source links; a full cross-generation recovery and
+real source custody policy remain separate acceptance questions.

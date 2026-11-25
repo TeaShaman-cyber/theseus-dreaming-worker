@@ -137,3 +137,12 @@
 - **WHEN** execution is requested
 - **THEN** one reservation is bound to the original plan before inference
 - **AND** replay does not repeat inference or change the original plan
+
+### Requirement: Source acknowledgement retains original plan
+
+#### Scenario: Distinct original and current plans
+
+- **GIVEN** a verified completion bound to its original staged plan and an equivalent later staged witness
+- **WHEN** the batch is acknowledged
+- **THEN** the receipt preserves both identities and exact readback
+- **AND** an unbound generic completion cannot advance the chain

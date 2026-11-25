@@ -575,19 +575,29 @@ try {
   assert.equal((await afterRestart.acknowledge(pendingInput)).status, 'PENDING');
   console.log('SOURCE_PLAN_ADMISSION_PG_PASS missing_plan=blocked original_plan=bound replay_extra_calls=0');
   console.log('PENDING_PLAN_RESTART_PG_PASS');
-  const wrongParent = { ...exact, previousCheckpoint: pendingRoot.receipt.receiptFingerprint };
+  assert.equal((await sourceStore.stage(exact)).status, 'STAGED');
+  assert.equal((await sourceStore.acknowledge(exact)).status, 'STORAGE_UNKNOWN');
+  assert.deepEqual(await sourceStore.readTip(exact), root.receipt);
+  const secondId = pendingInput.entries[1].sessionId;
+  assert.equal((await afterRestart.runSelected(pendingInput, secondId, sourceRoutes)).decision, 'COMMITTED');
+  const wrongParent = { ...pendingInput, previousCheckpoint: root.receipt.receiptFingerprint };
   assert.equal((await sourceStore.acknowledge(wrongParent)).status, 'CONFLICT');
-  const badMembership = structuredClone(exact);
+  const badMembership = structuredClone(pendingInput);
   badMembership.candidate.previous_membership = badMembership.candidate.current_membership;
   badMembership.expected.previousSnapshotSha256 = badMembership.candidate.previous_membership.snapshot_sha256;
   delete badMembership.candidate.candidate_sha256;
   badMembership.candidate.candidate_sha256 = sha256Fingerprint(canonicalReceipt(badMembership.candidate)).slice(7);
   assert.equal((await sourceStore.acknowledge(badMembership)).status, 'CONFLICT');
   // Alternate witness for the same work is not the same successor receipt.
-  const alternate = structuredClone(exact);
+  const alternate = structuredClone(pendingInput);
   alternate.entries[0].index.sessions[0].messages[0].sources.push({
     ...alternate.entries[0].index.sessions[0].messages[0].sources[0], member_name: 'synthetic-alternate-witness',
   });
+  const laterPlan = await afterRestart.stage(alternate);
+  assert.equal(laterPlan.status, 'STAGED');
+  assert.notEqual(laterPlan.plan.planFingerprint, stagedPending.plan.planFingerprint);
+  assert.deepEqual(laterPlan.plan.work.map(w => w.workFingerprint), stagedPending.plan.work.map(w => w.workFingerprint));
+  assert.equal((await afterRestart.runSelected(alternate, selectedId, sourceRoutes)).decision, 'ALREADY_PROCESSED');
   let commitCount = 0;
   let signalLock;
   const lockAcquired = new Promise(resolve => { signalLock = resolve; });
@@ -606,21 +616,27 @@ try {
       },
     };
   } });
-  const first = lostAckStore.acknowledge(exact);
+  const first = lostAckStore.acknowledge(alternate);
   await Promise.race([lockAcquired, first.then(() => { throw Error('lock was not acquired'); })]);
-  const race = await Promise.all([first, sourceStore.acknowledge(alternate)]);
+  const race = await Promise.all([first, sourceStore.acknowledge(pendingInput)]);
   assert.equal(commitCount, 1);
   assert.equal(race[0].status, 'ACKNOWLEDGED');
   assert.equal(race[1].status, 'CONFLICT');
   assert.equal(race.filter(r => r.status === 'ACKNOWLEDGED').length, 1);
   assert.equal(race.filter(r => r.status === 'CONFLICT').length, 1);
-  const winnerArgs = race[0].status === 'ACKNOWLEDGED' ? exact : alternate;
+  const winnerArgs = alternate;
   const winning = race.find(r => r.status === 'ACKNOWLEDGED');
-  assert.deepEqual(await sourceStore.readTip(args), winning.receipt);
+  assert.deepEqual(await sourceStore.readTip(pendingInput), winning.receipt);
+  assert.equal(winning.receipt.schema, 'theseus.dreaming-worker.source-batch-receipt.v2');
+  assert.equal(winning.receipt.currentPlanFingerprint, laterPlan.plan.planFingerprint);
+  assert.equal(winning.receipt.origins.length, 2);
+  assert.ok(winning.receipt.origins.every(o => o.planFingerprint === stagedPending.plan.planFingerprint));
+  assert.deepEqual(winning.receipt.origins.map(o => o.workFingerprint), winning.receipt.work.map(w => w.workFingerprint));
+  console.log('SOURCE_RECEIPT_ORIGIN_PG_PASS original=preserved current=distinct unbound=blocked');
   console.log('SOURCE_BATCH_COMMIT_ACK_LOSS_PASS successful_commit=1 exact_readback=true');
   assert.equal((await sourceStore.acknowledge(winnerArgs)).status, 'ALREADY_ACKNOWLEDGED');
   assert.equal((await sourceStore.acknowledge({ ...winnerArgs, previousCheckpoint: winning.receipt.receiptFingerprint })).status, 'CONFLICT');
-  assert.equal(sourceCalls, 6);
+  assert.equal(sourceCalls, 8);
   const count = await sourceReader.query('SELECT count(*)::int AS count FROM dw_ledger.source_checkpoints');
   assert.equal(count.rows[0].count, 3);
   await assert.rejects(() => sourceClient.query('UPDATE dw_ledger.source_checkpoints SET receipt=receipt'), { code: '42501' });
