@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { prepareSourceBatchReceipt } from '../src/dreaming/source-batch-receipt.ts';
+import { prepareSourceBatchReceipt, prepareSourceBatchPlan } from '../src/dreaming/source-batch-receipt.ts';
 import { prepareVerifiedSessionWork } from '../src/dreaming/verified-session-work.ts';
 import { runDurablePilot2 } from '../src/dreaming/durable-pilot2.ts';
 import { sha256Fingerprint } from '../src/dreaming/proposal-schema.ts';
@@ -91,4 +91,23 @@ test('analysis intent and source witness remain independently bound',async () =>
   assert.equal(second.status,'RECEIPT_CANDIDATE');
   assert.deepEqual(second.receipt.work.map(w=>w.workFingerprint),first.receipt.work.map(w=>w.workFingerprint));
   assert.notEqual(second.receipt.receiptFingerprint,first.receipt.receiptFingerprint);
+});
+
+test('pending plan is metadata-only, binds request and preserves stable work across new witnesses', () => {
+  const x=input();
+  const first=prepareSourceBatchPlan(x);
+  assert.equal(first.checkpointAdvanced,false);
+  assert.equal(first.work.length,2);
+  assert.ok(first.work.every(w => w.packetId && w.requestFingerprint && w.workFingerprint));
+  assert.ok(first.work.every(w => w.witness.session.messages.every(m => !Object.hasOwn(m,'text'))));
+  assert.deepEqual(prepareSourceBatchPlan({...x,entries:[...x.entries].reverse()}),first);
+  const y=input();
+  y.entries[0].index.sessions[0].messages[0].sources.push({
+    ...y.entries[0].index.sessions[0].messages[0].sources[0],member_name:'synthetic-observation-two',
+  });
+  const second=prepareSourceBatchPlan(y);
+  assert.deepEqual(second.work.map(w=>w.workFingerprint),first.work.map(w=>w.workFingerprint));
+  assert.notEqual(second.planFingerprint,first.planFingerprint);
+  assert.throws(()=>prepareSourceBatchPlan({...x,entries:x.entries.slice(0,1)}));
+  assert.notEqual(prepareSourceBatchPlan({...x,analysisVersion:'v2'}).planFingerprint,first.planFingerprint);
 });

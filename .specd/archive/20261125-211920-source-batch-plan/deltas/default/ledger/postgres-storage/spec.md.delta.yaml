@@ -1,0 +1,14 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Durable source batch acknowledgement$'
+  content: |
+    ### Requirement: Pending source plan custody
+
+    The synthetic source store MUST support explicitly staging an immutable plan derived from the exact verified selected work under the existing predecessor and analysis intent. A plan MUST retain the complete handoff, original packet and request identities, work identities and source witnesses, but no evidence bodies. Staging MUST NOT advance the acknowledged source checkpoint or invoke inference.
+
+    The plan MUST be bound to the existing source chain and predecessor, use the existing ledger transaction lock, and be independently read back. Exact repeats MUST be idempotent. Distinct rederived witnesses MAY coexist for the same predecessor while it remains the tip; an acknowledged predecessor MUST NOT admit new plans. Restart lookup MUST validate stored digest and binding and MUST distinguish unavailable/corrupt storage from no plans. A plan alone is not permission to execute or replay stale evidence.

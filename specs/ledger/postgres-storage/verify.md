@@ -107,3 +107,21 @@
 - **WHEN** acknowledgement is attempted
 - **THEN** the chain does not advance incorrectly
 - **AND** ambiguous commit is resolved only by exact readback
+
+### Requirement: Pending source plan custody
+
+#### Scenario: Recovered pending witness
+
+- **GIVEN** an exact synthetic selected batch and existing source predecessor
+- **WHEN** staging succeeds and the executor restarts
+- **THEN** exact metadata and work/packet identities are independently recovered
+- **AND** source acknowledgement remains unchanged
+
+#### Scenario: New source witness or invalid predecessor
+
+- **GIVEN** a rederived source witness for the same content under an unadvanced predecessor
+- **WHEN** staging succeeds
+- **THEN** both witnesses remain distinct and the same work identity is retained
+- **GIVEN** an absent or advanced predecessor, or inconsistent stored plan
+- **WHEN** staging or readback is attempted
+- **THEN** no new plan is accepted or corrupt plan returned

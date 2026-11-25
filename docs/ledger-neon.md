@@ -248,3 +248,27 @@ Persisted receipt readback checks envelope, chain and digest; it assumes
 trusted ledger writers, not cryptographic authentication of source.
 No runtime migration of Neon, deployment, pending-batch custody,
 empty/removal disposition, or real source access is included.
+
+### Pending source plan custody (issue #65)
+
+The existing verified batch admission also prepares an immutable plan
+before model execution. It retains the full handoff and source witnesses,
+predecessor, task/version, work and packet/request/evidence fingerprints.
+It does not retain message bodies. The source_plans table belongs to
+the existing ledger and references its exact source checkpoint parent.
+Stage and lookup use the existing connection boundary; staging uses the
+ledger transaction lock and independent exact digest readback. New
+plans require an unadvanced compatible parent, while exact repeats are
+idempotent. Distinct rederived witnesses can coexist without replacing
+the original. Lookup is bounded and throws rather than treating a
+missing parent, corrupt readback or excessive results as no plans.
+
+Synthetic-only; no production migration. Staging is not yet enforced
+before reservation, and completion-to-original-plan linkage remains
+open (different witnesses can share a packet ID). Neither staging nor
+lookup authorizes stale source reads or advances the checkpoint.
+Actual source custody, real metadata retention and recovery budgets
+require separate acceptance. The fast tests cover stable work identity
+across distinct source witnesses; hosted PostgreSQL checks restart and
+unchanged checkpoint with unprocessed work. The additional PostgreSQL
+generation-change scenario has not been executed.

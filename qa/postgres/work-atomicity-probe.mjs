@@ -549,6 +549,16 @@ try {
   const pendingRoot = await sourceStore.initialize(pending);
   assert.equal(pendingRoot.status, 'ACKNOWLEDGED');
   assert.equal((await sourceStore.acknowledge({ ...pending, previousCheckpoint: pendingRoot.receipt.receiptFingerprint })).status, 'PENDING');
+  // An independent storage contract for the still-unprocessed analysis intent.
+  const pendingInput = { ...pending, previousCheckpoint: pendingRoot.receipt.receiptFingerprint };
+  const stagedPending = await sourceStore.stage(pendingInput);
+  assert.equal(stagedPending.status, 'STAGED');
+  const afterRestart = createPostgresSourceBatchStore({ connectionString });
+  assert.deepEqual(await afterRestart.readPlans(pendingInput, pendingInput.previousCheckpoint, 1), [stagedPending.plan]);
+  assert.equal((await afterRestart.stage(pendingInput)).status, 'ALREADY_STAGED');
+  assert.deepEqual(await afterRestart.readTip(pendingInput), pendingRoot.receipt);
+  assert.equal((await afterRestart.acknowledge(pendingInput)).status, 'PENDING');
+  console.log('PENDING_PLAN_RESTART_PG_PASS');
   const wrongParent = { ...exact, previousCheckpoint: pendingRoot.receipt.receiptFingerprint };
   assert.equal((await sourceStore.acknowledge(wrongParent)).status, 'CONFLICT');
   const badMembership = structuredClone(exact);
