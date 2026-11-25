@@ -82,6 +82,7 @@ test('concurrent callers reserve once, preserve both perspectives and replay wit
   assert.equal(done.attemptedPasses, 2);
   assert.equal(done.analysis.outcome, 'COMPLETE');
   assert.deepEqual(done.completionCandidate, done.completion);
+  assert.equal(done.recovery, null);
   assert.equal(done.completion.records.length, 2);
   assert.notEqual(done.completion.records[0].recordId, done.completion.records[1].recordId);
   assert.equal(done.completion.records[0].proposalFingerprint, done.completion.records[1].proposalFingerprint);
@@ -111,6 +112,7 @@ test('no evidence, invalid input or ambiguous reservation causes no inference', 
   assert.equal(unknown.decision, 'STORAGE_UNKNOWN');
   assert.equal(unknown.completion, null);
   assert.equal(unknown.attemptedPasses, 0);
+  assert.equal(unknown.recovery, null);
   assert.equal(calls.length, 0);
 });
 test('partial or unknown-finish analysis cannot complete or automatically retry', async () => {
@@ -122,6 +124,7 @@ test('partial or unknown-finish analysis cannot complete or automatically retry'
     assert.equal(result.completion, null);
     assert.equal(store.writes, 0);
     assert.ok(result.analysis);
+    assert.equal(result.recovery, null);
     assert.equal(result.completionCandidate, null);
     if (options.fail) assert.equal(result.analysis.outcome, 'PARTIAL');
     assert.equal((await runDurablePilot2(input, adapters, store)).decision, 'RESERVATION_UNRESOLVED');
@@ -338,5 +341,81 @@ test('PostgreSQL readback reconstructs exact committed projection and rejects mi
     if (expected instanceof RegExp) await assert.rejects(operation, expected);
     else assert.deepEqual(await operation, expected);
     assert.equal(client.closed, true);
+  }
+});
+
+test('retained complete candidate recovers after rollback without reservation or inference', async () => {
+  const { recoverDurableCompletion } = await import('../src/dreaming/durable-pilot2.ts');
+  const { calls, adapters } = routes();
+  const store = memoryStore({ failCommit: true });
+  const original = await runDurablePilot2(input, adapters, store);
+  assert.equal(original.decision, 'STORAGE_UNKNOWN');
+  assert.ok(original.recovery);
+  assert.deepEqual(original.recovery.candidate, original.completionCandidate);
+  assert.equal(original.recovery.ownerToken, store.reserved.get(original.workFingerprint));
+  const noReserve = { ...store, reserve: async () => { throw Error('unexpected reservation'); },
+    complete: async (owner, candidate) => {
+      assert.equal(owner, store.reserved.get(candidate.checkpoint.workFingerprint));
+      store.completions.set(candidate.checkpoint.workFingerprint, structuredClone(candidate));
+    },
+  };
+  const recovered = await recoverDurableCompletion(original.recovery, noReserve);
+  assert.equal(recovered.decision, 'COMMITTED');
+  assert.deepEqual(recovered.completion, original.completionCandidate);
+  const replay = await recoverDurableCompletion(original.recovery, {
+    ...noReserve, complete: async () => { throw Error('unexpected write'); },
+  });
+  assert.equal(replay.decision, 'ALREADY_PROCESSED');
+  assert.deepEqual(replay.completion, recovered.completion);
+  assert.equal(calls.length, 2);
+});
+
+test('recovery does not write if read is unavailable, corrupt or conflicting', async () => {
+  const { recoverDurableCompletion } = await import('../src/dreaming/durable-pilot2.ts');
+  const { adapters } = routes();
+  const original = await runDurablePilot2(input, adapters, memoryStore({ failCommit: true }));
+  const other = await completedFixture();
+  const changed = structuredClone(other);
+  changed.checkpoint.resultFingerprint = 'sha256:' + 'c'.repeat(64);
+  const conflict = rehash(changed);
+  for (const readCompletion of [
+    async () => { throw Error('unavailable'); },
+    async () => ({ ...other, projectionFingerprint: 'invalid' }),
+    async () => conflict,
+  ]) {
+    let writes = 0;
+    const result = await recoverDurableCompletion(original.recovery, {
+      readCompletion, complete: async () => { writes++; },
+    });
+    assert.equal(result.decision, 'STORAGE_UNKNOWN');
+    assert.equal(result.completion, null);
+    assert.equal(writes, 0);
+  }
+  let writes = 0;
+  await assert.rejects(recoverDurableCompletion({ ...original.recovery, ownerToken: 'bad' }, {
+    complete: async () => { writes++; }, readCompletion: async () => null,
+  }));
+  assert.equal(writes, 0);
+});
+
+test('recovery attempts one write and verifies readback even after a commit error', async () => {
+  const { recoverDurableCompletion } = await import('../src/dreaming/durable-pilot2.ts');
+  const { adapters } = routes();
+  const original = await runDurablePilot2(input, adapters, memoryStore({ failCommit: true }));
+  for (const commit of [true, false]) {
+    let writes = 0;
+    let stored = null;
+    const recovered = await recoverDurableCompletion(original.recovery, {
+      readCompletion: async () => stored,
+      complete: async (owner, candidate) => {
+        assert.equal(owner, original.recovery.ownerToken);
+        writes++;
+        if (commit) stored = structuredClone(candidate);
+        throw Error('unknown commit');
+      },
+    });
+    assert.equal(writes, 1);
+    assert.equal(recovered.decision, commit ? 'COMMITTED' : 'STORAGE_UNKNOWN');
+    assert.deepEqual(recovered.completion, stored);
   }
 });

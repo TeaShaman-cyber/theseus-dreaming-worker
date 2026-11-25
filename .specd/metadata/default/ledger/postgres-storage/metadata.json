@@ -24,6 +24,12 @@
       ]
     },
     {
+      "requirement": "Explicit completion-only recovery",
+      "rules": [
+        "When a validated complete candidate cannot be confirmed as committed, the trusted caller MAY retain its exact candidate and original reservation correlation. An explicit recovery invocation MUST validate the candidate and inspect the durable completion first. If an exact completion exists, return it without writing. If the read is unavailable, corrupt or conflicts with the candidate, do not write.\n\nOnly an observed absent completion MAY permit one transaction using the original reservation correlation and unchanged candidate. Independently verify the result by readback even after an error. Recovery MUST NOT acquire another reservation, invoke inference, change the candidate or take over an unresolved reservation. The envelope is trusted caller custody, not a new authorization mechanism. Lost or incomplete analysis is outside this recovery boundary."
+      ]
+    },
+    {
       "requirement": "Read behavior",
       "rules": [
         "Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.\n\nPersisted rows therefore do not gain authority merely by being stored in PostgreSQL."
@@ -149,11 +155,36 @@
         "the ordered derived records and observed provenance reproduce the stored projection fingerprint",
         "AND a different work version retains distinct record identities"
       ]
+    },
+    {
+      "requirement": "Explicit completion-only recovery",
+      "name": "Retained complete candidate",
+      "given": [
+        "a complete retained candidate and the original reservation"
+      ],
+      "when": [
+        "recovery finds no durable completion"
+      ],
+      "then": [
+        "at most one completion transaction is attempted and independently read back",
+        "AND no inference or new reservation occurs"
+      ]
+    },
+    {
+      "requirement": "Explicit completion-only recovery",
+      "name": "Existing or uncertain completion",
+      "when": [
+        "recovery reads an existing completion or the read is unavailable"
+      ],
+      "then": [
+        "an exact matching completion is returned without writing, otherwise state remains unknown",
+        "AND malformed candidate and wrong reservation correlation do not create a completion"
+      ]
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:03ee13e30a97a1e470f7141e85f985a8357ca885105a53c72ae7a5bed1250228",
-    "verify.md": "sha256:8da53b11e5c81beb985f307dcf55f43cfecf6c63393c9cd7c6cb58cc95a57b04"
+    "spec.md": "sha256:90d5021d0793c5e0e87ba09efc7bab8b4932c7a45ce3cf1c6127e80b867ca8df",
+    "verify.md": "sha256:bc88df28b2d5ea1bbfb52babf9377be24de715392e6cef28ef1d5f85a17dd54a"
   },
   "generatedBy": "core"
 }

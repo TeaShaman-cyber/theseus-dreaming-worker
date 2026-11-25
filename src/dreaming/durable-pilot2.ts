@@ -26,6 +26,12 @@ const completionSchema = payloadSchema.extend({
 }).strict();
 
 export type WorkCompletion = z.infer<typeof completionSchema>;
+const recoverySchema = z.object({
+  schema: z.literal('theseus.dreaming-worker.completion-recovery.v1'),
+  ownerToken: z.uuid(),
+  candidate: completionSchema,
+}).strict();
+export type CompletionRecovery = z.infer<typeof recoverySchema>;
 export type DurablePilot2Input = Omit<CheckpointedPilot2Input, 'checkpoint'>;
 export type WorkStore = {
   reserve(workFingerprint: string, ownerToken: string): Promise<boolean>;
@@ -57,6 +63,52 @@ export function validateWorkCompletion(raw: unknown): WorkCompletion {
   }
   if (ids.some(id => !records.some(record => record.origin.perspectiveId === id))) throw Error('WORK_PERSPECTIVE_MISSING');
   return parsed;
+}
+
+async function readVerifiedCompletion(
+  store: Pick<WorkStore, 'readCompletion'>, workFingerprint: string,
+): Promise<WorkCompletion | null> {
+  const raw = await store.readCompletion(workFingerprint);
+  if (raw === null) return null;
+  const verified = validateWorkCompletion(raw);
+  if (verified.checkpoint.workFingerprint !== workFingerprint) throw Error('WORK_READBACK_IDENTITY_MISMATCH');
+  return verified;
+}
+
+export type CompletionRecoveryResult = {
+  decision: 'ALREADY_PROCESSED' | 'COMMITTED' | 'STORAGE_UNKNOWN';
+  completion: WorkCompletion | null;
+};
+
+/** Trusted caller custody only. Never accepts an inference adapter or acquires a reservation. */
+export async function recoverDurableCompletion(
+  raw: CompletionRecovery, store: Pick<WorkStore, 'complete' | 'readCompletion'>,
+): Promise<CompletionRecoveryResult> {
+  const envelope = recoverySchema.parse(raw);
+  const candidate = validateWorkCompletion(envelope.candidate);
+  const work = candidate.checkpoint.workFingerprint;
+  const unknown = (): CompletionRecoveryResult => ({ decision: 'STORAGE_UNKNOWN', completion: null });
+  try {
+    const existing = await readVerifiedCompletion(store, work);
+    if (existing) {
+      return existing.projectionFingerprint === candidate.projectionFingerprint
+        ? { decision: 'ALREADY_PROCESSED', completion: existing } : unknown();
+    }
+  } catch {
+    return unknown();
+  }
+  try {
+    await store.complete(envelope.ownerToken, structuredClone(candidate));
+  } catch {
+    // The outcome may be ambiguous. Only readback can establish completion.
+  }
+  try {
+    const stored = await readVerifiedCompletion(store, work);
+    return stored?.projectionFingerprint === candidate.projectionFingerprint
+      ? { decision: 'COMMITTED', completion: stored } : unknown();
+  } catch {
+    return unknown();
+  }
 }
 
 function buildCompletion(checkpoint: CheckpointCandidate, analysis: Pilot2Result): WorkCompletion {
@@ -97,6 +149,7 @@ export type DurablePilot2Result = {
   completion: WorkCompletion | null;
   completionCandidate: WorkCompletion | null;
   analysis: Pilot2Result | null;
+  recovery: CompletionRecovery | null;
 };
 
 /** The caller owns source and budget authority. No retries, takeover or source-cursor advancement. */
@@ -108,8 +161,10 @@ export async function runDurablePilot2(
   let attemptedPasses = 0;
   let analysis: Pilot2Result | null = null;
   let completionCandidate: WorkCompletion | null = null;
+  let recovery: CompletionRecovery | null = null;
   const result = (decision: Decision, completion: WorkCompletion | null = null): DurablePilot2Result =>
-    ({ decision, workFingerprint, attemptedPasses, completion, analysis, completionCandidate });
+    ({ decision, workFingerprint, attemptedPasses, completion, analysis, completionCandidate,
+      recovery: decision === 'STORAGE_UNKNOWN' ? recovery : null });
   if (skipDecision) return result(skipDecision);
   const snapshot = routes.map(route => Object.freeze({ ...route }));
 
@@ -120,16 +175,9 @@ export async function runDurablePilot2(
   } catch {
     return result('STORAGE_UNKNOWN');
   }
-  async function readback(): Promise<WorkCompletion | null> {
-    const rawCompletion = await store.readCompletion(workFingerprint);
-    if (rawCompletion === null) return null;
-    const verified = validateWorkCompletion(rawCompletion);
-    if (verified.checkpoint.workFingerprint !== workFingerprint) throw Error('WORK_READBACK_IDENTITY_MISMATCH');
-    return verified;
-  }
   if (acquired !== true) {
     try {
-      const existing = await readback();
+      const existing = await readVerifiedCompletion(store, workFingerprint);
       return existing ? result('ALREADY_PROCESSED', existing) : result('RESERVATION_UNRESOLVED');
     } catch {
       return result('STORAGE_UNKNOWN');
@@ -144,6 +192,11 @@ export async function runDurablePilot2(
   try {
     completion = buildCompletion(analyzed.checkpointCandidate, analyzed.analysis);
     completionCandidate = completion;
+    recovery = {
+      schema: 'theseus.dreaming-worker.completion-recovery.v1',
+      ownerToken: owner,
+      candidate: structuredClone(completion),
+    };
   } catch {
     return result('ANALYSIS_INCOMPLETE');
   }
@@ -154,7 +207,7 @@ export async function runDurablePilot2(
     // Unknown commit outcome; read back below, never re-execute inference.
   }
   try {
-    const stored = await readback();
+    const stored = await readVerifiedCompletion(store, workFingerprint);
     return stored?.projectionFingerprint === completion.projectionFingerprint
       ? result('COMMITTED', stored) : result('STORAGE_UNKNOWN');
   } catch {

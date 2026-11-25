@@ -76,3 +76,18 @@
 - **WHEN** a completion is read from PostgreSQL
 - **THEN** the ordered derived records and observed provenance reproduce the stored projection fingerprint
 - **AND** a different work version retains distinct record identities
+
+### Requirement: Explicit completion-only recovery
+
+#### Scenario: Retained complete candidate
+
+- **GIVEN** a complete retained candidate and the original reservation
+- **WHEN** recovery finds no durable completion
+- **THEN** at most one completion transaction is attempted and independently read back
+- **AND** no inference or new reservation occurs
+
+#### Scenario: Existing or uncertain completion
+
+- **WHEN** recovery reads an existing completion or the read is unavailable
+- **THEN** an exact matching completion is returned without writing, otherwise state remains unknown
+- **AND** malformed candidate and wrong reservation correlation do not create a completion

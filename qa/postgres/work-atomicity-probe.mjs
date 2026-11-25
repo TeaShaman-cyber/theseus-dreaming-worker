@@ -261,3 +261,26 @@ try {
   await independent.end();
 }
 console.log('DURABLE_PILOT2_INTEGRATION_PASS concurrent=one_execution replay=zero_calls rollback=verified ack_loss=simulated_readback partial=blocked tampered_membership=rejected');
+
+
+// Explicit recovery with the retained candidate and original reservation.
+// No provider call is accepted by the recovery API.
+const { recoverDurableCompletion } = await import('../../src/dreaming/durable-pilot2.ts');
+assert.ok(failed.recovery);
+const denied = await recoverDurableCompletion({ ...failed.recovery, ownerToken: randomUUID() }, store);
+assert.equal(denied.decision, 'STORAGE_UNKNOWN');
+assert.equal(await store.readCompletion(failed.workFingerprint), null);
+const recoveryPair = await Promise.all([
+  recoverDurableCompletion(failed.recovery, store),
+  recoverDurableCompletion(failed.recovery, store),
+]);
+for (const outcome of recoveryPair) {
+  assert.ok(['COMMITTED', 'ALREADY_PROCESSED'].includes(outcome.decision));
+  assert.deepEqual(outcome.completion, failed.completionCandidate);
+}
+assert.deepEqual(await store.readCompletion(failed.workFingerprint), failed.completionCandidate);
+assert.equal((await recoverDurableCompletion(failed.recovery, store)).decision, 'ALREADY_PROCESSED');
+assert.equal((await runDurablePilot2(failedInput, makeRoutes(), store)).decision, 'ALREADY_PROCESSED');
+assert.equal(partial.recovery, null);
+assert.equal(calls.length, 8);
+console.log('COMPLETION_ONLY_RECOVERY_PASS wrong_owner=rejected rollback=recovered concurrent_recovery=verified inference_repeated=0');
