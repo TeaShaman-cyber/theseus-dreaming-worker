@@ -114,6 +114,8 @@ test('unavailable checkpoint and incomplete empty intake never invoke models or 
   const cases = [
     [{ ...input, checkpoint: { status: 'UNAVAILABLE' } }, 'CHECKPOINT_UNAVAILABLE'],
     [{ ...input, request: { ...request, packet: { ...packet, acceptedNewEvidence: false, evidence: [] } } }, 'INTAKE_UNKNOWN'],
+    [{ ...input, request: { ...request, packet: { ...packet, acceptedNewEvidence: false, evidence: [], coverage: { state: 'PARTIAL', currentness: 'CURRENT' } } } }, 'INTAKE_UNKNOWN'],
+    [{ ...input, request: { ...request, packet: { ...packet, acceptedNewEvidence: false, evidence: [], coverage: { state: 'COMPLETE', currentness: 'STALE' } } } }, 'INTAKE_UNKNOWN'],
     [{ ...input, request: { ...request, packet: { ...packet, evidence: [], coverage: { state: 'COMPLETE', currentness: 'CURRENT' } } } }, 'INTAKE_UNKNOWN'],
     [{ ...input, request: { ...request, packet: { ...packet, acceptedNewEvidence: false, evidence: [], coverage: { state: 'COMPLETE', currentness: 'CURRENT' } } } }, 'NO_DATA'],
     [{ ...input, request: { ...request, packet: { ...packet, acceptedNewEvidence: false, coverage: { state: 'COMPLETE', currentness: 'CURRENT' } } } }, 'NO_DATA'],
@@ -229,4 +231,14 @@ test('checkpoint schema and exact evidence ordering are checked without inventin
   }, routes);
   assert.notEqual(expanded.workFingerprint, reordered.workFingerprint);
   assert.equal(reordered.decision, 'ANALYZED');
+});
+
+test('duplicate source references report the provenance ambiguity explicitly', async () => {
+  const { routes, calls } = adapters();
+  const duplicate = {
+    ...input,
+    request: { ...request, packet: { ...packet, evidence: [packet.evidence[0], packet.evidence[0]] } },
+  };
+  await assert.rejects(runCheckpointedPilot2(duplicate, routes), /Duplicate evidence source references are ambiguous/);
+  assert.equal(calls.length, 0);
 });
