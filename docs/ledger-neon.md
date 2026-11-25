@@ -80,8 +80,8 @@ record per scope and previous checkpoint, alongside the existing
 fixture roots its chain explicitly, reads every required work completion
 using the existing validator, then inserts the successor. The unique
 predecessor constraint and self-FK prevent forks and missing parents.
-Readback independently binds the receipt to its fingerprint (ordered
-tuple, not JSONB key order). Competing successors, incomplete work,
+Readback independently binds the entire receipt to its fingerprint (sorted
+object keys, not JSONB insertion order). Competing successors, incomplete work,
 corrupt completion, restart, lost acknowledgement, scope isolation and
 append-only grants are exercised. Empty work sets deliberately block in
 this fixture; a production non-work disposition needs its own verified
@@ -145,7 +145,7 @@ The versioned JS-local content fingerprint includes session metadata and
 ordered message metadata/digests, not archive links, generation or packet
 ID. The Python content digest is preserved as opaque metadata, not
 recomputed using JS numeric formatting. Exact lineage is returned separately
-and is not yet persisted with the completion. The existing durable runner
+and is not yet persisted by the runtime completion adapter. The existing durable runner
 continues to establish work identity and verify individual completion.
 A changed generation or added archive link alone therefore does not
 repeat inference for the same scoped content and analysis intent.
@@ -170,3 +170,32 @@ authority. No private-data permission, external inference, source checkpoint
 advance, new service or production migration. Empty/removed obligations
 still require explicit source-level disposition. Persisted source lineage
 and batch acknowledgement remain the next integration boundary.
+
+### Integrated source-batch PostgreSQL reference (PR74, issue #65)
+
+The existing disposable heavy-postgres probe also consumes the exact
+recorded selected-session fixture through prepareVerifiedSessionWork.
+It derives both work identities using the real checkpoint preparation,
+runs durable Pilot2 against the actual PostgreSQL store with synthetic
+inference, and reads every completion independently. Only the exact
+selected set can produce the fixture acknowledgement; missing or
+duplicate entries, unfinished work and unresolved removals cannot do so.
+
+The existing fixture source_checkpoints table stores a successor receipt
+with the full decoded handoff (including reconstructible membership),
+analysis intent, work keys, verified completion digests and exact selected
+source lineage. Its JS-local fingerprint covers the entire receipt using
+sorted object keys. No transcript bodies are stored in this receipt.
+The test checks all derived record references against the prepared
+evidence, partial progress, fresh-store restart, lost acknowledgement
+and exact readback; two work items require four synthetic inference
+responses total and replay requires zero additional responses.
+
+This test-only composition uses the prior recorded SS reader pages,
+not a live cross-service network call. It does not implement a runtime
+batch store, source authentication, safe handling of empty/removed work,
+or a source checkpoint migration. Individual work can be committed
+before a source receipt is published; durable pending-batch custody and
+exact resume semantics still require implementation. The fixture itself
+is restricted to the disposable dreaming_worker_contract database by
+the existing probe schema. No new Neon allocation.
