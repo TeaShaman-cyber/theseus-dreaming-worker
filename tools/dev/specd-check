@@ -7,3 +7,5 @@ test -x "$CLI" || { echo 'SpecD QA toolchain missing: run ./tools/specd/install'
 test "$("$CLI" --version)" = 0.2.0
 node -e 'if (require("./tools/specd/node_modules/@specd/schema-std/package.json").version !== "0.1.1") process.exit(1)'
 "$CLI" --config specd.yaml spec validate --all
+
+python3 tools/specd/check-changes.py

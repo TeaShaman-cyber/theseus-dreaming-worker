@@ -11,3 +11,11 @@ If a changed file or named symbol appears in `specs/**/spec-lock.json` under `im
 5. Keep deterministic QA, runtime readback, semantic conformance, and repository authority as separate claims.
 
 Do not duplicate linked requirement text here; the canonical requirement text remains in the SpecD artifacts.
+
+For substantial semantic changes, start with native `specd specs context` for
+the affected spec and `specd changes context` for the current lifecycle step.
+The repository-level workflow applies even when a legacy implementation link is
+missing. Review a new inference stage against the core deterministic-sufficiency
+requirement, including the software baseline, its demonstrated limitation,
+no-call controls and evidence of incremental value. Missing evidence remains an
+acceptance blocker, not a reason to assume a model is needed.

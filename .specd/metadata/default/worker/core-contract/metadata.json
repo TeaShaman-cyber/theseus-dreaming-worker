@@ -1,0 +1,249 @@
+{
+  "title": "Dreaming Worker Core Contract",
+  "description": "Dreaming Worker is a bounded background analysis workflow.\n\nIt consumes explicitly permitted evidence, asks one or more independently routed models for structured candidate interpretations, validates those outputs against the supplied evidence, preserves disagreement, and produces auditable proposals and run receipts for later human or independent evaluation.\n\nIt is not a search engine, not a general autonomous agent, and not a canonical-memory writer.",
+  "dependsOn": [
+    "default:pilot1/bounded-inference"
+  ],
+  "context": [
+    "Dreaming Worker is a bounded background analysis workflow.\n\nIt consumes explicitly permitted evidence, asks one or more independently routed models for structured candidate interpretations, validates those outputs against the supplied evidence, preserves disagreement, and produces auditable proposals and run receipts for later human or independent evaluation.\n\nIt is not a search engine, not a general autonomous agent, and not a canonical-memory writer."
+  ],
+  "rules": [
+    {
+      "requirement": "Evidence remains separate from interpretation",
+      "rules": [
+        "Accepted source material and Session Search projections MUST remain evidence. Model-generated summaries, inferences, and hypotheses MUST remain derived interpretations unless independently promoted by a separate authority process.\n\nRetrieval success, retrieval frequency, model confidence, or model agreement MUST NOT by themselves convert a derived proposal into source truth."
+      ]
+    },
+    {
+      "requirement": "Every derived proposal is typed and provenance-bearing",
+      "rules": [
+        "Every accepted proposal MUST be typed as exactly one of:\n\n- `FACT`\n- `INFERENCE`\n- `HYPOTHESIS`\n- `UNKNOWN`\n\nEvery proposal MUST preserve exact evidence references and evidence hashes from the bounded input packet.\n\nA `HYPOTHESIS` MUST include a falsifier, required evidence, competing explanations, and explicit uncertainty.\n\nAn `INFERENCE` MUST keep its assumptions explicit.\n\nAn `UNKNOWN` MUST state why stronger classification is not justified and what evidence would reduce the uncertainty."
+      ]
+    },
+    {
+      "requirement": "No accepted evidence means no model work",
+      "rules": [
+        "When the evidence gate accepts no new evidence, the worker MUST terminate without external model inference.\n\nA scheduler wake-up, retry, duplicate trigger, or unchanged checkpoint MUST NOT create paid model work by itself."
+      ]
+    },
+    {
+      "requirement": "Independent first passes remain independent",
+      "rules": [
+        "When more than one model is used for the same evidence packet, each independent first pass MUST receive the same bounded primary evidence before it sees another model's judgment.\n\nTwo endpoints serving the same underlying model family MUST NOT be counted as independent perspectives merely because the provider route differs.\n\nCross-model critique or synthesis MAY happen only after the independent first-pass outputs are frozen and auditable."
+      ]
+    },
+    {
+      "requirement": "Disagreement is preserved",
+      "rules": [
+        "The worker MUST preserve contradictory proposals, alternate explanations, uncertainty, and failed-provider outcomes.\n\nMajority vote or model consensus MUST NOT be used as a truth criterion.\n\nAny later comparison or critique output MUST reference the original independent proposals rather than silently replacing them."
+      ]
+    },
+    {
+      "requirement": "Model output is untrusted data",
+      "rules": [
+        "Model output MUST pass deterministic schema and provenance validation before it can become a worker proposal.\n\nModel output MUST NOT determine runtime facts such as model-call counts, tool use, memory use, canonical writes, permission state, or receipt authority.\n\nModel output MUST NOT direct execution, expand permissions, write canonical memory, or publish externally."
+      ]
+    },
+    {
+      "requirement": "Deterministic sufficiency precedes additional model work",
+      "rules": [
+        "The worker MUST use deterministic software for operations whose required result can be established sufficiently by explicit rules and validated data, including parsing known formats, exact comparison, hashing, identity, schema and provenance checks, and execution-state accounting.\n\nA proposed additional model stage MUST identify the unresolved semantic task, the deterministic baseline and its measured or demonstrated limitation, and the expected incremental value. Experiments MAY test this value without establishing a mandatory runtime dependency. Acceptance MUST use requirement-linked evidence on comparable cases, including failures and abstention, not merely a successful model response.\n\nA deterministically recoverable complete artifact MUST NOT cause a secondary inference call solely to reformat it. Truncated, semantically invalid or ambiguously attributed artifacts MUST NOT be repaired by inventing content or evidence.\n\nIndependent first-pass semantic analysis and optional critique remain governed by their existing scope, independence, cost and authority requirements. This requirement does not demand that arbitrary natural language be parsed by an unbounded collection of rules."
+      ]
+    },
+    {
+      "requirement": "Failure and cost boundaries are explicit",
+      "rules": [
+        "Provider timeouts, 429 responses, revoked credentials, malformed output, partial execution, and unavailable routes MUST remain visible typed failures.\n\nRetries MUST be bounded.\n\nInput/output tokens, model-call count, concurrency, and external data egress MUST be bounded before invocation.\n\nA failed or partial run MUST NOT be reported as complete."
+      ]
+    },
+    {
+      "requirement": "Runtime, persistence, and authority remain separable",
+      "rules": [
+        "The worker core MUST remain portable across authorized runners and MUST NOT make correctness depend on Mastra, exe.dev, one model provider, or one production runtime.\n\nExecution checkpointing, proposal persistence, and original evidence storage are different responsibilities.\n\nFuture durable proposal storage MUST be append-only or supersession-linked; a new proposal MUST NOT silently overwrite an earlier proposal."
+      ]
+    },
+    {
+      "requirement": "Canonical promotion is outside the worker",
+      "rules": [
+        "The worker MAY produce evidence-linked candidate proposals and review artifacts.\n\nIt MUST NOT automatically promote those proposals into:\n\n- user preferences;\n- canonical memory;\n- Session Search source history;\n- project policy;\n- ranking policy;\n- external publication.\n\nPromotion requires a separate authority path."
+      ]
+    },
+    {
+      "requirement": "State claims are evidence-bound, not lexically inferred",
+      "rules": [
+        "A runtime, deployment, review, capability, or authority state MUST be claimed only from evidence that establishes that exact state.\n\nTerminology from one layer MUST NOT silently promote a claim in another layer. In particular:\n\n- `production mode` does not establish an operating production service;\n- a deployed version does not establish go-live or introduction into operation;\n- configured does not establish available;\n- available does not establish invoked or completed;\n- review requested does not establish review completed or clean;\n- green deterministic checks do not by themselves establish acceptance or promotion authority.\n\nThis failure mode is treated as **lexical state leakage**: a familiar token or label biases interpretation toward a stronger lifecycle or authority state than the evidence supports.\n\nWhen lexical state leakage is possible, the stronger state MUST remain unclaimed until its own observable postcondition is verified."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "requirement": "Evidence remains separate from interpretation",
+      "name": "Model agreement does not create source truth",
+      "given": [
+        "two models produce the same hypothesis from one bounded evidence packet"
+      ],
+      "when": [
+        "the worker records their outputs"
+      ],
+      "then": [
+        "the proposal remains derived model output",
+        "AND agreement alone does not promote it to source truth or canonical memory"
+      ]
+    },
+    {
+      "requirement": "Every derived proposal is typed and provenance-bearing",
+      "name": "A proposal invents a source reference",
+      "given": [
+        "a model output whose source reference or evidence hash is absent from the input packet"
+      ],
+      "when": [
+        "deterministic proposal validation runs"
+      ],
+      "then": [
+        "the proposal is rejected"
+      ]
+    },
+    {
+      "requirement": "No accepted evidence means no model work",
+      "name": "Evidence gate returns NO_DATA",
+      "given": [
+        "no accepted new evidence"
+      ],
+      "when": [
+        "the worker is invoked"
+      ],
+      "then": [
+        "external model calls equal zero"
+      ]
+    },
+    {
+      "requirement": "Independent first passes remain independent",
+      "name": "Two model families analyze one packet",
+      "given": [
+        "one accepted evidence packet and two approved independent model families"
+      ],
+      "when": [
+        "both first passes run"
+      ],
+      "then": [
+        "both receive the same evidence-packet fingerprint",
+        "AND neither first pass receives the other pass's output"
+      ]
+    },
+    {
+      "requirement": "Disagreement is preserved",
+      "name": "Independent models contradict each other",
+      "given": [
+        "two valid first-pass proposal sets with incompatible hypotheses"
+      ],
+      "when": [
+        "the worker constructs a comparison artifact"
+      ],
+      "then": [
+        "both original proposals remain present",
+        "AND the contradiction is represented explicitly",
+        "AND no majority-vote truth is produced"
+      ]
+    },
+    {
+      "requirement": "Model output is untrusted data",
+      "name": "Model prose claims false runtime facts",
+      "given": [
+        "a model claims that zero model calls or zero tools were used"
+      ],
+      "when": [
+        "the worker constructs its runtime receipt"
+      ],
+      "then": [
+        "runtime facts come from controlled invocation/readback rather than model prose"
+      ]
+    },
+    {
+      "requirement": "Deterministic sufficiency precedes additional model work",
+      "name": "Known-format complete output is recoverable",
+      "given": [
+        "a complete artifact whose format has a lossless deterministic mapping"
+      ],
+      "when": [
+        "the recovery path is evaluated"
+      ],
+      "then": [
+        "the result is validated without secondary inference"
+      ]
+    },
+    {
+      "requirement": "Deterministic sufficiency precedes additional model work",
+      "name": "Missing or ambiguous semantic information",
+      "given": [
+        "an incomplete, semantically invalid or ambiguously attributed artifact"
+      ],
+      "when": [
+        "recovery is considered"
+      ],
+      "then": [
+        "no invented evidence or content is accepted",
+        "AND unresolved information remains explicit"
+      ]
+    },
+    {
+      "requirement": "Deterministic sufficiency precedes additional model work",
+      "name": "An additional model stage is proposed",
+      "given": [
+        "a proposed durable additional inference stage"
+      ],
+      "when": [
+        "its acceptance is reviewed"
+      ],
+      "then": [
+        "the unresolved task, baseline limitation, comparative evidence and bounded call policy are linked to this requirement",
+        "AND absence of incremental-value evidence prevents acceptance of the additional stage"
+      ]
+    },
+    {
+      "requirement": "Failure and cost boundaries are explicit",
+      "name": "One provider fails during a multi-model run",
+      "given": [
+        "two planned independent passes",
+        "AND one pass returns a timeout, 429, credential failure, or malformed output"
+      ],
+      "when": [
+        "the run terminates"
+      ],
+      "then": [
+        "the failure remains visible",
+        "AND the run is not reported as a complete two-perspective result"
+      ]
+    },
+    {
+      "requirement": "Runtime, persistence, and authority remain separable",
+      "name": "Runtime backend changes",
+      "given": [
+        "the same versioned evidence and analysis contracts"
+      ],
+      "when": [
+        "the bounded workflow moves between authorized runners"
+      ],
+      "then": [
+        "proposal semantics and authority boundaries remain unchanged"
+      ]
+    },
+    {
+      "requirement": "Canonical promotion is outside the worker",
+      "name": "A valid hypothesis is produced",
+      "given": [
+        "a schema-valid evidence-linked hypothesis"
+      ],
+      "when": [
+        "the worker completes"
+      ],
+      "then": [
+        "no canonical memory, user preference, project policy, or external publication is changed automatically"
+      ]
+    }
+  ],
+  "contentHashes": {
+    "spec.md": "sha256:7e970a9577bcae31bd94b682832bebc4eece299e171271de5462c20eebd8e1e1",
+    "verify.md": "sha256:dfafc2eecf37775d956d193a41e87dff77ae4afcff62bb7da6005ff9bc2974d3"
+  },
+  "generatedBy": "core"
+}

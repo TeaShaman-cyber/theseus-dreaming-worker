@@ -18,6 +18,7 @@ class SpecDGateTests(unittest.TestCase):
             (workspace / "tools/dev").mkdir(parents=True)
             (workspace / "tools/specd").mkdir()
             shutil.copy2(ROOT / "tools/dev/specd-check", workspace / "tools/dev/specd-check")
+            shutil.copy2(ROOT / "tools/specd/check-changes.py", workspace / "tools/specd")
             (workspace / "tools/specd/node_modules").symlink_to(
                 ROOT / "tools/specd/node_modules", target_is_directory=True
             )

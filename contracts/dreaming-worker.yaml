@@ -28,6 +28,7 @@ invariants:
   - no accepted new evidence => zero external model calls
   - partial or stale coverage cannot justify absence claims
   - independent model passes remain independent before optional critique/synthesis
+  - deterministic sufficiency precedes additional model work; use deterministic software when sufficient, and require comparative evidence of incremental value for an additional model stage
   - generator capability is not acceptance authority
   - state claims require exact-state evidence; lexical labels such as production/configured/deployed MUST NOT promote lifecycle, capability, review, or authority state
   - exact source provenance survives every derived proposal
