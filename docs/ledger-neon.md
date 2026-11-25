@@ -53,3 +53,17 @@ separately from independently verified completion; replay does not reconstruct
 raw model output.
 The real PostgreSQL contract exercises concurrency, replay, rollback, simulated
 lost acknowledgement and corruption using synthetic inference adapters.
+
+### Completion-only recovery
+
+If both passes produced a valid candidate but durable completion could not
+be verified, the trusted caller receives a recovery envelope with the
+original reservation correlation and exact candidate. This envelope is
+in-memory caller custody, not durable storage or proof of authority. Keep
+it within the trusted execution boundary; do not emit it in public logs.
+Explicit `recoverDurableCompletion` first validates and reads the result.
+An exact match returns without writing; a failed or conflicting read blocks
+recovery. Observed absence permits one completion transaction followed by
+independent readback. No inference, new reservation or automatic takeover
+occurs. A lost candidate or incomplete analysis still requires a separate
+recovery policy; this is not crash recovery if the envelope itself is lost.

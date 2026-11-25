@@ -1,0 +1,14 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Work reservation and atomic completion$'
+  content: |
+    ### Requirement: Explicit completion-only recovery
+
+    When a validated complete candidate cannot be confirmed as committed, the trusted caller MAY retain its exact candidate and original reservation correlation. An explicit recovery invocation MUST validate the candidate and inspect the durable completion first. If an exact completion exists, return it without writing. If the read is unavailable, corrupt or conflicts with the candidate, do not write.
+
+    Only an observed absent completion MAY permit one transaction using the original reservation correlation and unchanged candidate. Independently verify the result by readback even after an error. Recovery MUST NOT acquire another reservation, invoke inference, change the candidate or take over an unresolved reservation. The envelope is trusted caller custody, not a new authorization mechanism. Lost or incomplete analysis is outside this recovery boundary.

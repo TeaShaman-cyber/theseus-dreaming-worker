@@ -32,6 +32,12 @@ All new records, completion and ordered record membership MUST commit together u
 
 An incomplete analysis MUST NOT produce a completion. The in-memory analysis and any uncommitted candidate MUST remain distinct from verified durable completion. Reservations without completion remain unresolved, without automatic takeover. Work completion is not a source-level cursor or canonical truth.
 
+### Requirement: Explicit completion-only recovery
+
+When a validated complete candidate cannot be confirmed as committed, the trusted caller MAY retain its exact candidate and original reservation correlation. An explicit recovery invocation MUST validate the candidate and inspect the durable completion first. If an exact completion exists, return it without writing. If the read is unavailable, corrupt or conflicts with the candidate, do not write.
+
+Only an observed absent completion MAY permit one transaction using the original reservation correlation and unchanged candidate. Independently verify the result by readback even after an error. Recovery MUST NOT acquire another reservation, invoke inference, change the candidate or take over an unresolved reservation. The envelope is trusted caller custody, not a new authorization mechanism. Lost or incomplete analysis is outside this recovery boundary.
+
 ### Requirement: Read behavior
 
 Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.
