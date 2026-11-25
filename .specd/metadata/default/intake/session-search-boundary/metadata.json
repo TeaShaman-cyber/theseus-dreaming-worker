@@ -57,6 +57,12 @@
       ]
     },
     {
+      "requirement": "Bounded synthetic source acquisition",
+      "rules": [
+        "The synthetic acquisition adapter MUST validate the exact selected set and source indexes before requesting pages. It MUST pin each read to the selected session, shard and generation, and only follow a nonrepeated cursor bound to that exact read position. It MUST bound request count, response bytes per page and in aggregate, character and message admission, and each request deadline. Failed, incomplete or inconsistent acquisition MUST NOT return a batch ready for analysis.\n\nThe adapter MUST use injected explicitly supplied transport; no default network credential, real history access or implicit fallback is permitted. Complete acquired pages MUST pass the existing verified batch admission. The adapter MUST NOT reserve work, invoke inference or advance checkpoints."
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "rules": [
         "The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.\n\nA timestamp alone is insufficient as the durable checkpoint.\n\nThe checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope."
@@ -253,6 +259,32 @@
       ]
     },
     {
+      "requirement": "Bounded synthetic source acquisition",
+      "name": "Exact pinned read",
+      "given": [
+        "a valid synthetic handoff and exact source indexes"
+      ],
+      "when": [
+        "the injected transport returns bounded pinned pages"
+      ],
+      "then": [
+        "the complete verified batch is returned without inference or persistence"
+      ]
+    },
+    {
+      "requirement": "Bounded synthetic source acquisition",
+      "name": "Failed or excessive acquisition",
+      "given": [
+        "invalid metadata, stale response, repeated cursor, unavailable transport, timeout or exhausted bounds"
+      ],
+      "when": [
+        "acquisition is attempted"
+      ],
+      "then": [
+        "no batch ready for analysis is returned"
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "name": "Evidence is read but provider analysis fails",
       "given": [
@@ -350,8 +382,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:e7846caa9af470b4ff299b842e4c2de4e2e477b1d18dcfaf4e919e142a197a82",
-    "verify.md": "sha256:464d02bfe280806f8d2377a7d6598f11e03737fa66a416daefbe4aee74c8063a"
+    "spec.md": "sha256:f7e080f54298dfb5a7faf29cdf36b766063f3a81f70ebe994911d2209d0d5618",
+    "verify.md": "sha256:a3ea2949ddce69dc26723e0caaff1c88b73ba74dac7122e1e8c6cb4d18280942"
   },
   "generatedBy": "core"
 }

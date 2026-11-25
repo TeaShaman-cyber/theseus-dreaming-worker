@@ -693,7 +693,23 @@ try {
   console.log('SOURCE_REFRESH_RECOVERY_PG_PASS producer=actual serving=simulated old=2 new=4 reused=1 new_work=3 replay_extra_calls=0');
   // The normal bounded composition uses the same durable store, not a second worker.
   const { runSourceBatch } = await import('../../src/dreaming/source-batch-run.ts');
-  const batchRunInput = { ...oldArgs, analysisVersion: 'bounded-batch-run-v1' };
+  const { acquireSourceBatch } = await import('../../src/dreaming/source-batch-acquire.ts');
+  const { entries: _entries, ...acquireIntent } = args;
+  const batchRunIntent = { ...acquireIntent, analysisVersion: 'bounded-batch-run-v1' };
+  let acquiredPages = 0;
+  const batchRunInput = await acquireSourceBatch({
+    ...batchRunIntent, indexes: fixture.entries.map(e => ({ sessionId: e.session_id, index: e.index })),
+  }, { maxRequests: 20, maxPageBytes: 8000, maxTotalBytes: 100000, timeoutMs: 1000, pageMessages: 2, pageChars: 3 },
+  async request => {
+    const entry = fixture.entries.find(e => e.session_id === request.session_id);
+    assert.equal(request.generation_id, entry.index.generation_id);
+    assert.equal(request.shard_id, entry.index.shard_id);
+    const i = request.cursor ? entry.pages.findIndex(p => p.next_cursor === request.cursor) + 1 : 0;
+    assert.ok(i >= 0 && i < entry.pages.length);
+    acquiredPages++;
+    return Response.json(entry.pages[i]);
+  });
+  assert.equal(acquiredPages, 12);
   const batchRunRoot = await sourceStore.initialize(batchRunInput);
   assert.equal(batchRunRoot.status, 'ACKNOWLEDGED');
   batchRunInput.previousCheckpoint = batchRunRoot.receipt.receiptFingerprint;
@@ -712,7 +728,7 @@ try {
   assert.equal(batchRunReplay.status, 'ALREADY_ACKNOWLEDGED');
   assert.deepEqual(batchRunReplay.receipt, batchRunSecond.receipt);
   assert.equal(sourceCalls, batchRunCalls + 4);
-  console.log('SOURCE_BOUNDED_RUN_PG_PASS budget=2 restart=verified exact_replay=0 partial_checkpoint=unchanged');
+  console.log('SOURCE_BOUNDED_RUN_PG_PASS acquired_pages=12 budget=2 restart=verified exact_replay=0 partial_checkpoint=unchanged');
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
 } finally {
   await Promise.allSettled(sourceClients.map(client => client.end()));

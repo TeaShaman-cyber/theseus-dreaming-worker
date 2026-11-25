@@ -98,6 +98,20 @@
 - **WHEN** a batch run is requested
 - **THEN** execution stops without acknowledging partial progress
 
+### Requirement: Bounded synthetic source acquisition
+
+#### Scenario: Exact pinned read
+
+- **GIVEN** a valid synthetic handoff and exact source indexes
+- **WHEN** the injected transport returns bounded pinned pages
+- **THEN** the complete verified batch is returned without inference or persistence
+
+#### Scenario: Failed or excessive acquisition
+
+- **GIVEN** invalid metadata, stale response, repeated cursor, unavailable transport, timeout or exhausted bounds
+- **WHEN** acquisition is attempted
+- **THEN** no batch ready for analysis is returned
+
 ### Requirement: Checkpoint advances only after bounded success
 
 #### Scenario: Evidence is read but provider analysis fails

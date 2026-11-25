@@ -359,3 +359,30 @@ input/route, missing root, mismatched or unavailable staging and unresolved
 reservation. The existing PostgreSQL contract exercises two separate
 two-pass invocations and a zero-budget exact replay. Actual source
 acquisition and real unattended authorization remain out of scope.
+
+### Bounded native browse acquisition
+
+The portable acquireSourceBatch function accepts independently supplied
+synthetic handoff/index observations and an explicitly injected transport
+with the existing native session-browse request shape. It validates the
+whole selected index set before requesting any page, pins every request to
+the exact session/shard/generation, checks native cursor binding and
+position, bounds page requests, streamed UTF-8 response bytes (per-page
+and aggregate), character/message admission and per-request deadline.
+Timeout covers both headers and body; injected transport must honor abort
+for upstream cancellation. No retry or fallback. Complete pages must pass
+the existing verified batch admission before a BatchInput is returned.
+This does not retrieve or authorize source metadata, assert source
+freshness, configure a network client or retain transcript bodies.
+
+Six acquisition tests cover exact recorded pages, invalid index, stale
+response/cursor, byte/request limits, truncation and stalled response.
+The reproducible in-process probe
+`node qa/source-native-browse-probe.mjs /path/to/ss-native-browse-http`
+uses exact SS candidate 94279cd75cc00ca356d237e9451f647e92cb7b15 with its
+locked dependencies: actual router/shard handlers, recorded synthetic SQL
+pages. Twelve requests reconstruct the same plan, wrong token and stale
+generation are blocked before shard dispatch. No live SQL or network.
+Hosted PostgreSQL composition now acquires those recorded pages before
+its budgeted run and exact replay. Real machine identity and source
+delivery remain deferred; no live migration.
