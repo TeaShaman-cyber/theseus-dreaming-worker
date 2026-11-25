@@ -533,6 +533,73 @@ try {
   assert.deepEqual(runtimeCandidate.receipt.work.map(e => e.workFingerprint).sort(), integratedReceipt.work);
   assert.equal(runtimeCandidate.receipt.checkpointAdvanced, false);
   assert.equal(sourceCalls, 4);
+  const { createPostgresSourceBatchStore } = await import('../../src/dreaming/source-batch-postgres.ts');
+  const sourceStore = createPostgresSourceBatchStore({ connectionString });
+  const args = {
+    candidate: fixture.candidate, expected: fixture.expected, previousCheckpoint: sourceRootKey,
+    task, analysisVersion, maxSessions: 2, bounds: { maxPages: 20, maxChars: 1000, maxMessages: 50 },
+    entries: fixture.entries.map(e => ({ sessionId: e.session_id, index: e.index, pages: e.pages })),
+  };
+  assert.equal((await sourceStore.acknowledge(args)).status, 'CONFLICT');
+  const root = await sourceStore.initialize(args);
+  assert.equal(root.status, 'ACKNOWLEDGED');
+  const exact = { ...args, previousCheckpoint: root.receipt.receiptFingerprint };
+  assert.equal((await sourceStore.initialize(args)).status, 'ALREADY_ACKNOWLEDGED');
+  const pending = { ...args, analysisVersion: 'unprocessed-v1' };
+  const pendingRoot = await sourceStore.initialize(pending);
+  assert.equal(pendingRoot.status, 'ACKNOWLEDGED');
+  assert.equal((await sourceStore.acknowledge({ ...pending, previousCheckpoint: pendingRoot.receipt.receiptFingerprint })).status, 'PENDING');
+  const wrongParent = { ...exact, previousCheckpoint: pendingRoot.receipt.receiptFingerprint };
+  assert.equal((await sourceStore.acknowledge(wrongParent)).status, 'CONFLICT');
+  const badMembership = structuredClone(exact);
+  badMembership.candidate.previous_membership = badMembership.candidate.current_membership;
+  badMembership.expected.previousSnapshotSha256 = badMembership.candidate.previous_membership.snapshot_sha256;
+  delete badMembership.candidate.candidate_sha256;
+  badMembership.candidate.candidate_sha256 = sha256Fingerprint(canonicalReceipt(badMembership.candidate)).slice(7);
+  assert.equal((await sourceStore.acknowledge(badMembership)).status, 'CONFLICT');
+  // Alternate witness for the same work is not the same successor receipt.
+  const alternate = structuredClone(exact);
+  alternate.entries[0].index.sessions[0].messages[0].sources.push({
+    ...alternate.entries[0].index.sessions[0].messages[0].sources[0], member_name: 'synthetic-alternate-witness',
+  });
+  let commitCount = 0;
+  let signalLock;
+  const lockAcquired = new Promise(resolve => { signalLock = resolve; });
+  const lostAckStore = createPostgresSourceBatchStore({ connectionString, clientFactory: url => {
+    const client = new Client({ connectionString: url });
+    return {
+      connect: () => client.connect(), end: () => client.end(),
+      query: async (sql, values) => {
+        const result = await client.query(sql, values);
+        if (sql.includes('pg_advisory_xact_lock')) signalLock();
+        if (sql === 'COMMIT') {
+          commitCount++;
+          throw Error('simulated commit acknowledgement loss');
+        }
+        return result;
+      },
+    };
+  } });
+  const first = lostAckStore.acknowledge(exact);
+  await Promise.race([lockAcquired, first.then(() => { throw Error('lock was not acquired'); })]);
+  const race = await Promise.all([first, sourceStore.acknowledge(alternate)]);
+  assert.equal(commitCount, 1);
+  assert.equal(race[0].status, 'ACKNOWLEDGED');
+  assert.equal(race[1].status, 'CONFLICT');
+  assert.equal(race.filter(r => r.status === 'ACKNOWLEDGED').length, 1);
+  assert.equal(race.filter(r => r.status === 'CONFLICT').length, 1);
+  const winnerArgs = race[0].status === 'ACKNOWLEDGED' ? exact : alternate;
+  const winning = race.find(r => r.status === 'ACKNOWLEDGED');
+  assert.deepEqual(await sourceStore.readTip(args), winning.receipt);
+  console.log('SOURCE_BATCH_COMMIT_ACK_LOSS_PASS successful_commit=1 exact_readback=true');
+  assert.equal((await sourceStore.acknowledge(winnerArgs)).status, 'ALREADY_ACKNOWLEDGED');
+  assert.equal((await sourceStore.acknowledge({ ...winnerArgs, previousCheckpoint: winning.receipt.receiptFingerprint })).status, 'CONFLICT');
+  assert.equal(sourceCalls, 4);
+  const count = await sourceReader.query('SELECT count(*)::int AS count FROM dw_ledger.source_checkpoints');
+  assert.equal(count.rows[0].count, 3);
+  await assert.rejects(() => sourceClient.query('UPDATE dw_ledger.source_checkpoints SET receipt=receipt'), { code: '42501' });
+  await assert.rejects(() => sourceClient.query('DELETE FROM dw_ledger.source_checkpoints'), { code: '42501' });
+  console.log('SOURCE_BATCH_STORE_PG_PASS root=explicit partial=blocked fork=blocked replay=verified lost_ack=readback append_only=verified');
   console.log('SOURCE_BATCH_RECEIPT_PG_PASS exact_selected=2 real_completion_readback=true writes=0 extra_inference=0');
   console.log('VERIFIED_SOURCE_BATCH_PG_PASS selected=2 pages=12 partial=blocked missing=blocked duplicate=blocked lineage=readback ack_loss=resolved replay_extra_calls=0 external_calls=0');
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');

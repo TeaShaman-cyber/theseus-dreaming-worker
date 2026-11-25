@@ -1,0 +1,224 @@
+{
+  "name": "source-batch-store",
+  "createdAt": "2026-11-25T21:01:09.109Z",
+  "description": "Append verified source checkpoints in existing ledger (#65)",
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "specIds": [
+    "default:ledger/postgres-storage"
+  ],
+  "artifacts": [
+    {
+      "type": "proposal",
+      "optional": false,
+      "requires": [],
+      "state": "complete",
+      "files": [
+        {
+          "key": "proposal",
+          "filename": "proposal.md",
+          "state": "complete",
+          "validatedHash": "sha256:a5802f0dae6534bd30bad3611fc4fc85e34cc0e00d4363f19553b397d6f31f7c"
+        }
+      ]
+    },
+    {
+      "type": "specs",
+      "optional": false,
+      "requires": [
+        "proposal"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:ledger/postgres-storage",
+          "filename": "deltas/default/ledger/postgres-storage/spec.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:51eab7a92d64e4e92a352b0104123cdfe1ac868193a5d92c04716c1457dd7252"
+        }
+      ]
+    },
+    {
+      "type": "verify",
+      "optional": false,
+      "requires": [
+        "specs"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:ledger/postgres-storage",
+          "filename": "deltas/default/ledger/postgres-storage/verify.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:984c1e745c0089387ee2ea972985bed62ae7e57860bf46d4e48e307674df5f1c"
+        }
+      ]
+    },
+    {
+      "type": "design",
+      "optional": false,
+      "requires": [
+        "proposal",
+        "specs",
+        "verify"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "design",
+          "filename": "design.md",
+          "state": "complete",
+          "validatedHash": "sha256:0bcee74bb7bda06e20ae044cbee93e7b9796b40aff76362e2d0058d2da0b9bcf"
+        }
+      ]
+    },
+    {
+      "type": "tasks",
+      "optional": false,
+      "requires": [
+        "specs",
+        "design"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "tasks",
+          "filename": "tasks.md",
+          "state": "complete",
+          "validatedHash": "sha256:4d69c0da76193a887be70802c0f931fde16eb65616307441f11b151d97024d85"
+        }
+      ]
+    }
+  ],
+  "history": [
+    {
+      "type": "created",
+      "at": "2026-11-25T21:01:09.109Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "specIds": [
+        "default:ledger/postgres-storage"
+      ],
+      "schemaName": "schema-std",
+      "schemaVersion": 1
+    },
+    {
+      "type": "artifacts-synced",
+      "at": "2026-11-25T21:01:09.133Z",
+      "by": {
+        "name": "specd",
+        "email": "system@getspecd.dev"
+      },
+      "typesAdded": [
+        "proposal",
+        "specs",
+        "verify",
+        "design",
+        "tasks"
+      ],
+      "typesRemoved": [],
+      "filesAdded": [
+        {
+          "type": "proposal",
+          "key": "proposal"
+        },
+        {
+          "type": "specs",
+          "key": "default:ledger/postgres-storage"
+        },
+        {
+          "type": "verify",
+          "key": "default:ledger/postgres-storage"
+        },
+        {
+          "type": "design",
+          "key": "design"
+        },
+        {
+          "type": "tasks",
+          "key": "tasks"
+        }
+      ],
+      "filesRemoved": []
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-25T21:01:10.330Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "drafting",
+      "to": "designing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-25T21:01:12.870Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "designing",
+      "to": "ready"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-25T21:01:13.451Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "ready",
+      "to": "implementing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-25T21:05:03.370Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "implementing",
+      "to": "verifying"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-25T21:05:03.912Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "verifying",
+      "to": "done"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-25T21:05:04.523Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "done",
+      "to": "archivable"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-25T21:05:04.900Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "archivable",
+      "to": "archiving"
+    }
+  ],
+  "archivedAt": "2026-11-25T21:05:04.956Z",
+  "archivedBy": {
+    "name": "exe.dev user",
+    "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+  }
+}

@@ -85,6 +85,19 @@ CREATE TABLE IF NOT EXISTS dw_ledger.work_membership (
   UNIQUE (work_fingerprint, record_id)
 );
 
+-- One explicit root and one successor per source/analysis chain.
+CREATE TABLE IF NOT EXISTS dw_ledger.source_checkpoints (
+  chain_id text NOT NULL CHECK (chain_id ~ '^sha256:[0-9a-f]{64}$'),
+  checkpoint_fingerprint text NOT NULL CHECK (checkpoint_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
+  previous_checkpoint text,
+  receipt jsonb NOT NULL CHECK (jsonb_typeof(receipt) = 'object'),
+  PRIMARY KEY (chain_id, checkpoint_fingerprint),
+  UNIQUE NULLS NOT DISTINCT (chain_id, previous_checkpoint),
+  FOREIGN KEY (chain_id, previous_checkpoint)
+    REFERENCES dw_ledger.source_checkpoints(chain_id, checkpoint_fingerprint),
+  CHECK (previous_checkpoint IS DISTINCT FROM checkpoint_fingerprint)
+);
+
 -- Runtime access is intentionally append-only for ledger data.
 GRANT USAGE ON SCHEMA dw_ledger TO dw_runtime_issue23;
 REVOKE CREATE ON SCHEMA dw_ledger FROM dw_runtime_issue23;
@@ -94,7 +107,8 @@ GRANT SELECT, INSERT ON TABLE
   dw_ledger.supersession_events,
   dw_ledger.work_reservations,
   dw_ledger.work_completions,
-  dw_ledger.work_membership
+  dw_ledger.work_membership,
+  dw_ledger.source_checkpoints
 TO dw_runtime_issue23;
 
 REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE
@@ -102,7 +116,8 @@ REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE
   dw_ledger.supersession_events,
   dw_ledger.work_reservations,
   dw_ledger.work_completions,
-  dw_ledger.work_membership
+  dw_ledger.work_membership,
+  dw_ledger.source_checkpoints
 FROM dw_runtime_issue23;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA dw_ledger TO dw_runtime_issue23;

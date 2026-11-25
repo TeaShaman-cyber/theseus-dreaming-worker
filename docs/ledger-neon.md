@@ -223,3 +223,28 @@ function. Pending batch custody, durable source store/chain enforcement
 and no-work/removal disposition remain open; the predecessor key itself
 must be verified by that store before any acknowledgement. No real intake
 or source permissions are enabled.
+
+### Source checkpoint storage adapter (issue #65)
+
+The existing versioned ledger DDL now includes source_checkpoints, an
+append-only table with one explicit root and at most one successor per
+predecessor in a chain keyed by source provider/scope and analysis
+task/version. The new createPostgresSourceBatchStore accepts synthetic
+inputs only. initialize explicitly binds the trusted previous membership;
+acknowledge derives the batch receipt from verified pages and completions
+using the existing ledger transaction lock and same connection. It checks
+the stored predecessor membership before insertion. A fresh client reads
+back the exact receipt digest; missing or ambiguous state remains explicit.
+readTip observes the current chain tip, not a grant to access source history.
+
+The schema and adapter have been exercised on disposable PostgreSQL 16
+using the existing heavy-postgres contract, including partial work,
+wrong predecessor/membership, competing successors, replay and append-only
+grants. The concurrent regression now starts the second contender only after the
+first holds the ledger lock, asserts that the first COMMIT succeeded before
+the synthetic acknowledgement error, and checks exact independent readback.
+The hosted heavy-postgres workflow is the acceptance witness.
+Persisted receipt readback checks envelope, chain and digest; it assumes
+trusted ledger writers, not cryptographic authentication of source.
+No runtime migration of Neon, deployment, pending-batch custody,
+empty/removal disposition, or real source access is included.
