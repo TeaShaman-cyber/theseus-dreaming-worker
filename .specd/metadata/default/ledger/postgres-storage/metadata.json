@@ -18,6 +18,12 @@
       ]
     },
     {
+      "requirement": "Work reservation and atomic completion",
+      "rules": [
+        "Work identity MUST use the deterministic checkpoint identity before inference. Only the caller with a confirmed unique durable reservation MAY execute the bounded passes. Existing, unavailable or ambiguous reservation state MUST NOT cause repeat inference.\n\nA complete candidate MUST bind the exact work, request and analysis-result fingerprints to validated derived proposal records, distinct work-scoped perspectives and observed provider/model/finish metadata. No raw response retention is required. Duplicate record identities within one batch MUST fail closed.\n\nAll new records, completion and ordered record membership MUST commit together under the existing ledger transaction boundary. Completion MUST reference the reservation owner. Readback MUST verify record identities and the durable projection fingerprint; that fingerprint is distinct from the original in-memory analysis hash. An ambiguous commit MUST be resolved by readback, or remain explicit UNKNOWN, never by repeating inference.\n\nAn incomplete analysis MUST NOT produce a completion. The in-memory analysis and any uncommitted candidate MUST remain distinct from verified durable completion. Reservations without completion remain unresolved, without automatic takeover. Work completion is not a source-level cursor or canonical truth."
+      ]
+    },
+    {
       "requirement": "Read behavior",
       "rules": [
         "Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.\n\nPersisted rows therefore do not gain authority merely by being stored in PostgreSQL."
@@ -104,11 +110,50 @@
         "BEGIN precedes lock, read and INSERT, and COMMIT follows INSERT",
         "AND a null required field reports the offending field and fails closed"
       ]
+    },
+    {
+      "requirement": "Work reservation and atomic completion",
+      "name": "Concurrent bounded execution and replay",
+      "given": [
+        "two callers with the same stable admitted work"
+      ],
+      "when": [
+        "they use the durable execution path"
+      ],
+      "then": [
+        "only one invokes the two bounded adapters",
+        "AND subsequent replay makes zero calls and verifies the completed record membership"
+      ]
+    },
+    {
+      "requirement": "Work reservation and atomic completion",
+      "name": "Incomplete analysis or uncertain storage",
+      "given": [
+        "an unavailable reservation, incomplete analysis or failed transaction"
+      ],
+      "when": [
+        "the execution returns"
+      ],
+      "then": [
+        "no unverified completion is asserted and no inference retry occurs",
+        "AND available analysis and any uncommitted candidate remain distinguishable from verified completion"
+      ]
+    },
+    {
+      "requirement": "Work reservation and atomic completion",
+      "name": "Durable projection readback",
+      "when": [
+        "a completion is read from PostgreSQL"
+      ],
+      "then": [
+        "the ordered derived records and observed provenance reproduce the stored projection fingerprint",
+        "AND a different work version retains distinct record identities"
+      ]
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:c5b3e4bb70198637af20f3cb31d7a4408438d38ef08fab093c01efd85824213a",
-    "verify.md": "sha256:fe277bf236862d7f3a859f30e5eda19bd0a033ba43e25f6dbe7251f1cc3481b5"
+    "spec.md": "sha256:03ee13e30a97a1e470f7141e85f985a8357ca885105a53c72ae7a5bed1250228",
+    "verify.md": "sha256:8da53b11e5c81beb985f307dcf55f43cfecf6c63393c9cd7c6cb58cc95a57b04"
   },
   "generatedBy": "core"
 }

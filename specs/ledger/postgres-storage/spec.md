@@ -22,6 +22,16 @@ Only after validation succeeds does the adapter issue a parameterized `INSERT`. 
 
 On any validation or database error the transaction is rolled back and the client is closed.
 
+### Requirement: Work reservation and atomic completion
+
+Work identity MUST use the deterministic checkpoint identity before inference. Only the caller with a confirmed unique durable reservation MAY execute the bounded passes. Existing, unavailable or ambiguous reservation state MUST NOT cause repeat inference.
+
+A complete candidate MUST bind the exact work, request and analysis-result fingerprints to validated derived proposal records, distinct work-scoped perspectives and observed provider/model/finish metadata. No raw response retention is required. Duplicate record identities within one batch MUST fail closed.
+
+All new records, completion and ordered record membership MUST commit together under the existing ledger transaction boundary. Completion MUST reference the reservation owner. Readback MUST verify record identities and the durable projection fingerprint; that fingerprint is distinct from the original in-memory analysis hash. An ambiguous commit MUST be resolved by readback, or remain explicit UNKNOWN, never by repeating inference.
+
+An incomplete analysis MUST NOT produce a completion. The in-memory analysis and any uncommitted candidate MUST remain distinct from verified durable completion. Reservations without completion remain unresolved, without automatic takeover. Work completion is not a source-level cursor or canonical truth.
+
 ### Requirement: Read behavior
 
 Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.

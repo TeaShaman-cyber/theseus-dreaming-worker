@@ -60,18 +60,49 @@ CREATE INDEX IF NOT EXISTS dw_ledger_supersession_source_idx
 CREATE INDEX IF NOT EXISTS dw_ledger_supersession_replacement_idx
   ON dw_ledger.supersession_events (replacement_record_id);
 
+CREATE TABLE IF NOT EXISTS dw_ledger.work_reservations (
+  work_fingerprint text PRIMARY KEY CHECK (work_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
+  owner_token uuid NOT NULL UNIQUE,
+  UNIQUE (work_fingerprint, owner_token)
+);
+
+CREATE TABLE IF NOT EXISTS dw_ledger.work_completions (
+  work_fingerprint text PRIMARY KEY,
+  owner_token uuid NOT NULL,
+  request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
+  result_fingerprint text NOT NULL CHECK (result_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
+  projection_fingerprint text NOT NULL CHECK (projection_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
+  observed jsonb NOT NULL CHECK (jsonb_typeof(observed) = 'array'),
+  FOREIGN KEY (work_fingerprint, owner_token)
+    REFERENCES dw_ledger.work_reservations(work_fingerprint, owner_token)
+);
+
+CREATE TABLE IF NOT EXISTS dw_ledger.work_membership (
+  work_fingerprint text NOT NULL REFERENCES dw_ledger.work_completions(work_fingerprint),
+  ordinal integer NOT NULL CHECK (ordinal >= 0),
+  record_id text NOT NULL REFERENCES dw_ledger.proposal_records(record_id),
+  PRIMARY KEY (work_fingerprint, ordinal),
+  UNIQUE (work_fingerprint, record_id)
+);
+
 -- Runtime access is intentionally append-only for ledger data.
 GRANT USAGE ON SCHEMA dw_ledger TO dw_runtime_issue23;
 REVOKE CREATE ON SCHEMA dw_ledger FROM dw_runtime_issue23;
 
 GRANT SELECT, INSERT ON TABLE
   dw_ledger.proposal_records,
-  dw_ledger.supersession_events
+  dw_ledger.supersession_events,
+  dw_ledger.work_reservations,
+  dw_ledger.work_completions,
+  dw_ledger.work_membership
 TO dw_runtime_issue23;
 
 REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE
   dw_ledger.proposal_records,
-  dw_ledger.supersession_events
+  dw_ledger.supersession_events,
+  dw_ledger.work_reservations,
+  dw_ledger.work_completions,
+  dw_ledger.work_membership
 FROM dw_runtime_issue23;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA dw_ledger TO dw_runtime_issue23;

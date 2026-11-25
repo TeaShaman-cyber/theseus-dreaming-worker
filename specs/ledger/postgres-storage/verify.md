@@ -54,3 +54,25 @@
 - **WHEN** append executes or a required persisted field is null
 - **THEN** BEGIN precedes lock, read and INSERT, and COMMIT follows INSERT
 - **AND** a null required field reports the offending field and fails closed
+
+### Requirement: Work reservation and atomic completion
+
+#### Scenario: Concurrent bounded execution and replay
+
+- **GIVEN** two callers with the same stable admitted work
+- **WHEN** they use the durable execution path
+- **THEN** only one invokes the two bounded adapters
+- **AND** subsequent replay makes zero calls and verifies the completed record membership
+
+#### Scenario: Incomplete analysis or uncertain storage
+
+- **GIVEN** an unavailable reservation, incomplete analysis or failed transaction
+- **WHEN** the execution returns
+- **THEN** no unverified completion is asserted and no inference retry occurs
+- **AND** available analysis and any uncommitted candidate remain distinguishable from verified completion
+
+#### Scenario: Durable projection readback
+
+- **WHEN** a completion is read from PostgreSQL
+- **THEN** the ordered derived records and observed provenance reproduce the stored projection fingerprint
+- **AND** a different work version retains distinct record identities

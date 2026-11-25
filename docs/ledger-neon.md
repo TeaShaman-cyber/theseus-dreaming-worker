@@ -36,3 +36,20 @@ The existing Hyperdrive/runtime role is reused for the Worker write path. Ledger
 ## Not performed by this design
 
 The checked-in SQL is not applied by this change. There is no automatic write path, no ledger reader endpoint, no Session Search tool change, and no production deployment.
+
+## Durable work composition (laboratory)
+
+The deterministic checkpoint identity is reserved through a unique PostgreSQL
+insert before bounded analysis. The same existing ledger adapter validates and
+inserts all derived records in a single transaction with completion and ordered
+membership. A successful acknowledgement is not sufficient; readback validates
+record identities and the durable projection digest. The in-memory analysis
+hash is recorded, not represented as independently reconstructed raw output.
+The reservation token correlates a writer, not a separate authorization system.
+An incomplete or unresolved reservation remains blocked from repeat inference;
+automatic takeover and source-level cursor progression are not implemented.
+The caller receives the in-memory analysis and any uncommitted candidate
+separately from independently verified completion; replay does not reconstruct
+raw model output.
+The real PostgreSQL contract exercises concurrency, replay, rollback, simulated
+lost acknowledgement and corruption using synthetic inference adapters.

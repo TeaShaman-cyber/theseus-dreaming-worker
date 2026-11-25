@@ -4,7 +4,7 @@ import { sha256Fingerprint } from './proposal-schema.ts';
 
 const nonblank = z.string().refine(value => value.trim().length > 0);
 const fingerprint = z.string().regex(/^sha256:[0-9a-f]{64}$/);
-const checkpointSchema = z.object({
+export const checkpointSchema = z.object({
   schema: z.literal('theseus.dreaming-worker.checkpoint.v1'),
   workFingerprint: fingerprint,
   requestFingerprint: fingerprint,
@@ -67,17 +67,11 @@ export type CheckpointedPilot2Result =
       checkpointPersisted: false;
     };
 
-/**
- * Portable, bounded composition only. The caller must establish source authority,
- * checkpoint read accuracy, budget and single-writer exclusion independently.
- * A returned candidate is not a durable commit or permission to advance intake.
- */
-export async function runCheckpointedPilot2(
-  rawInput: CheckpointedPilot2Input,
-  routes: Pilot2Route[],
-): Promise<CheckpointedPilot2Result> {
+/** Pure deterministic admission; no checkpoint authority is established here. */
+export function prepareCheckpointedPilot2(rawInput: CheckpointedPilot2Input) {
   // Strict parsing also creates an isolated snapshot of the admitted input.
-  const { request, acceptedSourceFingerprint, analysisVersion, checkpoint } = inputSchema.parse(rawInput);
+  const input = inputSchema.parse(rawInput);
+  const { request, acceptedSourceFingerprint, analysisVersion, checkpoint } = input;
   const { packet } = request;
   const workFingerprint = sha256Fingerprint(JSON.stringify({
     schema: 'theseus.dreaming-worker.work-identity.v1',
@@ -89,6 +83,34 @@ export async function runCheckpointedPilot2(
     evidence: packet.evidence,
   }));
 
+  let skipDecision: SkippedDecision | null = null;
+  if (checkpoint.status === 'UNAVAILABLE') skipDecision = 'CHECKPOINT_UNAVAILABLE';
+  else if (!packet.acceptedNewEvidence || packet.evidence.length === 0) {
+    skipDecision = !packet.acceptedNewEvidence
+      && packet.coverage.state === 'COMPLETE'
+      && packet.coverage.currentness === 'CURRENT'
+      ? 'NO_DATA' : 'INTAKE_UNKNOWN';
+  } else if (checkpoint.committed?.workFingerprint === workFingerprint) skipDecision = 'ALREADY_PROCESSED';
+  for (const item of packet.evidence) Object.freeze(item);
+  Object.freeze(packet.evidence);
+  Object.freeze(packet.coverage);
+  Object.freeze(packet);
+  Object.freeze(request);
+  return { input, workFingerprint, skipDecision };
+}
+
+/**
+ * Portable, bounded composition only. The caller must establish source authority,
+ * checkpoint read accuracy, budget and single-writer exclusion independently.
+ * A returned candidate is not a durable commit or permission to advance intake.
+ */
+export async function runCheckpointedPilot2(
+  rawInput: CheckpointedPilot2Input,
+  routes: Pilot2Route[],
+): Promise<CheckpointedPilot2Result> {
+  const { input, workFingerprint, skipDecision } = prepareCheckpointedPilot2(rawInput);
+  const { request } = input;
+
   const skip = (decision: SkippedDecision): CheckpointedPilot2Result => ({
     decision,
     workFingerprint,
@@ -98,24 +120,7 @@ export async function runCheckpointedPilot2(
     checkpointPersisted: false,
   });
 
-  if (checkpoint.status === 'UNAVAILABLE') return skip('CHECKPOINT_UNAVAILABLE');
-  if (!packet.acceptedNewEvidence || packet.evidence.length === 0) {
-    return skip(
-      !packet.acceptedNewEvidence
-      && packet.coverage.state === 'COMPLETE'
-      && packet.coverage.currentness === 'CURRENT'
-        ? 'NO_DATA'
-        : 'INTAKE_UNKNOWN',
-    );
-  }
-  if (checkpoint.committed?.workFingerprint === workFingerprint) return skip('ALREADY_PROCESSED');
-
-  // Neither independent adapter may mutate the evidence the other receives.
-  for (const item of packet.evidence) Object.freeze(item);
-  Object.freeze(packet.evidence);
-  Object.freeze(packet.coverage);
-  Object.freeze(packet);
-  Object.freeze(request);
+  if (skipDecision) return skip(skipDecision);
   const analysis = await runPilot2(request, routes);
   const terminalSuccess =
     analysis.passes.filter(pass => pass.status === 'SUCCESS' && pass.receipt.finishReason === 'stop').length === 2;
