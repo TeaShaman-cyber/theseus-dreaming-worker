@@ -125,3 +125,15 @@
 - **GIVEN** an absent or advanced predecessor, or inconsistent stored plan
 - **WHEN** staging or readback is attempted
 - **THEN** no new plan is accepted or corrupt plan returned
+
+### Requirement: Staged source work admission
+
+#### Scenario: Missing or exact staged plan
+
+- **GIVEN** a verified synthetic selected work without a staged plan
+- **WHEN** source-specific execution is requested
+- **THEN** no reservation or inference occurs
+- **GIVEN** the exact staged plan and unadvanced predecessor
+- **WHEN** execution is requested
+- **THEN** one reservation is bound to the original plan before inference
+- **AND** replay does not repeat inference or change the original plan

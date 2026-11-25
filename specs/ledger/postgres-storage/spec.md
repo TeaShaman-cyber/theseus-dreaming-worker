@@ -50,6 +50,12 @@ The synthetic source store MUST support explicitly staging an immutable plan der
 
 The plan MUST be bound to the existing source chain and predecessor, use the existing ledger transaction lock, and be independently read back. Exact repeats MUST be idempotent. Distinct rederived witnesses MAY coexist for the same predecessor while it remains the tip; an acknowledged predecessor MUST NOT admit new plans. Restart lookup MUST validate stored digest and binding and MUST distinguish unavailable/corrupt storage from no plans. A plan alone is not permission to execute or replay stale evidence.
 
+### Requirement: Staged source work admission
+
+Source-specific synthetic execution MUST derive the exact selected work from verified input and require the matching durable plan before reservation. Under the existing transaction lock it MUST verify the unadvanced predecessor and atomically bind a new work reservation to its exact original plan. Missing, corrupt or unavailable plan state MUST prevent inference. Existing reservations MUST NOT be taken over or relabelled; an unbound reservation cannot establish source custody.
+
+The existing durable runner MUST remain responsible for inference and completion; source-specific admission MUST NOT advance the source checkpoint, grant access or change generic pilot behavior.
+
 ### Requirement: Read behavior
 
 Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.

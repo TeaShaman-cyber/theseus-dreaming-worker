@@ -272,3 +272,23 @@ require separate acceptance. The fast tests cover stable work identity
 across distinct source witnesses; hosted PostgreSQL checks restart and
 unchanged checkpoint with unprocessed work. The additional PostgreSQL
 generation-change scenario has not been executed.
+
+### Staged source work admission
+
+The synthetic source-specific runSelected entry point now derives the exact
+plan and selected input, then verifies the existing unadvanced predecessor
+and durable plan under the ledger transaction lock before reserving work.
+It uses the ordinary durable runner and ordinary completion store. A new
+source_work_origins association is inserted atomically with a reservation;
+foreign keys bind the original staged plan and work reservation. No
+transaction remains open during inference. Missing plan or unavailable
+storage blocks execution. An existing reservation with no source origin
+is not accepted as source-specific custody. The original association is
+never relabelled when a reservation is encountered again.
+
+The generic synthetic pilot remains independently usable. This is not a
+global enforcement boundary for arbitrary SQL writers or a grant to
+read real history. Source receipt linkage to the original plan is still
+open; source checkpoint acknowledgement is separate. No live migration
+or model calls. Hosted PostgreSQL tests cover missing plan, staged
+execution and restart with the original association and no extra calls.

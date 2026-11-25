@@ -109,6 +109,16 @@ CREATE TABLE IF NOT EXISTS dw_ledger.source_plans (
     REFERENCES dw_ledger.source_checkpoints(chain_id, checkpoint_fingerprint)
 );
 
+-- Exact original source plan of a source-specific work reservation.
+CREATE TABLE IF NOT EXISTS dw_ledger.source_work_origins (
+  work_fingerprint text PRIMARY KEY REFERENCES dw_ledger.work_reservations(work_fingerprint),
+  chain_id text NOT NULL,
+  previous_checkpoint text NOT NULL,
+  plan_fingerprint text NOT NULL,
+  FOREIGN KEY (chain_id, previous_checkpoint, plan_fingerprint)
+    REFERENCES dw_ledger.source_plans(chain_id, previous_checkpoint, plan_fingerprint)
+);
+
 -- Runtime access is intentionally append-only for ledger data.
 GRANT USAGE ON SCHEMA dw_ledger TO dw_runtime_issue23;
 REVOKE CREATE ON SCHEMA dw_ledger FROM dw_runtime_issue23;
@@ -120,7 +130,8 @@ GRANT SELECT, INSERT ON TABLE
   dw_ledger.work_completions,
   dw_ledger.work_membership,
   dw_ledger.source_checkpoints,
-  dw_ledger.source_plans
+  dw_ledger.source_plans,
+  dw_ledger.source_work_origins
 TO dw_runtime_issue23;
 
 REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE
@@ -130,7 +141,8 @@ REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE
   dw_ledger.work_completions,
   dw_ledger.work_membership,
   dw_ledger.source_checkpoints,
-  dw_ledger.source_plans
+  dw_ledger.source_plans,
+  dw_ledger.source_work_origins
 FROM dw_runtime_issue23;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA dw_ledger TO dw_runtime_issue23;

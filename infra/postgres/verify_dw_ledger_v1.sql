@@ -86,7 +86,7 @@ DO $$
 DECLARE
   t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['work_reservations','work_completions','work_membership','source_checkpoints','source_plans'] LOOP
+  FOREACH t IN ARRAY ARRAY['work_reservations','work_completions','work_membership','source_checkpoints','source_plans','source_work_origins'] LOOP
     IF to_regclass('dw_ledger.' || t) IS NULL
       OR NOT has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'SELECT')
       OR NOT has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'INSERT')
@@ -124,6 +124,16 @@ BEGIN
       AND confrelid='dw_ledger.source_checkpoints'::regclass
       AND pg_get_constraintdef(oid) LIKE 'FOREIGN KEY (chain_id, previous_checkpoint)%'
   ) THEN RAISE EXCEPTION 'SOURCE_PLAN_PARENT_CONSTRAINT_INVALID';
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM pg_constraint
+      WHERE conrelid='dw_ledger.source_work_origins'::regclass AND contype='f'
+      AND confrelid IN ('dw_ledger.source_plans'::regclass,'dw_ledger.work_reservations'::regclass)) <> 2
+  THEN RAISE EXCEPTION 'SOURCE_WORK_ORIGIN_CONSTRAINT_INVALID';
   END IF;
 END
 $$;

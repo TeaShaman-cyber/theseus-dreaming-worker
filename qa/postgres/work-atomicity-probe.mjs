@@ -551,6 +551,10 @@ try {
   assert.equal((await sourceStore.acknowledge({ ...pending, previousCheckpoint: pendingRoot.receipt.receiptFingerprint })).status, 'PENDING');
   // An independent storage contract for the still-unprocessed analysis intent.
   const pendingInput = { ...pending, previousCheckpoint: pendingRoot.receipt.receiptFingerprint };
+  const selectedId = pendingInput.entries[0].sessionId;
+  const beforeAdmission = sourceCalls;
+  assert.equal((await sourceStore.runSelected(pendingInput, selectedId, sourceRoutes)).decision, 'STORAGE_UNKNOWN');
+  assert.equal(sourceCalls, beforeAdmission);
   const stagedPending = await sourceStore.stage(pendingInput);
   assert.equal(stagedPending.status, 'STAGED');
   const afterRestart = createPostgresSourceBatchStore({ connectionString });
@@ -558,6 +562,18 @@ try {
   assert.equal((await afterRestart.stage(pendingInput)).status, 'ALREADY_STAGED');
   assert.deepEqual(await afterRestart.readTip(pendingInput), pendingRoot.receipt);
   assert.equal((await afterRestart.acknowledge(pendingInput)).status, 'PENDING');
+  const result = await afterRestart.runSelected(pendingInput, selectedId, sourceRoutes);
+  assert.equal(result.decision, 'COMMITTED');
+  const { rows: origins } = await sourceReader.query(
+    'SELECT plan_fingerprint FROM dw_ledger.source_work_origins WHERE work_fingerprint=$1',
+    [result.workFingerprint],
+  );
+  assert.deepEqual(origins, [{ plan_fingerprint: stagedPending.plan.planFingerprint }]);
+  assert.equal((await afterRestart.runSelected(pendingInput, selectedId, sourceRoutes)).decision, 'ALREADY_PROCESSED');
+  assert.equal(sourceCalls, beforeAdmission + 2);
+  assert.deepEqual(await afterRestart.readTip(pendingInput), pendingRoot.receipt);
+  assert.equal((await afterRestart.acknowledge(pendingInput)).status, 'PENDING');
+  console.log('SOURCE_PLAN_ADMISSION_PG_PASS missing_plan=blocked original_plan=bound replay_extra_calls=0');
   console.log('PENDING_PLAN_RESTART_PG_PASS');
   const wrongParent = { ...exact, previousCheckpoint: pendingRoot.receipt.receiptFingerprint };
   assert.equal((await sourceStore.acknowledge(wrongParent)).status, 'CONFLICT');
@@ -604,7 +620,7 @@ try {
   console.log('SOURCE_BATCH_COMMIT_ACK_LOSS_PASS successful_commit=1 exact_readback=true');
   assert.equal((await sourceStore.acknowledge(winnerArgs)).status, 'ALREADY_ACKNOWLEDGED');
   assert.equal((await sourceStore.acknowledge({ ...winnerArgs, previousCheckpoint: winning.receipt.receiptFingerprint })).status, 'CONFLICT');
-  assert.equal(sourceCalls, 4);
+  assert.equal(sourceCalls, 6);
   const count = await sourceReader.query('SELECT count(*)::int AS count FROM dw_ledger.source_checkpoints');
   assert.equal(count.rows[0].count, 3);
   await assert.rejects(() => sourceClient.query('UPDATE dw_ledger.source_checkpoints SET receipt=receipt'), { code: '42501' });

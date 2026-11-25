@@ -42,6 +42,12 @@
       ]
     },
     {
+      "requirement": "Staged source work admission",
+      "rules": [
+        "Source-specific synthetic execution MUST derive the exact selected work from verified input and require the matching durable plan before reservation. Under the existing transaction lock it MUST verify the unadvanced predecessor and atomically bind a new work reservation to its exact original plan. Missing, corrupt or unavailable plan state MUST prevent inference. Existing reservations MUST NOT be taken over or relabelled; an unbound reservation cannot establish source custody.\n\nThe existing durable runner MUST remain responsible for inference and completion; source-specific admission MUST NOT advance the source checkpoint, grant access or change generic pilot behavior."
+      ]
+    },
+    {
       "requirement": "Read behavior",
       "rules": [
         "Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.\n\nPersisted rows therefore do not gain authority merely by being stored in PostgreSQL."
@@ -250,11 +256,28 @@
         "both witnesses remain distinct and the same work identity is retained",
         "no new plan is accepted or corrupt plan returned"
       ]
+    },
+    {
+      "requirement": "Staged source work admission",
+      "name": "Missing or exact staged plan",
+      "given": [
+        "a verified synthetic selected work without a staged plan",
+        "the exact staged plan and unadvanced predecessor"
+      ],
+      "when": [
+        "source-specific execution is requested",
+        "execution is requested"
+      ],
+      "then": [
+        "no reservation or inference occurs",
+        "one reservation is bound to the original plan before inference",
+        "AND replay does not repeat inference or change the original plan"
+      ]
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:36607ac32e4196ca08696f825534aacfe059bdcaac3117b41e01d7441653162e",
-    "verify.md": "sha256:9fa8f06247face30e5603c9bcabc32a0edb20687ae68a9ea3c5cdf2e381d6127"
+    "spec.md": "sha256:fdb75ded963a4a50b40cf02460aed1204efa7efcb1cb20b280277d883f203318",
+    "verify.md": "sha256:aa90874d343fe43fa7b02096c628e60c9da6e2c7fae3ff9f8e0b6e3e91ab2354"
   },
   "generatedBy": "core"
 }

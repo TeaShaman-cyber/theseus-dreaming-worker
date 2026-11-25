@@ -54,7 +54,7 @@ function prepareBatch(raw: BatchInput) {
 }
 
 /** Metadata-only plan; no evidence body or execution authority is retained. */
-export function prepareSourceBatchPlan(raw: BatchInput) {
+export function prepareSourceBatchExecution(raw: BatchInput) {
   const { x, previousCheckpoint, handoff, prepared } = prepareBatch(raw);
   const payload = {
     schema: 'theseus.dreaming-worker.source-batch-plan.v1' as const,
@@ -70,7 +70,12 @@ export function prepareSourceBatchPlan(raw: BatchInput) {
     }),
     checkpointAdvanced: false as const,
   };
-  return { ...payload, planFingerprint: sourceReceiptFingerprint(payload) };
+  const plan = { ...payload, planFingerprint: sourceReceiptFingerprint(payload) };
+  return { plan, prepared };
+}
+
+export function prepareSourceBatchPlan(raw: BatchInput) {
+  return prepareSourceBatchExecution(raw).plan;
 }
 
 /** Read-only synthetic receipt preparation; no durable source ack is made. */

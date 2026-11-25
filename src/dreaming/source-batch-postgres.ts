@@ -1,7 +1,9 @@
 import { Client } from 'pg';
 import { z } from 'zod';
 import { decodeSourceHandoff } from './source-handoff.ts';
-import { prepareSourceBatchPlan, prepareSourceBatchReceipt, sourceReceiptFingerprint, type BatchInput } from './source-batch-receipt.ts';
+import { prepareSourceBatchExecution, prepareSourceBatchPlan, prepareSourceBatchReceipt, sourceReceiptFingerprint, type BatchInput } from './source-batch-receipt.ts';
+import { runDurablePilot2 } from './durable-pilot2.ts';
+import type { Pilot2Route } from './pilot2-runner.ts';
 import { createPostgresWorkStore, type LedgerPgClient, type LedgerPgClientFactory } from './proposal-ledger-postgres.ts';
 
 type Intent = Pick<BatchInput, 'candidate' | 'expected' | 'task' | 'analysisVersion'>;
@@ -165,6 +167,60 @@ export function createPostgresSourceBatchStore(options: {
   }
 
   return {
+    /** Explicit source-specific execution. Generic synthetic work is unchanged. */
+    async runSelected(raw: BatchInput, sessionId: string, routes: Pilot2Route[]) {
+      const input = structuredClone(raw);
+      const { chain } = context(input);
+      const { plan, prepared } = prepareSourceBatchExecution(input);
+      const selected = prepared.find(entry => entry.provenance.session.session_id === sessionId);
+      if (!selected) throw Error('SOURCE_EXECUTION_SELECTION');
+      const ordinary = createPostgresWorkStore(options);
+      return runDurablePilot2(selected.input, routes, {
+        ...ordinary,
+        async reserve(workFingerprint, ownerToken) {
+          if (workFingerprint !== selected.workFingerprint) throw Error('SOURCE_EXECUTION_WORK');
+          return withClient(async client => {
+            await client.query('BEGIN');
+            try {
+              await client.query("SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))");
+              const parent = await readParent(client, chain, plan.previousCheckpoint);
+              if (!parent || await readChild(client, chain, plan.previousCheckpoint)
+                || !await readPlan(client, chain, parent, plan.planFingerprint)) {
+                throw Error('SOURCE_EXECUTION_PLAN_REQUIRED');
+              }
+              const scoped = createPostgresWorkStore({
+                connectionString: options.connectionString,
+                clientFactory: () => ({
+                  connect: async () => undefined, end: async () => undefined,
+                  query: (sql, values) => client.query(sql, values),
+                }),
+              });
+              const acquired = await scoped.reserve(workFingerprint, ownerToken);
+              if (acquired) {
+                await client.query(
+                  'INSERT INTO dw_ledger.source_work_origins(work_fingerprint,chain_id,previous_checkpoint,plan_fingerprint) VALUES ($1,$2,$3,$4)',
+                  [workFingerprint,chain,plan.previousCheckpoint,plan.planFingerprint],
+                );
+              } else {
+                const { rows } = await client.query<{
+                  chain_id: string; previous_checkpoint: string; plan_fingerprint: string;
+                }>('SELECT chain_id,previous_checkpoint,plan_fingerprint FROM dw_ledger.source_work_origins WHERE work_fingerprint=$1', [workFingerprint]);
+                if (rows.length !== 1 || rows[0].chain_id !== chain) throw Error('SOURCE_EXECUTION_ORIGIN_REQUIRED');
+                const origin = rows[0];
+                const originalParent = await readParent(client,chain,origin.previous_checkpoint);
+                const original = originalParent && await readPlan(client,chain,originalParent,origin.plan_fingerprint);
+                if (!original || !original.work.some(w => w.workFingerprint === workFingerprint)) throw Error('SOURCE_EXECUTION_ORIGIN_INVALID');
+              }
+              await client.query('COMMIT');
+              return acquired;
+            } catch (error) {
+              try { await client.query('ROLLBACK'); } catch { /* ambiguous outcome */ }
+              throw error;
+            }
+          });
+        },
+      });
+    },
     /** Stage metadata before execution. No inference or progress advancement. */
     async stage(raw: BatchInput): Promise<PlanResult> {
       const input = structuredClone(raw);
