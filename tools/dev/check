@@ -10,6 +10,14 @@ cd "$ROOT"
 printf '%s\n' '== repository contract =='
 node scripts/verify-repo.mjs
 
+printf '%s\n' '== upstream SpecD structural validation =='
+if [ "${GITHUB_ACTIONS:-}" = true ] && [ -z "${SPECD_DIFF_BASE:-}" ]; then
+  echo "SpecD QA requires the exact event base SHA" >&2
+  exit 1
+fi
+./tools/dev/specd-check
+unset SPECD_DIFF_BASE
+
 printf '%s\n' '== lint =='
 npm run lint
 
@@ -35,6 +43,8 @@ printf '%s\n' '== reverse trace promises =='
 python3 tools/reverse_trace/check_current.py
 
 printf '%s\n' '== shell syntax =='
+sh -n tools/dev/specd-check
+sh -n tools/specd/install
 sh -n tools/dev/check tools/dev/provider-adapter-readiness tools/dev/observability-readiness tools/ci/build-check tools/ci/mutation-test tools/pr/codex-review-status.sh tools/pr/codex-review-wait.sh
 
 printf '%s\n' '== whitespace =='

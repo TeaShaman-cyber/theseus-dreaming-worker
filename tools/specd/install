@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")"
+npm ci --ignore-scripts --no-audit --no-fund
+# SpecD loads Ladybug's graph module even for spec validation. Use the
+# locked package's bundled prebuilt binary rather than an implicit build.
+node --input-type=module -e 'import { existsSync } from "node:fs"; if (!existsSync("node_modules/lbug/prebuilt/lbugjs-" + process.platform + "-" + process.arch + ".node")) throw Error("SpecD QA requires a supported bundled Ladybug prebuild");'
+npm rebuild lbug --ignore-scripts=false --no-audit --no-fund

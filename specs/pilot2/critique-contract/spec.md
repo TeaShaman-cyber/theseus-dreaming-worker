@@ -6,7 +6,9 @@ This layer analyzes already-frozen Pilot 2 perspectives. It does not choose a wi
 
 The critique artifact is a derived interpretation only. Original Pilot 2 proposal sets, failures, provenance, and receipts remain authoritative records of what the first passes actually produced.
 
-## Input Contract
+## Requirements
+
+### Requirement: Input Contract
 
 Critique input may be built only from a Pilot 2 `COMPLETE` or `PARTIAL` result with at least one valid perspective.
 
@@ -21,7 +23,7 @@ The input must preserve:
 
 `NO_DATA` and `FAIL_CLOSED` results do not create critique work.
 
-## Critique Artifact
+### Requirement: Critique Artifact
 
 A critique artifact uses schema `theseus.dreaming-worker.critique.v1` and authority `DERIVED_ONLY`.
 
@@ -35,7 +37,7 @@ Every relation must reference existing frozen proposal fingerprints and evidence
 
 `AGREEMENT` and `DISAGREEMENT` require proposal references from at least two perspectives. `DISAGREEMENT` and `UNRESOLVED` must state what additional evidence could reduce the uncertainty.
 
-## Authority Boundary
+### Requirement: Authority Boundary
 
 Critique must never:
 

@@ -8,6 +8,7 @@ required = [
     'HYPOTHESIS',
     'UNKNOWN',
     'zero external model calls',
+    'deterministic sufficiency precedes additional model work',
     'partial or stale coverage cannot justify absence claims',
     'general-purpose autonomous agent',
     'Mastra is a development surface',

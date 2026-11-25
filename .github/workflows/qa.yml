@@ -29,5 +29,10 @@ jobs:
       - name: Install locked dependencies
         run: npx --yes pnpm@11.3.0 install --frozen-lockfile
 
+      - name: Install locked SpecD QA toolchain
+        run: ./tools/specd/install
+
       - name: Run canonical repository QA
+        env:
+          SPECD_DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: ./tools/dev/check

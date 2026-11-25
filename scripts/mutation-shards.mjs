@@ -4,6 +4,7 @@ export const MUTATION_SHARDS = Object.freeze({
       'src/dreaming/dry-run.ts',
       'src/dreaming/pilot1-runner.ts',
       'src/dreaming/proposal-schema.ts',
+      'src/dreaming/structured-output-recovery.ts',
     ]),
     tests: Object.freeze([
       'test/dry-run.test.mjs',
@@ -19,6 +20,16 @@ export const MUTATION_SHARDS = Object.freeze({
     tests: Object.freeze([
       'test/pilot2-runner.test.mjs',
       'test/pilot2-live-composition.test.mjs',
+    ]),
+  }),
+  serializer: Object.freeze({
+    mutate: Object.freeze([
+      'src/dreaming/serializer-benchmark.ts',
+      'src/dreaming/serializer-benchmark-runner.ts',
+    ]),
+    tests: Object.freeze([
+      'test/serializer-benchmark.test.mjs',
+      'test/serializer-benchmark-runner.test.mjs',
     ]),
   }),
   critique: Object.freeze({

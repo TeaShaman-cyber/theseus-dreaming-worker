@@ -1,0 +1,94 @@
+{
+  "schema": "theseus.dreaming-worker.serializer-fixtures.v1",
+  "packet": {
+    "schema": "theseus-evidence-packet-v1",
+    "packetId": "serializer-synthetic-packet-v1",
+    "acceptedNewEvidence": true,
+    "coverage": {
+      "state": "PARTIAL",
+      "currentness": "UNKNOWN"
+    },
+    "evidence": [
+      {
+        "sourceRef": "fixture:source:1",
+        "evidenceHash": "sha256:fixture-source-1",
+        "text": "Synthetic observation: one request timed out."
+      }
+    ]
+  },
+  "goldenOutput": "{\"schema\":\"theseus.dreaming-worker.proposals.v1\",\"proposals\":[{\"type\":\"FACT\",\"claim\":\"One synthetic request timed out.\",\"source_refs\":[{\"source_ref\":\"fixture:source:1\",\"evidence_hash\":\"sha256:fixture-source-1\"}]}]}",
+  "cases": [
+    {
+      "id": "prose-complete",
+      "reasonerRaw": "FACT: One synthetic request timed out. Source ref: fixture:source:1. Evidence hash: sha256:fixture-source-1.",
+      "finishReason": "stop",
+      "classification": "UNSTRUCTURED_COMPLETE",
+      "serializerEligible": true,
+      "candidate": "golden",
+      "expected": "EXACT_GOLDEN_MATCH"
+    },
+    {
+      "id": "schema-mismatch-complete",
+      "reasonerRaw": "{\"kind\":\"FACT\",\"observation\":\"One synthetic request timed out.\",\"source\":\"fixture:source:1\",\"hash\":\"sha256:fixture-source-1\"}",
+      "finishReason": "stop",
+      "classification": "SCHEMA_MISMATCH_COMPLETE",
+      "serializerEligible": true,
+      "candidate": "golden",
+      "expected": "EXACT_GOLDEN_MATCH"
+    },
+    {
+      "id": "invented-source",
+      "reasonerRaw": "FACT: One synthetic request timed out. Source ref: fixture:source:1. Evidence hash: sha256:fixture-source-1.",
+      "finishReason": "stop",
+      "classification": "UNSTRUCTURED_COMPLETE",
+      "serializerEligible": true,
+      "candidate": "{\"schema\":\"theseus.dreaming-worker.proposals.v1\",\"proposals\":[{\"type\":\"FACT\",\"claim\":\"One synthetic request timed out.\",\"source_refs\":[{\"source_ref\":\"fixture:invented\",\"evidence_hash\":\"sha256:invented\"}]}]}",
+      "expected": "PROVENANCE_REJECTED"
+    },
+    {
+      "id": "changed-claim",
+      "reasonerRaw": "FACT: One synthetic request timed out. Source ref: fixture:source:1. Evidence hash: sha256:fixture-source-1.",
+      "finishReason": "stop",
+      "classification": "UNSTRUCTURED_COMPLETE",
+      "serializerEligible": true,
+      "candidate": "{\"schema\":\"theseus.dreaming-worker.proposals.v1\",\"proposals\":[{\"type\":\"FACT\",\"claim\":\"Two synthetic requests timed out.\",\"source_refs\":[{\"source_ref\":\"fixture:source:1\",\"evidence_hash\":\"sha256:fixture-source-1\"}]}]}",
+      "expected": "GOLDEN_MISMATCH"
+    },
+    {
+      "id": "truncated",
+      "reasonerRaw": "{\"schema\":",
+      "finishReason": "length",
+      "classification": "TRUNCATED_OUTPUT",
+      "serializerEligible": false,
+      "candidate": "golden",
+      "expected": "NOT_ELIGIBLE"
+    },
+    {
+      "id": "missing-finish",
+      "reasonerRaw": "One synthetic request timed out.",
+      "classification": "UNSTRUCTURED_COMPLETE",
+      "serializerEligible": true,
+      "candidate": "golden",
+      "expected": "NOT_ELIGIBLE"
+    },
+    {
+      "id": "semantic-invalid",
+      "reasonerRaw": "Invented source.",
+      "finishReason": "stop",
+      "classification": "SEMANTIC_INVALID",
+      "serializerEligible": false,
+      "candidate": "golden",
+      "expected": "NOT_ELIGIBLE"
+    },
+    {
+      "id": "missing-original-provenance",
+      "reasonerRaw": "FACT: One synthetic request timed out.",
+      "finishReason": "stop",
+      "classification": "UNSTRUCTURED_COMPLETE",
+      "serializerEligible": true,
+      "oracle": "none",
+      "candidate": "golden",
+      "expected": "SCHEMA_VALID_UNREVIEWED"
+    }
+  ]
+}

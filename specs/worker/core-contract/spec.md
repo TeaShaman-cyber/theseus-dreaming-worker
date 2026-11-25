@@ -63,6 +63,16 @@ Model output MUST NOT determine runtime facts such as model-call counts, tool us
 
 Model output MUST NOT direct execution, expand permissions, write canonical memory, or publish externally.
 
+### Requirement: Deterministic sufficiency precedes additional model work
+
+The worker MUST use deterministic software for operations whose required result can be established sufficiently by explicit rules and validated data, including parsing known formats, exact comparison, hashing, identity, schema and provenance checks, and execution-state accounting.
+
+A proposed additional model stage MUST identify the unresolved semantic task, the deterministic baseline and its measured or demonstrated limitation, and the expected incremental value. Experiments MAY test this value without establishing a mandatory runtime dependency. Acceptance MUST use requirement-linked evidence on comparable cases, including failures and abstention, not merely a successful model response.
+
+A deterministically recoverable complete artifact MUST NOT cause a secondary inference call solely to reformat it. Truncated, semantically invalid or ambiguously attributed artifacts MUST NOT be repaired by inventing content or evidence.
+
+Independent first-pass semantic analysis and optional critique remain governed by their existing scope, independence, cost and authority requirements. This requirement does not demand that arbitrary natural language be parsed by an unbounded collection of rules.
+
 ### Requirement: Failure and cost boundaries are explicit
 
 Provider timeouts, 429 responses, revoked credentials, malformed output, partial execution, and unavailable routes MUST remain visible typed failures.

@@ -356,3 +356,100 @@ test('Pilot 1 passes only non-sensitive correlation metadata to inference', asyn
     false,
   );
 });
+
+test('Pilot 1 rejects truncated output before any JSON repair attempt', async () => {
+  await assert.rejects(
+    () => runPilot1(request, async () => ({
+      text: '```json\n{"schema":"theseus.dreaming-worker.proposals.v1","proposals":[',
+      provider: 'bothub',
+      model: 'gpt-5.6-sol',
+      finishReason: 'length',
+      toolCalls: [],
+    })),
+    /PILOT1_OUTPUT_TRUNCATED/,
+  );
+});
+
+test('Pilot 1 deterministically unwraps one complete fenced JSON document and records the repair', async () => {
+  const raw = `\`\`\`json\n${validFactOutput}\n\`\`\``;
+
+  const result = await runPilot1(request, async () => ({
+    text: raw,
+    provider: 'fixture-provider',
+    model: 'fixture-model',
+    finishReason: 'stop',
+    toolCalls: [],
+  }));
+
+  assert.equal(result.outcome, 'PROPOSED');
+  assert.equal(result.rawModelOutput, raw);
+  assert.equal(result.proposalSet.proposals[0].type, 'FACT');
+  assert.equal(result.receipt.outputNormalization.classification, 'DIRTY_BUT_COMPLETE_JSON');
+  assert.equal(result.receipt.outputNormalization.repairKind, 'MARKDOWN_JSON_FENCE');
+  assert.match(result.receipt.outputNormalization.rawOutputFingerprint, /^sha256:[a-f0-9]{64}$/);
+  assert.match(result.receipt.outputNormalization.normalizedOutputFingerprint, /^sha256:[a-f0-9]{64}$/);
+  assert.notEqual(
+    result.receipt.outputNormalization.rawOutputFingerprint,
+    result.receipt.outputNormalization.normalizedOutputFingerprint,
+  );
+});
+
+test('Pilot 1 does not extract fenced JSON from surrounding prose', async () => {
+  const raw = `Here is the requested object:\n\`\`\`json\n${validFactOutput}\n\`\`\``;
+
+  await assert.rejects(
+    () => runPilot1(request, async () => ({
+      text: raw,
+      provider: 'fixture-provider',
+      model: 'fixture-model',
+      finishReason: 'stop',
+      toolCalls: [],
+    })),
+    /PILOT1_PROPOSAL_JSON_INVALID/,
+  );
+});
+
+test('Pilot 1 rejects a fenced document when the inner JSON is malformed', async () => {
+  const raw = '```json\n{"schema":"theseus.dreaming-worker.proposals.v1"\n```';
+
+  await assert.rejects(
+    () => runPilot1(request, async () => ({
+      text: raw,
+      provider: 'fixture-provider',
+      model: 'fixture-model',
+      finishReason: 'stop',
+      toolCalls: [],
+    })),
+    /PILOT1_PROPOSAL_JSON_INVALID/,
+  );
+});
+
+test('Pilot 1 repair accepts only an exact json fence with whitespace outside it', async () => {
+  const accepted = `  \n\`\`\`json\n${validFactOutput}\n\`\`\`\n  `;
+  const result = await runPilot1(request, async () => ({
+    text: accepted,
+    provider: 'fixture-provider',
+    model: 'fixture-model',
+    finishReason: 'stop',
+    toolCalls: [],
+  }));
+  assert.equal(result.outcome, 'PROPOSED');
+
+  for (const raw of [
+    `x\`\`\`json\n${validFactOutput}\n\`\`\``,
+    `\`\`\`jsonx\n${validFactOutput}\n\`\`\``,
+    `\`\`\`\n${validFactOutput}\n\`\`\``,
+    `\`\`\`json\n${validFactOutput}\n\`\`\`tail`,
+  ]) {
+    await assert.rejects(
+      () => runPilot1(request, async () => ({
+        text: raw,
+        provider: 'fixture-provider',
+        model: 'fixture-model',
+        finishReason: 'stop',
+        toolCalls: [],
+      })),
+      /PILOT1_PROPOSAL_JSON_INVALID/,
+    );
+  }
+});
