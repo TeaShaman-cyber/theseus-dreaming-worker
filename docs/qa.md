@@ -232,6 +232,36 @@ The workflow is intentionally committed before credential enablement. Creating t
 
 This design follows current Neon guidance for GitHub Actions, schema diff, project-scoped API keys, and schema-only branches rather than installing the default GitHub integration with a broader account/organization key.
 
+## Database QA routing
+
+Database checks are risk-routed, not global PR gates. Do **not** run PostgreSQL/Neon infrastructure checks for unrelated agent, prompt, model-routing, documentation, or UI-only changes.
+
+| Changed surface | Required database QA | Why |
+| --- | --- | --- |
+| unrelated code/docs | normal canonical QA only | no database contract changed |
+| ledger persistence code or PostgreSQL contract tests | hosted PostgreSQL contract | exercises real `pg` read/write behavior and append-only grants |
+| PostgreSQL DDL / grant / migration IaC | hosted PostgreSQL contract **and** Neon schema-only preview | generic PostgreSQL semantics plus current Neon compatibility |
+| investigation of a database failure | start with the failing hosted lane; use a Codespace only when interactive diagnosis is actually needed | avoid long-lived test infrastructure by default |
+
+The workflows enforce this with GitHub `pull_request.paths` filters. `heavy-postgres.yml` is deliberately scoped to ledger/PostgreSQL storage surfaces; it is **not** a repository-wide PR job. `neon-ledger-preview.yml` is narrower still and runs only for the SQL/Neon migration surface and its own contract tests. Both retain `workflow_dispatch` only for explicit diagnostic reruns.
+
+This routing is a reusable pattern recovered from `TeaShaman-cyber/theseus-repo-search-lab#122` and the follow-up simplification discussion in #128. The durable lesson is the separation of concerns, not the old Repo Search implementation: use an ephemeral PostgreSQL service on a GitHub runner for generic database behavior, keep provider-specific Neon preview as a second compatibility layer, and avoid a persistent Codespace/VM unless interactive debugging requires it.
+
+Current observed substrate (2026-11-23): GitHub `ubuntu-26.04` provides PostgreSQL 18.x directly on the runner; the Dreaming Worker Neon development/test database is PostgreSQL 17.x. Exact versions are current evidence, not a permanent requirement. The invariant is that generic PostgreSQL QA and current-Neon compatibility remain separate checks.
+
+## Hosted PostgreSQL ledger contract
+
+Generic PostgreSQL correctness is tested separately from Neon-specific compatibility.
+
+`.github/workflows/heavy-postgres.yml` starts an runner-provided PostgreSQL 18 service on a GitHub-hosted runner and executes the repository-owned `tools/ci/heavy-postgres` contract. The lane:
+
+- creates only the minimal owner/runtime roles required by the ledger schema;
+- applies `infra/postgres/dw_ledger_v1.sql` twice to prove replay safety;
+- runs the SQL grant/FK/schema readback;
+- exercises the real TypeScript Postgres ledger adapter against the database;
+- verifies duplicate/cycle rejection and the runtime no-UPDATE boundary.
+
+This is the fast generic PostgreSQL lane. The Neon schema-only preview remains a separate provider-specific compatibility check. No Codespace or long-lived PostgreSQL test host is required.
 ### SpecD runtime diff coverage
 
 The required hosted QA supplies the exact PR base (or previous main SHA on

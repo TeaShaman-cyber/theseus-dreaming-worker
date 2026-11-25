@@ -134,3 +134,38 @@ test('Neon ledger preview workflow is project-scoped, data-free, ephemeral, and 
   assert.match(workflow, /continue-on-error:\s*true/);
   assert.doesNotMatch(workflow, /ALTER\s+ROLE|connection_uri/is);
 });
+
+test('hosted PostgreSQL contract lane uses the runner PostgreSQL service without registry pulls', () => {
+  const workflow = readFileSync('.github/workflows/heavy-postgres.yml', 'utf8');
+  const runner = readFileSync('tools/ci/heavy-postgres', 'utf8');
+
+  assert.match(workflow, /systemctl start postgresql\.service/);
+  assert.match(workflow, /PG_EXPECTED_MAJOR:\s*'18'/);
+  assert.doesNotMatch(workflow, /docker\/library\/postgres|services:\s*[\s\S]*postgres:/);
+  assert.match(workflow, /tools\/ci\/heavy-postgres/);
+  assert.match(workflow, /node-version:\s*'22'/);
+  assert.match(workflow, /persist-credentials:\s*false/);
+
+  assert.match(runner, /infra\/postgres\/dw_ledger_v1\.sql/);
+  assert.match(runner, /infra\/postgres\/verify_dw_ledger_v1\.sql/);
+  assert.match(runner, /qa\/postgres\/ledger-adapter-integration\.mjs/);
+  assert.match(runner, /server_version_num/);
+});
+
+test('ledger mutation shard covers the Postgres storage adapter', () => {
+  const manifest = readFileSync('scripts/mutation-shards.mjs', 'utf8');
+  assert.match(manifest, /src\/dreaming\/proposal-ledger-postgres\.ts/);
+  assert.match(manifest, /test\/proposal-ledger-postgres\.test\.mjs/);
+});
+
+
+test('hosted PostgreSQL remains a path-scoped database QA lane, not a global PR gate', () => {
+  const workflow = readFileSync('.github/workflows/heavy-postgres.yml', 'utf8');
+
+  assert.match(workflow, /pull_request:\s*\n\s+paths:/);
+  assert.match(workflow, /infra\/postgres\/\*\*/);
+  assert.match(workflow, /src\/dreaming\/proposal-ledger-postgres\.ts/);
+  assert.doesNotMatch(workflow, /- ['"]src\/\*\*['"]/);
+  assert.doesNotMatch(workflow, /- ['"]docs\/\*\*['"]/);
+  assert.doesNotMatch(workflow, /^\s*push:/m);
+});

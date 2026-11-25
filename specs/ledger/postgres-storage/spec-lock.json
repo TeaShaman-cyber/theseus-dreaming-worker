@@ -1,0 +1,17 @@
+{
+  "schema": { "name": "schema-std", "version": 1 },
+  "dependsOn": [
+    "default:ledger/append-only-proposals",
+    "default:ledger/neon-persistence"
+  ],
+  "implementation": [
+    {
+      "file": "default:src/dreaming/proposal-ledger-postgres.ts",
+      "symbols": ["createPostgresProposalLedger"]
+    },
+    {
+      "file": "default:infra/postgres/dw_ledger_v1.sql",
+      "symbols": []
+    }
+  ]
+}

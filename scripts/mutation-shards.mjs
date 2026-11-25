@@ -59,9 +59,11 @@ export const MUTATION_SHARDS = Object.freeze({
   ledger: Object.freeze({
     mutate: Object.freeze([
       'src/dreaming/proposal-ledger.ts',
+      'src/dreaming/proposal-ledger-postgres.ts',
     ]),
     tests: Object.freeze([
       'test/proposal-ledger.test.mjs',
+      'test/proposal-ledger-postgres.test.mjs',
     ]),
   }),
   observability: Object.freeze({

@@ -1,0 +1,114 @@
+{
+  "title": "PostgreSQL Ledger Storage Adapter",
+  "description": "Persist validated append-only proposal-ledger events through the existing Cloudflare Hyperdrive/PostgreSQL boundary while preserving the in-memory ledger contract.\n\nThe current Cloudflare/Neon resource set is a development/test environment. Cloudflare CLI `production` mode names a technical deploy mode only and is not evidence of a real production deployment.",
+  "context": [
+    "Persist validated append-only proposal-ledger events through the existing Cloudflare Hyperdrive/PostgreSQL boundary while preserving the in-memory ledger contract.\n\nThe current Cloudflare/Neon resource set is a development/test environment. Cloudflare CLI `production` mode names a technical deploy mode only and is not evidence of a real production deployment."
+  ],
+  "rules": [
+    {
+      "requirement": "Connection boundary",
+      "rules": [
+        "The adapter receives the existing Hyperdrive PostgreSQL connection string. It does not receive a Neon control-plane API key and does not create database resources.\n\nA fresh `pg.Client` is created for each adapter operation. Hyperdrive owns connection pooling."
+      ]
+    },
+    {
+      "requirement": "Append behavior",
+      "rules": [
+        "Before insert, append acquires one transaction-scoped advisory lock, reads and revalidates persisted ledger history, and applies the existing `appendLedgerEvent` contract to the candidate event.\n\nOnly after validation succeeds does the adapter issue a parameterized `INSERT`. There is no UPDATE or DELETE method.\n\nOn any validation or database error the transaction is rolled back and the client is closed."
+      ]
+    },
+    {
+      "requirement": "Read behavior",
+      "rules": [
+        "Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.\n\nPersisted rows therefore do not gain authority merely by being stored in PostgreSQL."
+      ]
+    },
+    {
+      "requirement": "QA layers",
+      "rules": [
+        "Fast unit tests use a small client fake for SQL mapping, rollback, cleanup and validation boundaries.\n\nHosted Heavy PostgreSQL starts the PostgreSQL 18 service already present on the current GitHub runner, replays the migration twice, verifies grants/FKs/shared sequence, and exercises the real adapter.\n\nNeon schema-only preview remains a separate provider-specific compatibility check."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "requirement": "Writes preserve append-only validation",
+      "name": "Append an event",
+      "when": [
+        "an event is appended"
+      ],
+      "then": [
+        "current persisted history is read under the transaction lock",
+        "AND the existing ledger validator accepts the candidate before INSERT",
+        "AND SQL values are parameterized"
+      ]
+    },
+    {
+      "requirement": "Failed writes leave no partial event",
+      "name": "Validation or insert fails",
+      "when": [
+        "validation or INSERT fails"
+      ],
+      "then": [
+        "the transaction rolls back",
+        "AND the database client closes"
+      ]
+    },
+    {
+      "requirement": "Read order is exact across event types",
+      "name": "Read mixed events",
+      "then": [
+        "both ledger tables use one shared event_seq",
+        "AND reads return events in ascending global event sequence"
+      ]
+    },
+    {
+      "requirement": "Database rows are not automatically trusted",
+      "name": "Read invalid persisted data",
+      "when": [
+        "a stored row has invalid content-addressed identity or violates ledger graph rules"
+      ],
+      "then": [
+        "read fails closed through the existing ledger validator"
+      ]
+    },
+    {
+      "requirement": "Hosted PostgreSQL validates real behavior",
+      "name": "Run the hosted database contract",
+      "then": [
+        "GitHub-hosted PostgreSQL 18 applies the migration twice",
+        "AND verifies least-privilege runtime grants",
+        "AND exercises the real adapter using the runtime role"
+      ]
+    },
+    {
+      "requirement": "Connection and transaction boundaries are independently verified",
+      "name": "Construct the default client",
+      "given": [
+        "an explicitly supplied synthetic connection string"
+      ],
+      "when": [
+        "the default adapter client is created"
+      ],
+      "then": [
+        "its actual connection parameters match the supplied string without contacting a live service"
+      ]
+    },
+    {
+      "requirement": "Connection and transaction boundaries are independently verified",
+      "name": "Transaction order and invalid rows",
+      "when": [
+        "append executes or a required persisted field is null"
+      ],
+      "then": [
+        "BEGIN precedes lock, read and INSERT, and COMMIT follows INSERT",
+        "AND a null required field reports the offending field and fails closed"
+      ]
+    }
+  ],
+  "contentHashes": {
+    "spec.md": "sha256:c5b3e4bb70198637af20f3cb31d7a4408438d38ef08fab093c01efd85824213a",
+    "verify.md": "sha256:fe277bf236862d7f3a859f30e5eda19bd0a033ba43e25f6dbe7251f1cc3481b5"
+  },
+  "generatedBy": "core"
+}

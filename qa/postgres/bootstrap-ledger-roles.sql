@@ -1,0 +1,18 @@
+\set ON_ERROR_STOP on
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dreaming_issue23_owner') THEN
+    CREATE ROLE dreaming_issue23_owner
+      NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+      NOINHERIT NOREPLICATION NOBYPASSRLS;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dw_runtime_issue23') THEN
+    CREATE ROLE dw_runtime_issue23
+      LOGIN PASSWORD 'runtime-test'
+      NOSUPERUSER NOCREATEDB NOCREATEROLE
+      NOINHERIT NOREPLICATION NOBYPASSRLS;
+  END IF;
+END
+$$;

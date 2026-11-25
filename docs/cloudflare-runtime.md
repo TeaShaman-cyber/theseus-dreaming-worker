@@ -1,5 +1,7 @@
 # Cloudflare target runtime readiness and pre-operational acceptance
 
+> Environment terminology: the current Cloudflare/Neon resources are a development/test environment. Cloudflare's technical deployment mode named `production` does not mean the Theseus project is a real production service.
+
 Issue: #23. Architecture authority: TeaShaman-cyber/theseus-research#127.
 
 This repository has two deliberately different runtime surfaces:

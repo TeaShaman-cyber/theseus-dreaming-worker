@@ -6,6 +6,8 @@ DECLARE
   proposal_table constant text := 'dw_ledger.proposal_records';
   supersession_table constant text := 'dw_ledger.supersession_events';
   fk_count integer;
+  proposal_seq_default text;
+  supersession_seq_default text;
 BEGIN
   IF to_regclass(proposal_table) IS NULL OR to_regclass(supersession_table) IS NULL THEN
     RAISE EXCEPTION 'DW_LEDGER_TABLE_MISSING';
@@ -42,6 +44,35 @@ BEGIN
 
   IF fk_count <> 2 THEN
     RAISE EXCEPTION 'DW_LEDGER_SUPERSESSION_FK_COUNT_INVALID: %', fk_count;
+  END IF;
+
+  IF to_regclass('dw_ledger.event_seq') IS NULL THEN
+    RAISE EXCEPTION 'DW_LEDGER_EVENT_SEQUENCE_MISSING';
+  END IF;
+
+  SELECT pg_get_expr(d.adbin, d.adrelid)
+  INTO proposal_seq_default
+  FROM pg_attrdef d
+  JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
+  WHERE d.adrelid = 'dw_ledger.proposal_records'::regclass
+    AND a.attname = 'event_seq';
+
+  SELECT pg_get_expr(d.adbin, d.adrelid)
+  INTO supersession_seq_default
+  FROM pg_attrdef d
+  JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
+  WHERE d.adrelid = 'dw_ledger.supersession_events'::regclass
+    AND a.attname = 'event_seq';
+
+  IF proposal_seq_default IS NULL
+     OR supersession_seq_default IS NULL
+     OR proposal_seq_default NOT LIKE '%dw_ledger.event_seq%'
+     OR supersession_seq_default NOT LIKE '%dw_ledger.event_seq%' THEN
+    RAISE EXCEPTION 'DW_LEDGER_SHARED_EVENT_SEQUENCE_INVALID';
+  END IF;
+
+  IF NOT has_sequence_privilege(runtime_role, 'dw_ledger.event_seq', 'USAGE') THEN
+    RAISE EXCEPTION 'DW_LEDGER_RUNTIME_SEQUENCE_USAGE_MISSING';
   END IF;
 
   IF has_schema_privilege('public', 'dw_ledger', 'USAGE')

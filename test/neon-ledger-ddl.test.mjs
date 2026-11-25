@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const sql = readFileSync(new URL('../infra/postgres/dw_ledger_v1.sql', import.meta.url), 'utf8');
+const verifySql = readFileSync(new URL('../infra/postgres/verify_dw_ledger_v1.sql', import.meta.url), 'utf8');
 
 test('ledger DDL uses a dedicated schema and never creates ledger tables in Mastra schema', () => {
   assert.match(sql, /CREATE SCHEMA IF NOT EXISTS dw_ledger/i);
@@ -31,4 +32,18 @@ test('runtime ledger grants are append-only and schema-bounded', () => {
 test('ledger event ids and proposal fingerprints retain sha256 wire shape', () => {
   const shaCheckCount = (sql.match(/\^sha256:\[0-9a-f\]\{64\}\$/g) ?? []).length;
   assert.ok(shaCheckCount >= 3);
+});
+
+
+test('proposal and supersession tables share one global event sequence', () => {
+  assert.match(sql, /CREATE SEQUENCE IF NOT EXISTS dw_ledger\.event_seq/i);
+  const defaults = sql.match(/event_seq\s+bigint\s+NOT NULL\s+DEFAULT nextval\('dw_ledger\.event_seq'/gi) ?? [];
+  assert.equal(defaults.length, 2);
+});
+
+
+test('ledger verifier rejects missing shared sequence defaults fail-closed', () => {
+  assert.match(verifySql, /proposal_seq_default IS NULL/i);
+  assert.match(verifySql, /supersession_seq_default IS NULL/i);
+  assert.match(verifySql, /DW_LEDGER_SHARED_EVENT_SEQUENCE_INVALID/);
 });
