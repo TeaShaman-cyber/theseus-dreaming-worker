@@ -28,6 +28,7 @@ const required = [
   'tools/dev/check',
   'tools/dev/specd-check',
   'tools/specd/install',
+  'tools/specd/check-changes.py',
   'tools/specd/package.json',
   'tools/specd/package-lock.json',
   'tools/ci/build-check',

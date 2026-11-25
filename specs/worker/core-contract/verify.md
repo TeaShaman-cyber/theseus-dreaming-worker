@@ -54,6 +54,28 @@
 - **WHEN** the worker constructs its runtime receipt
 - **THEN** runtime facts come from controlled invocation/readback rather than model prose
 
+### Requirement: Deterministic sufficiency precedes additional model work
+
+#### Scenario: Known-format complete output is recoverable
+
+- **GIVEN** a complete artifact whose format has a lossless deterministic mapping
+- **WHEN** the recovery path is evaluated
+- **THEN** the result is validated without secondary inference
+
+#### Scenario: Missing or ambiguous semantic information
+
+- **GIVEN** an incomplete, semantically invalid or ambiguously attributed artifact
+- **WHEN** recovery is considered
+- **THEN** no invented evidence or content is accepted
+- **AND** unresolved information remains explicit
+
+#### Scenario: An additional model stage is proposed
+
+- **GIVEN** a proposed durable additional inference stage
+- **WHEN** its acceptance is reviewed
+- **THEN** the unresolved task, baseline limitation, comparative evidence and bounded call policy are linked to this requirement
+- **AND** absence of incremental-value evidence prevents acceptance of the additional stage
+
 ### Requirement: Failure and cost boundaries are explicit
 
 #### Scenario: One provider fails during a multi-model run
