@@ -1,5 +1,7 @@
 # Verification: Pilot 2 — Live Provider Composition
 
+## Requirements
+
 ### Requirement: Live composition preserves the pure Pilot 2 contract
 
 #### Scenario: Two explicit configured-distinct routes are composed

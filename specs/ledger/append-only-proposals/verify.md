@@ -1,5 +1,7 @@
 # Verification: Append-only Proposal Ledger
 
+## Requirements
+
 ### Requirement: History is append-only
 
 #### Scenario: A newer proposal supersedes an older one

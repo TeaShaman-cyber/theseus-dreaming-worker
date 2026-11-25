@@ -4,7 +4,9 @@
 
 Persist the already-defined append-only proposal ledger in the existing Dreaming Worker Neon boundary without coupling ledger history to Session Search shard storage or Mastra internal tables.
 
-## Physical boundary
+## Requirements
+
+### Requirement: Physical boundary
 
 The intended durable boundary is the existing issue-owned Dreaming Worker Neon project/database:
 
@@ -15,7 +17,7 @@ The intended durable boundary is the existing issue-owned Dreaming Worker Neon p
 
 `dw_ledger` MUST remain separate from `dw_issue23`. Session Search shard projects and the Session Search feedback store are separate ownership surfaces and MUST NOT be reused for Dreaming Worker ledger tables.
 
-## Tables
+### Requirement: Tables
 
 `proposal_records` stores immutable Proposal v1 records with exact proposal, route and source/provenance fingerprints.
 
@@ -23,7 +25,7 @@ The intended durable boundary is the existing issue-owned Dreaming Worker Neon p
 
 Database persistence does not replace application-ledger validation. The application contract remains responsible for content-addressed ID recomputation, exact Proposal v1 fingerprint verification and supersession-cycle detection before insert.
 
-## Runtime authority
+### Requirement: Runtime authority
 
 The existing Hyperdrive runtime role `dw_runtime_issue23` may receive:
 
@@ -35,7 +37,7 @@ It MUST NOT receive `CREATE`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES` or `T
 
 Every persisted ledger record remains `DERIVED_ONLY`. PostgreSQL persistence does not promote a hypothesis into source truth, memory, instruction or permission.
 
-## Session Search read boundary
+### Requirement: Session Search read boundary
 
 The future ChatGPT-facing route should remain inside the Session Search product surface while preserving authority separation:
 
