@@ -1,0 +1,5 @@
+interface:
+  display_name: Mastra Builder Usage
+  short_description: Operate our agent laboratory
+policy:
+  allow_implicit_invocation: true
