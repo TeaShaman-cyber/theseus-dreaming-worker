@@ -6,7 +6,9 @@ This layer performs exactly one bounded critique-model call over an already froz
 
 It does not change Pilot 2 first-pass artifacts, does not retrieve new evidence, and does not decide truth. The returned critique remains `DERIVED_ONLY` and is accepted only after deterministic `parseCritiqueArtifact` validation.
 
-## Input
+## Requirements
+
+### Requirement: Input
 
 - one `CritiqueInput` built from a frozen Pilot 2 `COMPLETE` or `PARTIAL` result;
 - one explicit provider route with id, provider, model, model-family, base URL, timeout, output-token bound, and optional runtime bearer credential.
@@ -15,7 +17,7 @@ The model receives only the supplied critique input. No tools, memory, retrieval
 
 Wire-level OpenAI-compatible HTTP/SSE execution is delegated to the shared provider transport used by the existing provider adapter. This layer owns only critique-specific prompt construction, transport-code mapping, deterministic artifact validation, and the critique receipt. Provider-specific/model semantics MUST NOT be moved into the shared transport.
 
-## Model-facing contract
+### Requirement: Model-facing contract
 
 The system prompt MUST embed `critiqueArtifactJsonSchema`, generated from the same Zod contract used by `parseCritiqueArtifact`.
 
@@ -25,7 +27,7 @@ The critic MUST be instructed to:
 - use only supplied proposal/evidence references;
 - keep authority exactly `DERIVED_ONLY`.
 
-## Execution bounds
+### Requirement: Execution bounds
 
 One invocation performs at most one external critique-model call.
 
@@ -33,13 +35,13 @@ The route MUST provide a positive integer `maxOutputTokens`. Timeout is bounded 
 
 There are no retries in this increment.
 
-## Failure semantics
+### Requirement: Failure semantics
 
 Transport and analytical validity remain distinct. The live layer preserves typed failures for rate limiting, timeout with unknown provider state, empty final content, output-budget exhaustion, ordinary HTTP failure, malformed transport response, invalid critique JSON/schema, and invented proposal/evidence references.
 
 Free prose or structurally invalid model output is not partial success.
 
-## Receipt
+### Requirement: Receipt
 
 The outer receipt records configured route identity separately from observed provider/model metadata, explicit bounds, one attempted external call, and zero tools, memory, and canonical writes.
 

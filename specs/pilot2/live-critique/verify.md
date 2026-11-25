@@ -1,5 +1,7 @@
 # Verification: Pilot 2 — Bounded Live Critique
 
+## Requirements
+
 ### Requirement: Exactly one bounded call
 
 #### Scenario: Critique succeeds

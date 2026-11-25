@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+CLI=tools/specd/node_modules/.bin/specd
+test -x "$CLI" || { echo 'SpecD QA toolchain missing: run ./tools/specd/install' >&2; exit 1; }
+test "$("$CLI" --version)" = 0.2.0
+node -e 'if (require("./tools/specd/node_modules/@specd/schema-std/package.json").version !== "0.1.1") process.exit(1)'
+"$CLI" --config specd.yaml spec validate --all

@@ -1,5 +1,7 @@
 # Verification: Pilot 2 — Bounded Critique Contract
 
+## Requirements
+
 ### Requirement: Frozen first-pass artifacts remain the source of critique references
 
 #### Scenario: Pilot 2 has two valid perspectives

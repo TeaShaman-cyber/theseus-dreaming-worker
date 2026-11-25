@@ -26,6 +26,10 @@ const required = [
   'docs/observability.md',
   'docs/exe-dev-remote-mcp.md',
   'tools/dev/check',
+  'tools/dev/specd-check',
+  'tools/specd/install',
+  'tools/specd/package.json',
+  'tools/specd/package-lock.json',
   'tools/ci/build-check',
   'tools/ci/mutation-test',
   'tools/reverse_trace/check_current.py',
@@ -90,6 +94,11 @@ for (const path of tracked) {
 const qaWorkflow = readFileSync('.github/workflows/qa.yml', 'utf8');
 if (!qaWorkflow.includes('./tools/dev/check')) {
   throw new Error('REPO_VERIFY_FAIL CI does not call tools/dev/check');
+}
+
+const devCheck = readFileSync('tools/dev/check', 'utf8');
+if (!devCheck.split('\n').includes('./tools/dev/specd-check') || !qaWorkflow.includes('run: ./tools/specd/install')) {
+  throw new Error('REPO_VERIFY_FAIL missing unconditional SpecD QA wiring');
 }
 
 const mutationWorkflow = readFileSync('.github/workflows/mutation.yml', 'utf8');

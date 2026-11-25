@@ -1,0 +1,8 @@
+{
+  "name": "theseus-dreaming-worker-specd-qa",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "@specd/cli": "0.2.0"
+  }
+}
