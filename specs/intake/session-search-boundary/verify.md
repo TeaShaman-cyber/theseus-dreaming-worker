@@ -68,6 +68,20 @@
 - **WHEN** the adapter validates them
 - **THEN** no work is prepared
 
+### Requirement: Exact source batch acknowledgement candidate
+
+#### Scenario: Exact verified completions
+
+- **GIVEN** the complete synthetic selected set with exact bounded evidence and independently verified work completions
+- **WHEN** the receipt builder derives a candidate
+- **THEN** it binds all source and completion identities without evidence text or checkpoint mutation
+
+#### Scenario: Incomplete or inconsistent work
+
+- **GIVEN** missing, duplicate, extra, removed, unusable or incomplete work
+- **WHEN** the builder attempts preparation
+- **THEN** it returns no acknowledgement candidate
+
 ### Requirement: Checkpoint advances only after bounded success
 
 #### Scenario: Evidence is read but provider analysis fails

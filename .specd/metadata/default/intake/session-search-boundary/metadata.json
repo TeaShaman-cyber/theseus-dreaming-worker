@@ -45,6 +45,12 @@
       ]
     },
     {
+      "requirement": "Exact source batch acknowledgement candidate",
+      "rules": [
+        "For synthetic recovery the receipt builder MUST derive every work identity from the exact selected session set and verified bounded pages under the same trusted handoff and analysis intent. Missing, duplicate, extra, removed or unusable selections MUST NOT yield an acknowledgement candidate. Every derived work MUST have a verified durable completion whose proposal references match admitted evidence. Unavailable, corrupt or missing completion MUST NOT advance the source checkpoint.\n\nThe receipt MUST bind the expected predecessor, full source handoff, analysis intent, selected work and completion fingerprints, and exact current source witness. Original inference packet identity MUST remain distinct from a later equivalent source witness. The candidate MUST contain no evidence text and MUST NOT invoke inference, write storage or authorize access. A candidate is not durable acknowledgement."
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "rules": [
         "The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.\n\nA timestamp alone is insufficient as the durable checkpoint.\n\nThe checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope."
@@ -187,6 +193,32 @@
       ]
     },
     {
+      "requirement": "Exact source batch acknowledgement candidate",
+      "name": "Exact verified completions",
+      "given": [
+        "the complete synthetic selected set with exact bounded evidence and independently verified work completions"
+      ],
+      "when": [
+        "the receipt builder derives a candidate"
+      ],
+      "then": [
+        "it binds all source and completion identities without evidence text or checkpoint mutation"
+      ]
+    },
+    {
+      "requirement": "Exact source batch acknowledgement candidate",
+      "name": "Incomplete or inconsistent work",
+      "given": [
+        "missing, duplicate, extra, removed, unusable or incomplete work"
+      ],
+      "when": [
+        "the builder attempts preparation"
+      ],
+      "then": [
+        "it returns no acknowledgement candidate"
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "name": "Evidence is read but provider analysis fails",
       "given": [
@@ -284,8 +316,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:4d88f3afe7e528fd0dc9aea27dbf64b0a7137718203cad0f514a74e9b49089ac",
-    "verify.md": "sha256:bfe00014c4356a66997d0d99ec72bb786920521b5c173df9c008352b16390e31"
+    "spec.md": "sha256:6dc85c382fa85b3a8766a9daf5e4f9a86181821f1818f2875fe4b32db7766cf5",
+    "verify.md": "sha256:01f29be8a20d9251b247821d0940e5e566226e335b5bc1536b96d23ee0d827a2"
   },
   "generatedBy": "core"
 }
