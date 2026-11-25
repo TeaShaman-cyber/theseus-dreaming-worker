@@ -124,3 +124,7 @@ lease: no storage, scheduler, automatic retry, actual Session Search reader
 or new data/model authority is introduced. A caller must independently verify
 the accepted-source identity, budget, checkpoint read and atomic commit with
 single-writer exclusion before using this composition in unattended execution.
+
+## License
+
+Project code is licensed under [Apache License 2.0](LICENSE) (SPDX: Apache-2.0). Third-party components retain their applicable licenses and notices.
