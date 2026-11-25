@@ -313,3 +313,23 @@ The PostgreSQL regression covers different staged witnesses, unbound
 completion rejection, exact readback and commit acknowledgement loss.
 It uses synthetic source links; a full cross-generation recovery and
 real source custody policy remain separate acceptance questions.
+
+### Cross-generation recovery regression
+
+`qa/postgres/generate-source-refresh-fixture.py` derives two observations
+from the actual pinned Session Search producer (3b7b536): accepted export,
+bundle verification, rederived membership and selected evidence index.
+The second observation ingests an unrelated synthetic conversation and
+rebuilds the source generation; two original selected sessions retain
+content identity while the selected set expands to four. Page bodies are
+simulated serving from independently verified bundle rows, not live
+reader receipts. The checked-in fixture is synthetic and reproducible
+in structure; timestamps in accepted ledger receipts can vary.
+
+The hosted PostgreSQL contract stages the old plan and completes one
+work, then restarts with the rederived new plan. Mixed old/new pages must
+be rejected; unchanged work is reused, the other three works complete,
+and acknowledgement binds the expanded membership with original plan
+pointers for both generations. No duplicate model calls, real provider
+traffic, local PostgreSQL or live source migration. This verifies the
+consumer recovery boundary, not live cross-generation source transport.

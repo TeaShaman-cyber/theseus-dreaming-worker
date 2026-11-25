@@ -1,0 +1,953 @@
+{
+  "producer_commit": "3b7b5360050cc2ecdcb60f485a657f2b763751e4",
+  "serving": "verified_bundle_rows_simulated_pages",
+  "before": {
+    "candidate": {
+      "schema": "theseus.session-search-recovery-handoff-candidate.v1",
+      "status": "HANDOFF_CANDIDATE",
+      "provider": "chatgpt",
+      "scope": "synthetic:chatgpt",
+      "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+      "delta_contract": "theseus.session-search-rederived-session-delta.v1",
+      "baseline_verification": "rederived_under_current_contract",
+      "previous_membership": {
+        "schema": "theseus.session-search-accepted-membership.v1",
+        "scope": "synthetic:chatgpt",
+        "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+        "verification_level": "projection_consistency",
+        "members": [
+          {
+            "artifact_sha256": "6e917ba99def53840d13d2e8ba4f619a3c8982ef32ded89dc9e66df31d23d4ba",
+            "ledger_sha256": "6a6c64434af2318e20c3d5eca71a2c8c866811e30c7bb6ed13e2da7a56f8b7a8"
+          },
+          {
+            "artifact_sha256": "6f3ec5480f87d9037683826a8e7723a3ec7db76763b9e0e4b25ab028b3cda2b4",
+            "ledger_sha256": "b92a600182f79d2e9fd4bac354c4b74f37e5cb93b9c5314b9a11d34cde0e9bed"
+          },
+          {
+            "artifact_sha256": "7f229094d8e17aaf152ad94e4949334870704927e4ce7cbbe042d5c28c539dae",
+            "ledger_sha256": "b1282015e32bca59926219bb7ca34a287d2f0fc15f381b3bbcb8f637181cc796"
+          }
+        ],
+        "accepted_set_sha256": "b5facc026336b88af02097dbf514f6ed426a0295059f0da6d387e2c63add3c79",
+        "snapshot_sha256": "564c0cb4350ef1194a71741f813ea79737a28b303e824338fb639bacfad556c8"
+      },
+      "current_membership": {
+        "schema": "theseus.session-search-accepted-membership.v1",
+        "scope": "synthetic:chatgpt",
+        "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+        "verification_level": "projection_consistency",
+        "members": [
+          {
+            "artifact_sha256": "29f988fcdfd956317802ea38fcb5e1d84db092ea066d9634e1fbcc59e3f854bb",
+            "ledger_sha256": "ea9ab931a50ffbab34f3ba9f9ea734c3442d564d192ae3cae87532bd449dd666"
+          },
+          {
+            "artifact_sha256": "523e9d5081896155777e29868d882ccef7c4d9ab280bee351ba078ae238f45cd",
+            "ledger_sha256": "30353101855e668aae4e16b2f30ff8b9c67b199395457da675cc01e1577e6d62"
+          },
+          {
+            "artifact_sha256": "6e917ba99def53840d13d2e8ba4f619a3c8982ef32ded89dc9e66df31d23d4ba",
+            "ledger_sha256": "6a6c64434af2318e20c3d5eca71a2c8c866811e30c7bb6ed13e2da7a56f8b7a8"
+          },
+          {
+            "artifact_sha256": "6f3ec5480f87d9037683826a8e7723a3ec7db76763b9e0e4b25ab028b3cda2b4",
+            "ledger_sha256": "b92a600182f79d2e9fd4bac354c4b74f37e5cb93b9c5314b9a11d34cde0e9bed"
+          },
+          {
+            "artifact_sha256": "7f229094d8e17aaf152ad94e4949334870704927e4ce7cbbe042d5c28c539dae",
+            "ledger_sha256": "b1282015e32bca59926219bb7ca34a287d2f0fc15f381b3bbcb8f637181cc796"
+          },
+          {
+            "artifact_sha256": "935a1e50184bb8598e07f9628b71477edc8ea4005dc09e0cd58112fc8ead6266",
+            "ledger_sha256": "cbe27e257c9ec5d34282dbb1dc7601d9e1f8e974dcd4034d31b8168b381780ae"
+          },
+          {
+            "artifact_sha256": "bfef982ee62ff2b2f38c8e97f2006e2b5b7c86934487d0f9b23a77f7f0c8f9f6",
+            "ledger_sha256": "24641ffaea152e25b2852966dbf99fe569706321e748013882d41de7aad9a088"
+          }
+        ],
+        "accepted_set_sha256": "6efece29e0703c5a7287ad0a2a6e006bf830e269670e85061ee360e99a46f935",
+        "snapshot_sha256": "9912795c777dcdce924bd18a410c279fe0906c358d6ae743b79b628375e8d806"
+      },
+      "promotion_receipt_sha256": "a7e121cef11f34cb44cf96df175f7fd41c7a81adc51b682d6e9c37895e519cec",
+      "catalog": [
+        {
+          "shard_id": "chatgpt-0001",
+          "provider": "chatgpt",
+          "generation_id": "e22f3095badd66dd5447de1699ecce05b0b255a228a5aba0f94dd781c2c20df6"
+        },
+        {
+          "shard_id": "chatgpt-0002",
+          "provider": "chatgpt",
+          "generation_id": "2012c7844efcdcf82dda0b960d40c57b9309eae8f5e05e0e2e44d35ca5cb64de"
+        },
+        {
+          "shard_id": "xai-0001",
+          "provider": "xai",
+          "generation_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        }
+      ],
+      "selected": [
+        {
+          "session_id": "changed",
+          "shard_id": "chatgpt-0002",
+          "generation_id": "2012c7844efcdcf82dda0b960d40c57b9309eae8f5e05e0e2e44d35ca5cb64de",
+          "source_manifest_sha256": "78cd64a428001fdd0af1cc497fb887aaacdf247990e7ef2a091295f77b1a363e",
+          "bundle_sha256": "0c53fdb770fc3b130af27a0d97c74004b96dad7c0a696767a53e93b761296ff8",
+          "change": "CHANGED"
+        },
+        {
+          "session_id": "changed~branch-5dd4066adc85",
+          "shard_id": "chatgpt-0001",
+          "generation_id": "e22f3095badd66dd5447de1699ecce05b0b255a228a5aba0f94dd781c2c20df6",
+          "source_manifest_sha256": "6162cf84abcce7ce1d558bd57b8cbe033e7e8c69c655772795a96ae0642e93ab",
+          "bundle_sha256": "faf848ad9467071905d97c3d47a45eac2340b12bf95ef2f01e65e7999aef49b0",
+          "change": "ADDED"
+        }
+      ],
+      "removed": [],
+      "checkpoint_advanced": false,
+      "candidate_sha256": "ef9cfc7a235f5153990fb43df97b8a351a69bfde34ae02f11aafdf3c042f81bb"
+    },
+    "expected": {
+      "provider": "chatgpt",
+      "scope": "synthetic:chatgpt",
+      "previousSnapshotSha256": "564c0cb4350ef1194a71741f813ea79737a28b303e824338fb639bacfad556c8",
+      "catalog": [
+        {
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0001",
+          "generation_id": "e22f3095badd66dd5447de1699ecce05b0b255a228a5aba0f94dd781c2c20df6",
+          "state": "READY"
+        },
+        {
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0002",
+          "generation_id": "2012c7844efcdcf82dda0b960d40c57b9309eae8f5e05e0e2e44d35ca5cb64de",
+          "state": "READY"
+        },
+        {
+          "provider": "xai",
+          "shard_id": "xai-0001",
+          "generation_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "state": "READY"
+        }
+      ]
+    },
+    "entries": [
+      {
+        "sessionId": "changed",
+        "index": {
+          "schema": "theseus.session-search-source-evidence-index.v1",
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0002",
+          "generation_id": "2012c7844efcdcf82dda0b960d40c57b9309eae8f5e05e0e2e44d35ca5cb64de",
+          "source_manifest_sha256": "78cd64a428001fdd0af1cc497fb887aaacdf247990e7ef2a091295f77b1a363e",
+          "membership_snapshot_sha256": "9912795c777dcdce924bd18a410c279fe0906c358d6ae743b79b628375e8d806",
+          "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+          "sessions": [
+            {
+              "session_id": "changed",
+              "title": "Synthetic ChatGPT",
+              "coverage_state": "PARTIAL_SESSION_SLICE",
+              "messages": [
+                {
+                  "ordinal": 0,
+                  "message_id": "m-u",
+                  "role": "user",
+                  "search_class": "dialogue",
+                  "create_time": 10.0,
+                  "text_sha256": "1f5087db919ced5c123c7f507d3fcce818cb0cf6e77c2f95a8a35e951e03fdb9",
+                  "canonical_message_sha256": "e84a5e4141cb114b9479e661efecd3fe825a33de1ff24290ac28f0661d1b3db1",
+                  "sources": [
+                    {
+                      "artifact_sha256": "29f988fcdfd956317802ea38fcb5e1d84db092ea066d9634e1fbcc59e3f854bb",
+                      "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                      "page_position": 0,
+                      "source_message_id": "m-u",
+                      "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                    }
+                  ]
+                },
+                {
+                  "ordinal": 1,
+                  "message_id": "m-a",
+                  "role": "assistant",
+                  "search_class": "dialogue",
+                  "create_time": 20.0,
+                  "text_sha256": "63992b1ee060a416f2830d955e143153382fc4e6672b983758b37ac23d71a14c",
+                  "canonical_message_sha256": "0099108e3a83dd9f51c57ab12fe25ea35aca9d2ccb6dac4b4c92424c54e10223",
+                  "sources": [
+                    {
+                      "artifact_sha256": "29f988fcdfd956317802ea38fcb5e1d84db092ea066d9634e1fbcc59e3f854bb",
+                      "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                      "page_position": 1,
+                      "source_message_id": "m-a",
+                      "source_object_sha256": "16b7451059f80c7e70b540a7f60bfa5744546a6591303cf733daf8b245e785b7"
+                    }
+                  ]
+                }
+              ],
+              "content_sha256": "d91e6b36536b493b68dc735901c0c3e25209415a8aef83943692c91930d23c28"
+            }
+          ]
+        },
+        "pages": [
+          {
+            "status": "OK",
+            "provider": "chatgpt",
+            "shard_id": "chatgpt-0002",
+            "generation_id": "2012c7844efcdcf82dda0b960d40c57b9309eae8f5e05e0e2e44d35ca5cb64de",
+            "session_id": "changed",
+            "session_title": "Synthetic ChatGPT",
+            "session_coverage": "PARTIAL_SESSION_SLICE",
+            "generation_binding": "router_pinned_v1",
+            "messages": [
+              {
+                "ordinal": 0,
+                "message_id": "m-u",
+                "role": "user",
+                "search_class": "dialogue",
+                "create_time": 10.0,
+                "text": "question",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              },
+              {
+                "ordinal": 1,
+                "message_id": "m-a",
+                "role": "assistant",
+                "search_class": "dialogue",
+                "create_time": 20.0,
+                "text": "answer A",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              }
+            ],
+            "has_more": false,
+            "next_position": null,
+            "next_cursor": null,
+            "coverage_complete": false,
+            "queried_shards": [
+              "chatgpt-0002"
+            ],
+            "unavailable_shards": []
+          }
+        ]
+      },
+      {
+        "sessionId": "changed~branch-5dd4066adc85",
+        "index": {
+          "schema": "theseus.session-search-source-evidence-index.v1",
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0001",
+          "generation_id": "e22f3095badd66dd5447de1699ecce05b0b255a228a5aba0f94dd781c2c20df6",
+          "source_manifest_sha256": "6162cf84abcce7ce1d558bd57b8cbe033e7e8c69c655772795a96ae0642e93ab",
+          "membership_snapshot_sha256": "9912795c777dcdce924bd18a410c279fe0906c358d6ae743b79b628375e8d806",
+          "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+          "sessions": [
+            {
+              "session_id": "changed~branch-5dd4066adc85",
+              "title": "Synthetic ChatGPT",
+              "coverage_state": "PARTIAL_SESSION_SLICE",
+              "messages": [
+                {
+                  "ordinal": 0,
+                  "message_id": "m-u",
+                  "role": "user",
+                  "search_class": "dialogue",
+                  "create_time": 10.0,
+                  "text_sha256": "1f5087db919ced5c123c7f507d3fcce818cb0cf6e77c2f95a8a35e951e03fdb9",
+                  "canonical_message_sha256": "e84a5e4141cb114b9479e661efecd3fe825a33de1ff24290ac28f0661d1b3db1",
+                  "sources": [
+                    {
+                      "artifact_sha256": "523e9d5081896155777e29868d882ccef7c4d9ab280bee351ba078ae238f45cd",
+                      "member_name": "optional/conversation-chatgpt-changed~branch-5dd4066adc85-e10375156e96.bin",
+                      "page_position": 0,
+                      "source_message_id": "m-u",
+                      "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                    },
+                    {
+                      "artifact_sha256": "7f229094d8e17aaf152ad94e4949334870704927e4ce7cbbe042d5c28c539dae",
+                      "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                      "page_position": 0,
+                      "source_message_id": "m-u",
+                      "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                    }
+                  ]
+                },
+                {
+                  "ordinal": 1,
+                  "message_id": "m-b",
+                  "role": "assistant",
+                  "search_class": "dialogue",
+                  "create_time": 30.0,
+                  "text_sha256": "cd7079c4057e3d19d9143037d56b9c538604fe0a0e89c2c0a97054960e01ab8c",
+                  "canonical_message_sha256": "e09659c85b7e3a51214b01b1e300f3c36dc46dd41e2a381cf7c69a4716cb25ec",
+                  "sources": [
+                    {
+                      "artifact_sha256": "523e9d5081896155777e29868d882ccef7c4d9ab280bee351ba078ae238f45cd",
+                      "member_name": "optional/conversation-chatgpt-changed~branch-5dd4066adc85-e10375156e96.bin",
+                      "page_position": 1,
+                      "source_message_id": "m-b",
+                      "source_object_sha256": "0b04664c125c7411f417fc958ea38fb573683983cd9fa57d1709be84d35784c6"
+                    },
+                    {
+                      "artifact_sha256": "7f229094d8e17aaf152ad94e4949334870704927e4ce7cbbe042d5c28c539dae",
+                      "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                      "page_position": 1,
+                      "source_message_id": "m-b",
+                      "source_object_sha256": "0b04664c125c7411f417fc958ea38fb573683983cd9fa57d1709be84d35784c6"
+                    }
+                  ]
+                }
+              ],
+              "content_sha256": "8d37d037e74081737eec8865e9236f3c4445f9cb72a83437933a2b895de2981b"
+            }
+          ]
+        },
+        "pages": [
+          {
+            "status": "OK",
+            "provider": "chatgpt",
+            "shard_id": "chatgpt-0001",
+            "generation_id": "e22f3095badd66dd5447de1699ecce05b0b255a228a5aba0f94dd781c2c20df6",
+            "session_id": "changed~branch-5dd4066adc85",
+            "session_title": "Synthetic ChatGPT",
+            "session_coverage": "PARTIAL_SESSION_SLICE",
+            "generation_binding": "router_pinned_v1",
+            "messages": [
+              {
+                "ordinal": 0,
+                "message_id": "m-u",
+                "role": "user",
+                "search_class": "dialogue",
+                "create_time": 10.0,
+                "text": "question",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              },
+              {
+                "ordinal": 1,
+                "message_id": "m-b",
+                "role": "assistant",
+                "search_class": "dialogue",
+                "create_time": 30.0,
+                "text": "answer B",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              }
+            ],
+            "has_more": false,
+            "next_position": null,
+            "next_cursor": null,
+            "coverage_complete": false,
+            "queried_shards": [
+              "chatgpt-0001"
+            ],
+            "unavailable_shards": []
+          }
+        ]
+      }
+    ]
+  },
+  "after": {
+    "candidate": {
+      "schema": "theseus.session-search-recovery-handoff-candidate.v1",
+      "status": "HANDOFF_CANDIDATE",
+      "provider": "chatgpt",
+      "scope": "synthetic:chatgpt",
+      "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+      "delta_contract": "theseus.session-search-rederived-session-delta.v1",
+      "baseline_verification": "rederived_under_current_contract",
+      "previous_membership": {
+        "schema": "theseus.session-search-accepted-membership.v1",
+        "scope": "synthetic:chatgpt",
+        "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+        "verification_level": "projection_consistency",
+        "members": [
+          {
+            "artifact_sha256": "6e917ba99def53840d13d2e8ba4f619a3c8982ef32ded89dc9e66df31d23d4ba",
+            "ledger_sha256": "6a6c64434af2318e20c3d5eca71a2c8c866811e30c7bb6ed13e2da7a56f8b7a8"
+          },
+          {
+            "artifact_sha256": "6f3ec5480f87d9037683826a8e7723a3ec7db76763b9e0e4b25ab028b3cda2b4",
+            "ledger_sha256": "b92a600182f79d2e9fd4bac354c4b74f37e5cb93b9c5314b9a11d34cde0e9bed"
+          },
+          {
+            "artifact_sha256": "7f229094d8e17aaf152ad94e4949334870704927e4ce7cbbe042d5c28c539dae",
+            "ledger_sha256": "b1282015e32bca59926219bb7ca34a287d2f0fc15f381b3bbcb8f637181cc796"
+          }
+        ],
+        "accepted_set_sha256": "b5facc026336b88af02097dbf514f6ed426a0295059f0da6d387e2c63add3c79",
+        "snapshot_sha256": "564c0cb4350ef1194a71741f813ea79737a28b303e824338fb639bacfad556c8"
+      },
+      "current_membership": {
+        "schema": "theseus.session-search-accepted-membership.v1",
+        "scope": "synthetic:chatgpt",
+        "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+        "verification_level": "projection_consistency",
+        "members": [
+          {
+            "artifact_sha256": "29f988fcdfd956317802ea38fcb5e1d84db092ea066d9634e1fbcc59e3f854bb",
+            "ledger_sha256": "ea9ab931a50ffbab34f3ba9f9ea734c3442d564d192ae3cae87532bd449dd666"
+          },
+          {
+            "artifact_sha256": "523e9d5081896155777e29868d882ccef7c4d9ab280bee351ba078ae238f45cd",
+            "ledger_sha256": "30353101855e668aae4e16b2f30ff8b9c67b199395457da675cc01e1577e6d62"
+          },
+          {
+            "artifact_sha256": "6e917ba99def53840d13d2e8ba4f619a3c8982ef32ded89dc9e66df31d23d4ba",
+            "ledger_sha256": "6a6c64434af2318e20c3d5eca71a2c8c866811e30c7bb6ed13e2da7a56f8b7a8"
+          },
+          {
+            "artifact_sha256": "6f3ec5480f87d9037683826a8e7723a3ec7db76763b9e0e4b25ab028b3cda2b4",
+            "ledger_sha256": "b92a600182f79d2e9fd4bac354c4b74f37e5cb93b9c5314b9a11d34cde0e9bed"
+          },
+          {
+            "artifact_sha256": "7f229094d8e17aaf152ad94e4949334870704927e4ce7cbbe042d5c28c539dae",
+            "ledger_sha256": "b1282015e32bca59926219bb7ca34a287d2f0fc15f381b3bbcb8f637181cc796"
+          },
+          {
+            "artifact_sha256": "935a1e50184bb8598e07f9628b71477edc8ea4005dc09e0cd58112fc8ead6266",
+            "ledger_sha256": "cbe27e257c9ec5d34282dbb1dc7601d9e1f8e974dcd4034d31b8168b381780ae"
+          },
+          {
+            "artifact_sha256": "a6b8603e752700f0cd6746fa32df019df50021c8f8c4fd1837f4c8d367d3f663",
+            "ledger_sha256": "3dd0e37946d1c3b3c341028baae3ef51798fb613422559c804bc27020e659ed3"
+          },
+          {
+            "artifact_sha256": "bfef982ee62ff2b2f38c8e97f2006e2b5b7c86934487d0f9b23a77f7f0c8f9f6",
+            "ledger_sha256": "24641ffaea152e25b2852966dbf99fe569706321e748013882d41de7aad9a088"
+          },
+          {
+            "artifact_sha256": "dce965647e77ff7df675148e715b68dbff654a33fefda96719f4d14aa5e1e3e9",
+            "ledger_sha256": "fe1fb795e5263bf5e9b2b24986c4b3843bda19985264f3d6d628a743867f96d5"
+          }
+        ],
+        "accepted_set_sha256": "b819a7d879a7ac767d7a4a2cd7c8d1cdb3edfa58635b1cdede729aeac7bd208b",
+        "snapshot_sha256": "795a1aedecbdd7ffff6d28ee92b76d75e7f54eea129e12a0396e9e4b96c033a6"
+      },
+      "promotion_receipt_sha256": "231090d873b62e3fc734b7918c6a26e9ada9a98b7ff97588181d37da1720d565",
+      "catalog": [
+        {
+          "shard_id": "chatgpt-0001",
+          "provider": "chatgpt",
+          "generation_id": "e550fc65cafa8b8b48f407e94fb6d0c60de884f43d447e8197d20c93c2b73ce2"
+        },
+        {
+          "shard_id": "chatgpt-0002",
+          "provider": "chatgpt",
+          "generation_id": "8bc34dc029df35a209226028b8e8129984b315937968492d99714d86dfd2702b"
+        },
+        {
+          "shard_id": "chatgpt-0003",
+          "provider": "chatgpt",
+          "generation_id": "def0f77c0806eab8da459581a1e392e0dbff873df9e8be8c49392aed997cba0e"
+        },
+        {
+          "shard_id": "xai-0001",
+          "provider": "xai",
+          "generation_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        }
+      ],
+      "selected": [
+        {
+          "session_id": "changed",
+          "shard_id": "chatgpt-0002",
+          "generation_id": "8bc34dc029df35a209226028b8e8129984b315937968492d99714d86dfd2702b",
+          "source_manifest_sha256": "22004f6df9567b7415c2cc18bbedc9eddec84e25cc6e1a025d4a3e929ad696f6",
+          "bundle_sha256": "3af94656262e4697ac0a94acc900d439e5be51a6056900bd71e207a7e73facce",
+          "change": "CHANGED"
+        },
+        {
+          "session_id": "changed~branch-5dd4066adc85",
+          "shard_id": "chatgpt-0001",
+          "generation_id": "e550fc65cafa8b8b48f407e94fb6d0c60de884f43d447e8197d20c93c2b73ce2",
+          "source_manifest_sha256": "c671d07440b862630b779f69e5916dd61df6a2a8d6ec436b5cdfcae134d25cb2",
+          "bundle_sha256": "9921d1bd51febd5a661b17e19b48b4bd42ba54802488074d59fd77485eed98f4",
+          "change": "ADDED"
+        },
+        {
+          "session_id": "unrelated-refresh",
+          "shard_id": "chatgpt-0003",
+          "generation_id": "def0f77c0806eab8da459581a1e392e0dbff873df9e8be8c49392aed997cba0e",
+          "source_manifest_sha256": "ba82a8f940d72c727d0fe3165a8a2ff23de6710b04aec328e92a20d9e1971fe0",
+          "bundle_sha256": "312cf893148b152341b6dc693e160f2f256b246439b4bd70b49dedf75bbab50c",
+          "change": "ADDED"
+        },
+        {
+          "session_id": "unrelated-refresh~branch-5dd4066adc85",
+          "shard_id": "chatgpt-0003",
+          "generation_id": "def0f77c0806eab8da459581a1e392e0dbff873df9e8be8c49392aed997cba0e",
+          "source_manifest_sha256": "ba82a8f940d72c727d0fe3165a8a2ff23de6710b04aec328e92a20d9e1971fe0",
+          "bundle_sha256": "312cf893148b152341b6dc693e160f2f256b246439b4bd70b49dedf75bbab50c",
+          "change": "ADDED"
+        }
+      ],
+      "removed": [],
+      "checkpoint_advanced": false,
+      "candidate_sha256": "b47d73119bd6f2e6b9e05f2abf84ab9b5e79b88c212d72e581f289f505596203"
+    },
+    "expected": {
+      "provider": "chatgpt",
+      "scope": "synthetic:chatgpt",
+      "previousSnapshotSha256": "564c0cb4350ef1194a71741f813ea79737a28b303e824338fb639bacfad556c8",
+      "catalog": [
+        {
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0001",
+          "generation_id": "e550fc65cafa8b8b48f407e94fb6d0c60de884f43d447e8197d20c93c2b73ce2",
+          "state": "READY"
+        },
+        {
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0002",
+          "generation_id": "8bc34dc029df35a209226028b8e8129984b315937968492d99714d86dfd2702b",
+          "state": "READY"
+        },
+        {
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0003",
+          "generation_id": "def0f77c0806eab8da459581a1e392e0dbff873df9e8be8c49392aed997cba0e",
+          "state": "READY"
+        },
+        {
+          "provider": "xai",
+          "shard_id": "xai-0001",
+          "generation_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "state": "READY"
+        }
+      ]
+    },
+    "entries": [
+      {
+        "sessionId": "changed",
+        "index": {
+          "schema": "theseus.session-search-source-evidence-index.v1",
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0002",
+          "generation_id": "8bc34dc029df35a209226028b8e8129984b315937968492d99714d86dfd2702b",
+          "source_manifest_sha256": "22004f6df9567b7415c2cc18bbedc9eddec84e25cc6e1a025d4a3e929ad696f6",
+          "membership_snapshot_sha256": "795a1aedecbdd7ffff6d28ee92b76d75e7f54eea129e12a0396e9e4b96c033a6",
+          "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+          "sessions": [
+            {
+              "session_id": "changed",
+              "title": "Synthetic ChatGPT",
+              "coverage_state": "PARTIAL_SESSION_SLICE",
+              "messages": [
+                {
+                  "ordinal": 0,
+                  "message_id": "m-u",
+                  "role": "user",
+                  "search_class": "dialogue",
+                  "create_time": 10.0,
+                  "text_sha256": "1f5087db919ced5c123c7f507d3fcce818cb0cf6e77c2f95a8a35e951e03fdb9",
+                  "canonical_message_sha256": "e84a5e4141cb114b9479e661efecd3fe825a33de1ff24290ac28f0661d1b3db1",
+                  "sources": [
+                    {
+                      "artifact_sha256": "29f988fcdfd956317802ea38fcb5e1d84db092ea066d9634e1fbcc59e3f854bb",
+                      "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                      "page_position": 0,
+                      "source_message_id": "m-u",
+                      "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                    }
+                  ]
+                },
+                {
+                  "ordinal": 1,
+                  "message_id": "m-a",
+                  "role": "assistant",
+                  "search_class": "dialogue",
+                  "create_time": 20.0,
+                  "text_sha256": "63992b1ee060a416f2830d955e143153382fc4e6672b983758b37ac23d71a14c",
+                  "canonical_message_sha256": "0099108e3a83dd9f51c57ab12fe25ea35aca9d2ccb6dac4b4c92424c54e10223",
+                  "sources": [
+                    {
+                      "artifact_sha256": "29f988fcdfd956317802ea38fcb5e1d84db092ea066d9634e1fbcc59e3f854bb",
+                      "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                      "page_position": 1,
+                      "source_message_id": "m-a",
+                      "source_object_sha256": "16b7451059f80c7e70b540a7f60bfa5744546a6591303cf733daf8b245e785b7"
+                    }
+                  ]
+                }
+              ],
+              "content_sha256": "d91e6b36536b493b68dc735901c0c3e25209415a8aef83943692c91930d23c28"
+            }
+          ]
+        },
+        "pages": [
+          {
+            "status": "OK",
+            "provider": "chatgpt",
+            "shard_id": "chatgpt-0002",
+            "generation_id": "8bc34dc029df35a209226028b8e8129984b315937968492d99714d86dfd2702b",
+            "session_id": "changed",
+            "session_title": "Synthetic ChatGPT",
+            "session_coverage": "PARTIAL_SESSION_SLICE",
+            "generation_binding": "router_pinned_v1",
+            "messages": [
+              {
+                "ordinal": 0,
+                "message_id": "m-u",
+                "role": "user",
+                "search_class": "dialogue",
+                "create_time": 10.0,
+                "text": "question",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              },
+              {
+                "ordinal": 1,
+                "message_id": "m-a",
+                "role": "assistant",
+                "search_class": "dialogue",
+                "create_time": 20.0,
+                "text": "answer A",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              }
+            ],
+            "has_more": false,
+            "next_position": null,
+            "next_cursor": null,
+            "coverage_complete": false,
+            "queried_shards": [
+              "chatgpt-0002"
+            ],
+            "unavailable_shards": []
+          }
+        ]
+      },
+      {
+        "sessionId": "changed~branch-5dd4066adc85",
+        "index": {
+          "schema": "theseus.session-search-source-evidence-index.v1",
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0001",
+          "generation_id": "e550fc65cafa8b8b48f407e94fb6d0c60de884f43d447e8197d20c93c2b73ce2",
+          "source_manifest_sha256": "c671d07440b862630b779f69e5916dd61df6a2a8d6ec436b5cdfcae134d25cb2",
+          "membership_snapshot_sha256": "795a1aedecbdd7ffff6d28ee92b76d75e7f54eea129e12a0396e9e4b96c033a6",
+          "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+          "sessions": [
+            {
+              "session_id": "changed~branch-5dd4066adc85",
+              "title": "Synthetic ChatGPT",
+              "coverage_state": "PARTIAL_SESSION_SLICE",
+              "messages": [
+                {
+                  "ordinal": 0,
+                  "message_id": "m-u",
+                  "role": "user",
+                  "search_class": "dialogue",
+                  "create_time": 10.0,
+                  "text_sha256": "1f5087db919ced5c123c7f507d3fcce818cb0cf6e77c2f95a8a35e951e03fdb9",
+                  "canonical_message_sha256": "e84a5e4141cb114b9479e661efecd3fe825a33de1ff24290ac28f0661d1b3db1",
+                  "sources": [
+                    {
+                      "artifact_sha256": "523e9d5081896155777e29868d882ccef7c4d9ab280bee351ba078ae238f45cd",
+                      "member_name": "optional/conversation-chatgpt-changed~branch-5dd4066adc85-e10375156e96.bin",
+                      "page_position": 0,
+                      "source_message_id": "m-u",
+                      "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                    },
+                    {
+                      "artifact_sha256": "7f229094d8e17aaf152ad94e4949334870704927e4ce7cbbe042d5c28c539dae",
+                      "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                      "page_position": 0,
+                      "source_message_id": "m-u",
+                      "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                    }
+                  ]
+                },
+                {
+                  "ordinal": 1,
+                  "message_id": "m-b",
+                  "role": "assistant",
+                  "search_class": "dialogue",
+                  "create_time": 30.0,
+                  "text_sha256": "cd7079c4057e3d19d9143037d56b9c538604fe0a0e89c2c0a97054960e01ab8c",
+                  "canonical_message_sha256": "e09659c85b7e3a51214b01b1e300f3c36dc46dd41e2a381cf7c69a4716cb25ec",
+                  "sources": [
+                    {
+                      "artifact_sha256": "523e9d5081896155777e29868d882ccef7c4d9ab280bee351ba078ae238f45cd",
+                      "member_name": "optional/conversation-chatgpt-changed~branch-5dd4066adc85-e10375156e96.bin",
+                      "page_position": 1,
+                      "source_message_id": "m-b",
+                      "source_object_sha256": "0b04664c125c7411f417fc958ea38fb573683983cd9fa57d1709be84d35784c6"
+                    },
+                    {
+                      "artifact_sha256": "7f229094d8e17aaf152ad94e4949334870704927e4ce7cbbe042d5c28c539dae",
+                      "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                      "page_position": 1,
+                      "source_message_id": "m-b",
+                      "source_object_sha256": "0b04664c125c7411f417fc958ea38fb573683983cd9fa57d1709be84d35784c6"
+                    }
+                  ]
+                }
+              ],
+              "content_sha256": "8d37d037e74081737eec8865e9236f3c4445f9cb72a83437933a2b895de2981b"
+            }
+          ]
+        },
+        "pages": [
+          {
+            "status": "OK",
+            "provider": "chatgpt",
+            "shard_id": "chatgpt-0001",
+            "generation_id": "e550fc65cafa8b8b48f407e94fb6d0c60de884f43d447e8197d20c93c2b73ce2",
+            "session_id": "changed~branch-5dd4066adc85",
+            "session_title": "Synthetic ChatGPT",
+            "session_coverage": "PARTIAL_SESSION_SLICE",
+            "generation_binding": "router_pinned_v1",
+            "messages": [
+              {
+                "ordinal": 0,
+                "message_id": "m-u",
+                "role": "user",
+                "search_class": "dialogue",
+                "create_time": 10.0,
+                "text": "question",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              },
+              {
+                "ordinal": 1,
+                "message_id": "m-b",
+                "role": "assistant",
+                "search_class": "dialogue",
+                "create_time": 30.0,
+                "text": "answer B",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              }
+            ],
+            "has_more": false,
+            "next_position": null,
+            "next_cursor": null,
+            "coverage_complete": false,
+            "queried_shards": [
+              "chatgpt-0001"
+            ],
+            "unavailable_shards": []
+          }
+        ]
+      },
+      {
+        "sessionId": "unrelated-refresh",
+        "index": {
+          "schema": "theseus.session-search-source-evidence-index.v1",
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0003",
+          "generation_id": "def0f77c0806eab8da459581a1e392e0dbff873df9e8be8c49392aed997cba0e",
+          "source_manifest_sha256": "ba82a8f940d72c727d0fe3165a8a2ff23de6710b04aec328e92a20d9e1971fe0",
+          "membership_snapshot_sha256": "795a1aedecbdd7ffff6d28ee92b76d75e7f54eea129e12a0396e9e4b96c033a6",
+          "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+          "sessions": [
+            {
+              "session_id": "unrelated-refresh",
+              "title": "Synthetic ChatGPT",
+              "coverage_state": "PARTIAL_SESSION_SLICE",
+              "messages": [
+                {
+                  "ordinal": 0,
+                  "message_id": "m-u",
+                  "role": "user",
+                  "search_class": "dialogue",
+                  "create_time": 10.0,
+                  "text_sha256": "1f5087db919ced5c123c7f507d3fcce818cb0cf6e77c2f95a8a35e951e03fdb9",
+                  "canonical_message_sha256": "e84a5e4141cb114b9479e661efecd3fe825a33de1ff24290ac28f0661d1b3db1",
+                  "sources": [
+                    {
+                      "artifact_sha256": "a6b8603e752700f0cd6746fa32df019df50021c8f8c4fd1837f4c8d367d3f663",
+                      "member_name": "optional/conversation-chatgpt-unrelated-refresh-3e402cfd7475.bin",
+                      "page_position": 0,
+                      "source_message_id": "m-u",
+                      "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                    }
+                  ]
+                },
+                {
+                  "ordinal": 1,
+                  "message_id": "m-a",
+                  "role": "assistant",
+                  "search_class": "dialogue",
+                  "create_time": 20.0,
+                  "text_sha256": "63992b1ee060a416f2830d955e143153382fc4e6672b983758b37ac23d71a14c",
+                  "canonical_message_sha256": "0099108e3a83dd9f51c57ab12fe25ea35aca9d2ccb6dac4b4c92424c54e10223",
+                  "sources": [
+                    {
+                      "artifact_sha256": "a6b8603e752700f0cd6746fa32df019df50021c8f8c4fd1837f4c8d367d3f663",
+                      "member_name": "optional/conversation-chatgpt-unrelated-refresh-3e402cfd7475.bin",
+                      "page_position": 1,
+                      "source_message_id": "m-a",
+                      "source_object_sha256": "16b7451059f80c7e70b540a7f60bfa5744546a6591303cf733daf8b245e785b7"
+                    }
+                  ]
+                }
+              ],
+              "content_sha256": "e80cd019ea552df9fc31e84f31a0a6fa203136e0a1c3b177309a8c1ef6425889"
+            }
+          ]
+        },
+        "pages": [
+          {
+            "status": "OK",
+            "provider": "chatgpt",
+            "shard_id": "chatgpt-0003",
+            "generation_id": "def0f77c0806eab8da459581a1e392e0dbff873df9e8be8c49392aed997cba0e",
+            "session_id": "unrelated-refresh",
+            "session_title": "Synthetic ChatGPT",
+            "session_coverage": "PARTIAL_SESSION_SLICE",
+            "generation_binding": "router_pinned_v1",
+            "messages": [
+              {
+                "ordinal": 0,
+                "message_id": "m-u",
+                "role": "user",
+                "search_class": "dialogue",
+                "create_time": 10.0,
+                "text": "question",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              },
+              {
+                "ordinal": 1,
+                "message_id": "m-a",
+                "role": "assistant",
+                "search_class": "dialogue",
+                "create_time": 20.0,
+                "text": "answer A",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              }
+            ],
+            "has_more": false,
+            "next_position": null,
+            "next_cursor": null,
+            "coverage_complete": false,
+            "queried_shards": [
+              "chatgpt-0003"
+            ],
+            "unavailable_shards": []
+          }
+        ]
+      },
+      {
+        "sessionId": "unrelated-refresh~branch-5dd4066adc85",
+        "index": {
+          "schema": "theseus.session-search-source-evidence-index.v1",
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0003",
+          "generation_id": "def0f77c0806eab8da459581a1e392e0dbff873df9e8be8c49392aed997cba0e",
+          "source_manifest_sha256": "ba82a8f940d72c727d0fe3165a8a2ff23de6710b04aec328e92a20d9e1971fe0",
+          "membership_snapshot_sha256": "795a1aedecbdd7ffff6d28ee92b76d75e7f54eea129e12a0396e9e4b96c033a6",
+          "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+          "sessions": [
+            {
+              "session_id": "unrelated-refresh~branch-5dd4066adc85",
+              "title": "Synthetic ChatGPT",
+              "coverage_state": "PARTIAL_SESSION_SLICE",
+              "messages": [
+                {
+                  "ordinal": 0,
+                  "message_id": "m-u",
+                  "role": "user",
+                  "search_class": "dialogue",
+                  "create_time": 10.0,
+                  "text_sha256": "1f5087db919ced5c123c7f507d3fcce818cb0cf6e77c2f95a8a35e951e03fdb9",
+                  "canonical_message_sha256": "e84a5e4141cb114b9479e661efecd3fe825a33de1ff24290ac28f0661d1b3db1",
+                  "sources": [
+                    {
+                      "artifact_sha256": "dce965647e77ff7df675148e715b68dbff654a33fefda96719f4d14aa5e1e3e9",
+                      "member_name": "optional/conversation-chatgpt-unrelated-refresh~branch-5dd4066adc85-d9fc084efef4.bin",
+                      "page_position": 0,
+                      "source_message_id": "m-u",
+                      "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                    }
+                  ]
+                },
+                {
+                  "ordinal": 1,
+                  "message_id": "m-b",
+                  "role": "assistant",
+                  "search_class": "dialogue",
+                  "create_time": 30.0,
+                  "text_sha256": "cd7079c4057e3d19d9143037d56b9c538604fe0a0e89c2c0a97054960e01ab8c",
+                  "canonical_message_sha256": "e09659c85b7e3a51214b01b1e300f3c36dc46dd41e2a381cf7c69a4716cb25ec",
+                  "sources": [
+                    {
+                      "artifact_sha256": "dce965647e77ff7df675148e715b68dbff654a33fefda96719f4d14aa5e1e3e9",
+                      "member_name": "optional/conversation-chatgpt-unrelated-refresh~branch-5dd4066adc85-d9fc084efef4.bin",
+                      "page_position": 1,
+                      "source_message_id": "m-b",
+                      "source_object_sha256": "0b04664c125c7411f417fc958ea38fb573683983cd9fa57d1709be84d35784c6"
+                    }
+                  ]
+                }
+              ],
+              "content_sha256": "1840cc1df6a85d423a7dd1a0e398c0660d61ce4e98558147f63af51d4deb786b"
+            }
+          ]
+        },
+        "pages": [
+          {
+            "status": "OK",
+            "provider": "chatgpt",
+            "shard_id": "chatgpt-0003",
+            "generation_id": "def0f77c0806eab8da459581a1e392e0dbff873df9e8be8c49392aed997cba0e",
+            "session_id": "unrelated-refresh~branch-5dd4066adc85",
+            "session_title": "Synthetic ChatGPT",
+            "session_coverage": "PARTIAL_SESSION_SLICE",
+            "generation_binding": "router_pinned_v1",
+            "messages": [
+              {
+                "ordinal": 0,
+                "message_id": "m-u",
+                "role": "user",
+                "search_class": "dialogue",
+                "create_time": 10.0,
+                "text": "question",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              },
+              {
+                "ordinal": 1,
+                "message_id": "m-b",
+                "role": "assistant",
+                "search_class": "dialogue",
+                "create_time": 30.0,
+                "text": "answer B",
+                "text_offset": 0,
+                "text_total_chars": 8,
+                "complete_message": true
+              }
+            ],
+            "has_more": false,
+            "next_position": null,
+            "next_cursor": null,
+            "coverage_complete": false,
+            "queried_shards": [
+              "chatgpt-0003"
+            ],
+            "unavailable_shards": []
+          }
+        ]
+      }
+    ]
+  }
+}

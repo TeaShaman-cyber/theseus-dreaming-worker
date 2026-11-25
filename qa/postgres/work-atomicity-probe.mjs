@@ -644,6 +644,53 @@ try {
   console.log('SOURCE_BATCH_STORE_PG_PASS root=explicit partial=blocked fork=blocked replay=verified lost_ack=readback append_only=verified');
   console.log('SOURCE_BATCH_RECEIPT_PG_PASS exact_selected=2 real_completion_readback=true writes=0 extra_inference=0');
   console.log('VERIFIED_SOURCE_BATCH_PG_PASS selected=2 pages=12 partial=blocked missing=blocked duplicate=blocked lineage=readback ack_loss=resolved replay_extra_calls=0 external_calls=0');
+  // Actual SS producer refresh, simulated bounded serving pages, real DW ledger.
+  const refresh = JSON.parse(readFileSync(new URL('../../test/fixtures/source-refresh.json', import.meta.url), 'utf8'));
+  const refreshIntent = { task, analysisVersion: 'cross-generation-v1',
+    maxSessions: 4, bounds: { maxPages: 20, maxChars: 1000, maxMessages: 50 } };
+  const oldArgs = { ...refresh.before, ...refreshIntent, previousCheckpoint: sourceRootKey };
+  const refreshRoot = await sourceStore.initialize(oldArgs);
+  assert.equal(refreshRoot.status, 'ACKNOWLEDGED');
+  oldArgs.previousCheckpoint = refreshRoot.receipt.receiptFingerprint;
+  const oldPlan = await sourceStore.stage(oldArgs);
+  assert.equal(oldPlan.status, 'STAGED');
+  const callsBeforeRefresh = sourceCalls;
+  const firstId = oldArgs.entries[0].sessionId;
+  const firstWork = await sourceStore.runSelected(oldArgs, firstId, sourceRoutes);
+  assert.equal(firstWork.decision, 'COMMITTED');
+  assert.equal((await sourceStore.acknowledge(oldArgs)).status, 'PENDING');
+
+  const newArgs = { ...refresh.after, ...refreshIntent, previousCheckpoint: oldArgs.previousCheckpoint };
+  const restartedAfterRefresh = createPostgresSourceBatchStore({ connectionString });
+  const mixed = structuredClone(newArgs);
+  mixed.entries.find(e => e.sessionId === firstId).pages = oldArgs.entries[0].pages;
+  await assert.rejects(() => restartedAfterRefresh.stage(mixed));
+  assert.equal(sourceCalls, callsBeforeRefresh + 2);
+  const newPlan = await restartedAfterRefresh.stage(newArgs);
+  assert.equal(newPlan.status, 'STAGED');
+  assert.notEqual(newPlan.plan.planFingerprint, oldPlan.plan.planFingerprint);
+  assert.equal(newPlan.plan.work.length, 4);
+  const stable = newPlan.plan.work.find(w => w.witness.session.session_id === firstId);
+  assert.equal(stable.workFingerprint, firstWork.workFingerprint);
+  assert.notEqual(stable.packetId, oldPlan.plan.work.find(w => w.workFingerprint === firstWork.workFingerprint).packetId);
+  assert.notEqual(stable.witness.generation_id, oldPlan.plan.work.find(w => w.workFingerprint === firstWork.workFingerprint).witness.generation_id);
+  assert.equal((await restartedAfterRefresh.runSelected(newArgs, firstId, sourceRoutes)).decision, 'ALREADY_PROCESSED');
+  assert.equal(sourceCalls, callsBeforeRefresh + 2);
+  for (const entry of newArgs.entries.filter(e => e.sessionId !== firstId)) {
+    assert.equal((await restartedAfterRefresh.runSelected(newArgs, entry.sessionId, sourceRoutes)).decision, 'COMMITTED');
+  }
+  const recoveredReceipt = await restartedAfterRefresh.acknowledge(newArgs);
+  assert.equal(recoveredReceipt.status, 'ACKNOWLEDGED');
+  assert.deepEqual(recoveredReceipt.receipt.handoff.current_membership, refresh.after.candidate.current_membership);
+  assert.equal(recoveredReceipt.receipt.currentPlanFingerprint, newPlan.plan.planFingerprint);
+  assert.equal(recoveredReceipt.receipt.origins.length, 4);
+  for (const o of recoveredReceipt.receipt.origins) {
+    assert.equal(o.planFingerprint, o.workFingerprint === firstWork.workFingerprint ? oldPlan.plan.planFingerprint : newPlan.plan.planFingerprint);
+  }
+  assert.deepEqual(await restartedAfterRefresh.readTip(newArgs), recoveredReceipt.receipt);
+  assert.equal((await restartedAfterRefresh.acknowledge(newArgs)).status, 'ALREADY_ACKNOWLEDGED');
+  assert.equal(sourceCalls, callsBeforeRefresh + 8);
+  console.log('SOURCE_REFRESH_RECOVERY_PG_PASS producer=actual serving=simulated old=2 new=4 reused=1 new_work=3 replay_extra_calls=0');
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
 } finally {
   await Promise.allSettled(sourceClients.map(client => client.end()));
