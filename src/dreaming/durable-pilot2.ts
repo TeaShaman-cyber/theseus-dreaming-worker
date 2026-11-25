@@ -61,11 +61,11 @@ export function validateWorkCompletion(raw: unknown): WorkCompletion {
     }
     events = appendLedgerEvent(events, record);
   }
-  if (ids.some(id => !records.some(record => record.origin.perspectiveId === id))) throw Error('WORK_PERSPECTIVE_MISSING');
+  if (new Set(records.map(record => record.origin.perspectiveId)).size !== ids.length) throw Error('WORK_PERSPECTIVE_MISSING');
   return parsed;
 }
 
-async function readVerifiedCompletion(
+export async function readVerifiedCompletion(
   store: Pick<WorkStore, 'readCompletion'>, workFingerprint: string,
 ): Promise<WorkCompletion | null> {
   const raw = await store.readCompletion(workFingerprint);
@@ -111,7 +111,7 @@ export async function recoverDurableCompletion(
   }
 }
 
-function buildCompletion(checkpoint: CheckpointCandidate, analysis: Pilot2Result): WorkCompletion {
+export function buildWorkCompletion(checkpoint: CheckpointCandidate, analysis: Pilot2Result): WorkCompletion {
   if (checkpoint.resultFingerprint !== digest(analysis)) throw Error('WORK_ANALYSIS_MISMATCH');
   const observed = [];
   const records = [];
@@ -190,7 +190,7 @@ export async function runDurablePilot2(
   if (!analyzed.checkpointCandidate || !analyzed.analysis) return result('ANALYSIS_INCOMPLETE');
   let completion: WorkCompletion;
   try {
-    completion = buildCompletion(analyzed.checkpointCandidate, analyzed.analysis);
+    completion = buildWorkCompletion(analyzed.checkpointCandidate, analyzed.analysis);
     completionCandidate = completion;
     recovery = {
       schema: 'theseus.dreaming-worker.completion-recovery.v1',

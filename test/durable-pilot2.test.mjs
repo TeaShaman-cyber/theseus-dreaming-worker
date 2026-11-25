@@ -419,3 +419,45 @@ test('recovery attempts one write and verifies readback even after a commit erro
     assert.deepEqual(recovered.completion, stored);
   }
 });
+
+test('projection validation preserves exact perspective identifiers and canonical metadata', async () => {
+  const valid = await completedFixture();
+  const ids = [valid.checkpoint.workFingerprint + ':pass-1', valid.checkpoint.workFingerprint + ':pass-2'];
+  assert.deepEqual(valid.observed.map(item => item.perspectiveId), ids);
+  assert.deepEqual(valid.records.map(item => item.origin.perspectiveId), ids);
+  for (const field of ['provider', 'model']) {
+    const spaced = structuredClone(valid);
+    spaced.observed[0][field] = ' ' + valid.observed[0][field] + ' ';
+    assert.deepEqual(validateWorkCompletion(spaced), valid);
+    spaced.observed[0][field] = ' ';
+    assert.throws(() => validateWorkCompletion(spaced), error =>
+      error.issues?.some(issue => issue.path.join('.') === 'observed.0.' + field && issue.code === 'too_small'));
+  }
+  for (const value of ['x' + valid.projectionFingerprint, valid.projectionFingerprint + 'x']) {
+    assert.throws(() => validateWorkCompletion({ ...valid, projectionFingerprint: value }), error =>
+      error.issues?.some(issue => issue.path.join('.') === 'projectionFingerprint' && issue.code === 'invalid_format'));
+  }
+  const oneWrong = structuredClone(valid);
+  oneWrong.observed[0].perspectiveId = 'wrong';
+  assert.throws(() => validateWorkCompletion(rehash(oneWrong)), /WORK_PERSPECTIVE_MISMATCH/);
+});
+
+test('pure completion projection rejects mismatched analysis digest and incomplete pass', async () => {
+  const { buildWorkCompletion } = await import('../src/dreaming/durable-pilot2.ts');
+  const { adapters } = routes();
+  const done = await runDurablePilot2(input, adapters, memoryStore());
+  const checkpoint = done.completion.checkpoint;
+  assert.deepEqual(buildWorkCompletion(checkpoint, done.analysis), done.completion);
+  assert.throws(() => buildWorkCompletion({ ...checkpoint, resultFingerprint: 'sha256:' + '0'.repeat(64) }, done.analysis), /WORK_ANALYSIS_MISMATCH/);
+  const failed = await runDurablePilot2(input, routes({ fail: true }).adapters, memoryStore());
+  const hash = 'sha256:' + createHash('sha256').update(JSON.stringify(failed.analysis)).digest('hex');
+  assert.throws(() => buildWorkCompletion({ ...checkpoint, resultFingerprint: hash }, failed.analysis), /WORK_ANALYSIS_INCOMPLETE/);
+});
+
+test('shared verified readback distinguishes wrong work identity from absent result', async () => {
+  const { readVerifiedCompletion } = await import('../src/dreaming/durable-pilot2.ts');
+  const valid = await completedFixture();
+  assert.deepEqual(await readVerifiedCompletion({ readCompletion: async () => valid }, valid.checkpoint.workFingerprint), valid);
+  await assert.rejects(readVerifiedCompletion({ readCompletion: async () => valid }, 'sha256:' + '0'.repeat(64)), /WORK_READBACK_IDENTITY_MISMATCH/);
+  assert.equal(await readVerifiedCompletion({ readCompletion: async () => null }, valid.checkpoint.workFingerprint), null);
+});
