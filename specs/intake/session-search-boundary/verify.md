@@ -35,6 +35,21 @@
 - **WHEN** the worker attempts to form an evidence packet
 - **THEN** intake is rejected as insufficiently provenance-bearing
 
+### Requirement: Recovery handoff candidate validation
+
+#### Scenario: Exact trusted recovery candidate
+
+- **GIVEN** a synthetic source candidate and independently expected predecessor and catalog
+- **WHEN** the consumer validates its wire identity
+- **THEN** the exact candidate is returned with unknown currentness and removals preserved
+- **AND** no inference or checkpoint mutation occurs
+
+#### Scenario: Inconsistent recovery candidate
+
+- **GIVEN** invalid digest, membership, scope, catalog or placement
+- **WHEN** the consumer validates the candidate
+- **THEN** the candidate is rejected even if an inconsistent payload was rehashed
+
 ### Requirement: Checkpoint advances only after bounded success
 
 #### Scenario: Evidence is read but provider analysis fails

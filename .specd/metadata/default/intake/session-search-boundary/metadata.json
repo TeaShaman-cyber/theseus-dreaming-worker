@@ -33,6 +33,12 @@
       ]
     },
     {
+      "requirement": "Recovery handoff candidate validation",
+      "rules": [
+        "Before using a trusted source recovery candidate, the consumer MUST strictly validate its version, canonical digest, both membership receipts, append-only membership, expected previous snapshot, explicit scope/provider, and exact independently supplied complete catalog vector. Selected and removed session identities MUST be ordered, unique and disjoint; each placement MUST match its provider, shard, generation and source manifest identity.\n\nDecoding MUST preserve unknown source currentness and removal obligations, and MUST NOT create evidence text, authorize access, invoke inference or advance a checkpoint. The caller MUST establish source custody and catalog observation independently. A valid digest is not authentication."
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "rules": [
         "The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.\n\nA timestamp alone is insufficient as the durable checkpoint.\n\nThe checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope."
@@ -115,6 +121,33 @@
       ],
       "then": [
         "intake is rejected as insufficiently provenance-bearing"
+      ]
+    },
+    {
+      "requirement": "Recovery handoff candidate validation",
+      "name": "Exact trusted recovery candidate",
+      "given": [
+        "a synthetic source candidate and independently expected predecessor and catalog"
+      ],
+      "when": [
+        "the consumer validates its wire identity"
+      ],
+      "then": [
+        "the exact candidate is returned with unknown currentness and removals preserved",
+        "AND no inference or checkpoint mutation occurs"
+      ]
+    },
+    {
+      "requirement": "Recovery handoff candidate validation",
+      "name": "Inconsistent recovery candidate",
+      "given": [
+        "invalid digest, membership, scope, catalog or placement"
+      ],
+      "when": [
+        "the consumer validates the candidate"
+      ],
+      "then": [
+        "the candidate is rejected even if an inconsistent payload was rehashed"
       ]
     },
     {
@@ -215,8 +248,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:19483701ad12b33c57ab7de848aaf1e13c978f0aa2bf3402d017af0edd7d035a",
-    "verify.md": "sha256:a02d070c17b06d227f77ffe51f9b610aec041d98aab254c03f2412073c6a406a"
+    "spec.md": "sha256:c59c43a29c22cee22b8bc24162a98b0c8067ca6685f39f56177de91aae39702d",
+    "verify.md": "sha256:5b2df6061866c2f0e74eca71b880465fafce5eaaa498ead5d844736b55f2489b"
   },
   "generatedBy": "core"
 }
