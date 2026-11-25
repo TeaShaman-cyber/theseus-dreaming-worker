@@ -66,6 +66,14 @@ A timestamp alone is insufficient as the durable checkpoint.
 
 The checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope.
 
+### Requirement: Checkpoint-aware bounded execution skips unchanged work
+
+A synthetic or publication-safe execution MUST establish an explicit available checkpoint read and a stable work identity before inference. The identity MUST bind accepted-source fingerprint, analysis version and task/scope, and the ordered evidence payload and coverage/currentness; a transient packet ID MUST NOT by itself create new work.
+
+A matching previously committed checkpoint MUST result in zero inference calls. An unavailable checkpoint read, inconsistent or untrusted packet, or empty non-current/incomplete intake MUST NOT be treated as proof of new or absent work. No accepted new evidence MUST result in zero calls.
+
+Only successful completion of both required independent passes with observed normal finish MAY yield a checkpoint candidate. A candidate is not proof of durable commit, source completeness or a concurrency lease. The caller must separately establish durable commit before presenting the candidate as a committed checkpoint.
+
 ### Requirement: Private-data egress is separately authorized
 
 Even after a valid reader exists, sending private conversation evidence to an external model requires a separate provider/data-class authorization and retention/budget review.

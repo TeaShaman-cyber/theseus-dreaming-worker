@@ -107,3 +107,20 @@ Publication-safe receipts are stored at:
 
 Implementation: `src/dreaming/pilot2-critique-live.ts`.
 Contract: `specs/pilot2/live-critique/`.
+
+## Checkpoint-aware Pilot 2 (portable synthetic boundary)
+
+`runCheckpointedPilot2` in `src/dreaming/checkpoint-pilot2.ts` composes the
+existing bounded runner with deterministic admission. It takes an explicitly
+available committed checkpoint (or null), an accepted-source fingerprint and
+an analysis version. Stable work identity binds the ordered evidence payload,
+coverage, scope and task, not the temporary packet ID. An unavailable checkpoint,
+unchanged work or no accepted new evidence causes zero adapter calls.
+Incomplete/unknown empty intake remains distinct from NO_DATA.
+
+Both independent passes must succeed with observed normal finish before a
+checkpoint candidate is returned. This is not a persisted checkpoint or a
+lease: no storage, scheduler, automatic retry, actual Session Search reader
+or new data/model authority is introduced. A caller must independently verify
+the accepted-source identity, budget, checkpoint read and atomic commit with
+single-writer exclusion before using this composition in unattended execution.

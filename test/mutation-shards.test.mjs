@@ -5,6 +5,7 @@ import { MUTATION_SHARDS, getMutationShard } from '../scripts/mutation-shards.mj
 
 test('heavy mutation is split into explicit hosted shards', () => {
   assert.deepEqual(Object.keys(MUTATION_SHARDS).sort(), [
+    'checkpoint',
     'critique',
     'critique-live',
     'ledger',
@@ -14,6 +15,8 @@ test('heavy mutation is split into explicit hosted shards', () => {
     'serializer',
   ]);
 
+  assert.deepEqual(MUTATION_SHARDS.checkpoint.mutate, ['src/dreaming/checkpoint-pilot2.ts']);
+  assert.deepEqual(MUTATION_SHARDS.checkpoint.tests, ['test/checkpoint-pilot2.test.mjs']);
   assert.deepEqual(MUTATION_SHARDS.critique.mutate, [
     'src/dreaming/pilot2-critique.ts',
   ]);
