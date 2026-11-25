@@ -656,8 +656,8 @@ try {
   assert.equal(oldPlan.status, 'STAGED');
   const callsBeforeRefresh = sourceCalls;
   const firstId = oldArgs.entries[0].sessionId;
-  const firstWork = await sourceStore.runSelected(oldArgs, firstId, sourceRoutes);
-  assert.equal(firstWork.decision, 'COMMITTED');
+  const preRefreshWork = await sourceStore.runSelected(oldArgs, firstId, sourceRoutes);
+  assert.equal(preRefreshWork.decision, 'COMMITTED');
   assert.equal((await sourceStore.acknowledge(oldArgs)).status, 'PENDING');
 
   const newArgs = { ...refresh.after, ...refreshIntent, previousCheckpoint: oldArgs.previousCheckpoint };
@@ -671,9 +671,9 @@ try {
   assert.notEqual(newPlan.plan.planFingerprint, oldPlan.plan.planFingerprint);
   assert.equal(newPlan.plan.work.length, 4);
   const stable = newPlan.plan.work.find(w => w.witness.session.session_id === firstId);
-  assert.equal(stable.workFingerprint, firstWork.workFingerprint);
-  assert.notEqual(stable.packetId, oldPlan.plan.work.find(w => w.workFingerprint === firstWork.workFingerprint).packetId);
-  assert.notEqual(stable.witness.generation_id, oldPlan.plan.work.find(w => w.workFingerprint === firstWork.workFingerprint).witness.generation_id);
+  assert.equal(stable.workFingerprint, preRefreshWork.workFingerprint);
+  assert.notEqual(stable.packetId, oldPlan.plan.work.find(w => w.workFingerprint === preRefreshWork.workFingerprint).packetId);
+  assert.notEqual(stable.witness.generation_id, oldPlan.plan.work.find(w => w.workFingerprint === preRefreshWork.workFingerprint).witness.generation_id);
   assert.equal((await restartedAfterRefresh.runSelected(newArgs, firstId, sourceRoutes)).decision, 'ALREADY_PROCESSED');
   assert.equal(sourceCalls, callsBeforeRefresh + 2);
   for (const entry of newArgs.entries.filter(e => e.sessionId !== firstId)) {
@@ -685,7 +685,7 @@ try {
   assert.equal(recoveredReceipt.receipt.currentPlanFingerprint, newPlan.plan.planFingerprint);
   assert.equal(recoveredReceipt.receipt.origins.length, 4);
   for (const o of recoveredReceipt.receipt.origins) {
-    assert.equal(o.planFingerprint, o.workFingerprint === firstWork.workFingerprint ? oldPlan.plan.planFingerprint : newPlan.plan.planFingerprint);
+    assert.equal(o.planFingerprint, o.workFingerprint === preRefreshWork.workFingerprint ? oldPlan.plan.planFingerprint : newPlan.plan.planFingerprint);
   }
   assert.deepEqual(await restartedAfterRefresh.readTip(newArgs), recoveredReceipt.receipt);
   assert.equal((await restartedAfterRefresh.acknowledge(newArgs)).status, 'ALREADY_ACKNOWLEDGED');
