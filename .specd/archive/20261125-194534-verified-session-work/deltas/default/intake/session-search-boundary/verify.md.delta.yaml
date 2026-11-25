@@ -1,0 +1,27 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Recovery handoff candidate validation$'
+  content: |
+    ### Requirement: Verified selected session evidence
+
+    #### Scenario: Exact bounded reader pages
+
+    - **GIVEN** a synthetic selected session with verified source metadata and exact pinned pages
+    - **WHEN** the adapter validates the pages
+    - **THEN** it prepares the existing analysis input with unknown currentness and exact separate source lineage
+    - **AND** no external call or source checkpoint mutation occurs
+
+    #### Scenario: Changed custody or inconsistent retrieval
+
+    - **GIVEN** an unchanged scoped content identity with a different verified generation or source links
+    - **WHEN** the adapter prepares the same analysis intent
+    - **THEN** the existing work identity is unchanged
+
+    - **GIVEN** missing, changed, out-of-order or over-budget pages or conflicting source metadata
+    - **WHEN** the adapter validates them
+    - **THEN** no work is prepared

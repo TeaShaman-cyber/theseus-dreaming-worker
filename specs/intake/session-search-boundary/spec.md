@@ -64,6 +64,12 @@ Before using a trusted source recovery candidate, the consumer MUST strictly val
 
 Decoding MUST preserve unknown source currentness and removal obligations, and MUST NOT create evidence text, authorize access, invoke inference or advance a checkpoint. The caller MUST establish source custody and catalog observation independently. A valid digest is not authentication.
 
+### Requirement: Verified selected session evidence
+
+For a synthetic recovery candidate, the adapter MUST bind trusted source metadata and every retrieved searchable message to one selected session, exact accepted membership, shard and generation. It MUST enforce explicit page and character limits, exact ordered message metadata, uninterrupted offsets, final page and complete message text digests. All source references MUST belong to the accepted membership. Inconsistent, truncated or over-budget retrieval MUST NOT prepare work.
+
+The adapter MUST preserve partial/unknown coverage and exact source lineage separately from the stable scoped content-dependent work identity. Blank messages MUST be accounted for even if not passed to the model. Empty usable evidence MUST NOT invoke inference or advance a checkpoint. A changed generation or archive link alone MUST NOT change the work identity. Decoding trusted inputs is not authentication, authority, durable completion or batch acknowledgement.
+
 ### Requirement: Checkpoint advances only after bounded success
 
 The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.

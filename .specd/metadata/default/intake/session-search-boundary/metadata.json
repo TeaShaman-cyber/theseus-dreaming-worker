@@ -39,6 +39,12 @@
       ]
     },
     {
+      "requirement": "Verified selected session evidence",
+      "rules": [
+        "For a synthetic recovery candidate, the adapter MUST bind trusted source metadata and every retrieved searchable message to one selected session, exact accepted membership, shard and generation. It MUST enforce explicit page and character limits, exact ordered message metadata, uninterrupted offsets, final page and complete message text digests. All source references MUST belong to the accepted membership. Inconsistent, truncated or over-budget retrieval MUST NOT prepare work.\n\nThe adapter MUST preserve partial/unknown coverage and exact source lineage separately from the stable scoped content-dependent work identity. Blank messages MUST be accounted for even if not passed to the model. Empty usable evidence MUST NOT invoke inference or advance a checkpoint. A changed generation or archive link alone MUST NOT change the work identity. Decoding trusted inputs is not authentication, authority, durable completion or batch acknowledgement."
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "rules": [
         "The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.\n\nA timestamp alone is insufficient as the durable checkpoint.\n\nThe checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope."
@@ -151,6 +157,36 @@
       ]
     },
     {
+      "requirement": "Verified selected session evidence",
+      "name": "Exact bounded reader pages",
+      "given": [
+        "a synthetic selected session with verified source metadata and exact pinned pages"
+      ],
+      "when": [
+        "the adapter validates the pages"
+      ],
+      "then": [
+        "it prepares the existing analysis input with unknown currentness and exact separate source lineage",
+        "AND no external call or source checkpoint mutation occurs"
+      ]
+    },
+    {
+      "requirement": "Verified selected session evidence",
+      "name": "Changed custody or inconsistent retrieval",
+      "given": [
+        "an unchanged scoped content identity with a different verified generation or source links",
+        "missing, changed, out-of-order or over-budget pages or conflicting source metadata"
+      ],
+      "when": [
+        "the adapter prepares the same analysis intent",
+        "the adapter validates them"
+      ],
+      "then": [
+        "the existing work identity is unchanged",
+        "no work is prepared"
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "name": "Evidence is read but provider analysis fails",
       "given": [
@@ -248,8 +284,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:c59c43a29c22cee22b8bc24162a98b0c8067ca6685f39f56177de91aae39702d",
-    "verify.md": "sha256:5b2df6061866c2f0e74eca71b880465fafce5eaaa498ead5d844736b55f2489b"
+    "spec.md": "sha256:4d88f3afe7e528fd0dc9aea27dbf64b0a7137718203cad0f514a74e9b49089ac",
+    "verify.md": "sha256:bfe00014c4356a66997d0d99ec72bb786920521b5c173df9c008352b16390e31"
   },
   "generatedBy": "core"
 }
