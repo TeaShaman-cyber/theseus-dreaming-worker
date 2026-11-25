@@ -44,6 +44,28 @@
 - **WHEN** checkpoint persistence is considered
 - **THEN** the checkpoint does not advance over the failed evidence
 
+### Requirement: Checkpoint-aware bounded execution skips unchanged work
+
+#### Scenario: Repeated stable work
+
+- **GIVEN** a previously committed checkpoint for the same accepted source, analysis intent and evidence payload
+- **WHEN** the packet ID changes but the work identity does not
+- **THEN** no inference is invoked
+
+#### Scenario: Intake or checkpoint state is uncertain
+
+- **GIVEN** an unavailable checkpoint, malformed or ambiguous evidence, or no accepted new evidence
+- **WHEN** execution is considered
+- **THEN** no inference is invoked
+- **AND** incomplete empty intake is not reported as proof of source absence
+
+#### Scenario: Bounded execution completes or fails
+
+- **GIVEN** admissible new work
+- **WHEN** both independent passes complete with normal finish
+- **THEN** a candidate checkpoint is returned without persistence
+- **AND** partial, failed or completion-unknown results do not produce a candidate
+
 ### Requirement: Private-data egress is separately authorized
 
 #### Scenario: Read access exists but provider approval does not

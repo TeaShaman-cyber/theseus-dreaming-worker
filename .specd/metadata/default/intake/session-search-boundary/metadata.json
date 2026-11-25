@@ -1,0 +1,222 @@
+{
+  "title": "Session Search Intake Boundary",
+  "description": "This specification defines what must be true before Dreaming Worker may consume real unattended Session Search history.\n\nIt intentionally does not authorize that access.\n\nThe current Session Search query surface is useful evidence retrieval, but it is not proven to be a complete accepted-source delta feed for a scheduled dreaming worker.",
+  "dependsOn": [
+    "default:worker/core-contract"
+  ],
+  "context": [
+    "This specification defines what must be true before Dreaming Worker may consume real unattended Session Search history.\n\nIt intentionally does not authorize that access.\n\nThe current Session Search query surface is useful evidence retrieval, but it is not proven to be a complete accepted-source delta feed for a scheduled dreaming worker."
+  ],
+  "rules": [
+    {
+      "requirement": "Intake authority is explicit",
+      "rules": [
+        "The worker MUST consume only evidence from an explicitly authorized read surface.\n\nA ChatGPT App OAuth session, operator bearer token, broad database credential, or convenient existing integration MUST NOT be silently reused as worker identity."
+      ]
+    },
+    {
+      "requirement": "Query retrieval is not treated as an accepted-source delta feed",
+      "rules": [
+        "The existing Session Search query API MAY support bounded search tasks.\n\nIt MUST NOT be represented as a complete stream of newly accepted history unless an independently verified contract establishes that behavior.\n\nA lexical search miss MUST NOT mean no new accepted source material exists."
+      ]
+    },
+    {
+      "requirement": "Source authority and indexed projection remain separate",
+      "rules": [
+        "Accepted source membership, normalized source evidence, and Session Search materialized/indexed generations are separate claims.\n\nA READY generation proves a serving projection is ready. It does not by itself prove source completeness or enumerate newly accepted artifacts.\n\nA generation-ID change MUST NOT be treated as proof that a new message exists in that shard."
+      ]
+    },
+    {
+      "requirement": "A future delta reader preserves exact provenance",
+      "rules": [
+        "A future unattended reader MUST provide enough information to construct a stable evidence packet with:\n\n- source/accepted-set identity;\n- exact artifact/message/session references as applicable;\n- evidence hashes;\n- shard/generation provenance when indexed evidence is used;\n- explicit coverage/currentness state;\n- explicit gap/partial state;\n- an immutable or reproducible checkpoint identity."
+      ]
+    },
+    {
+      "requirement": "Checkpoint advances only after bounded success",
+      "rules": [
+        "The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.\n\nA timestamp alone is insufficient as the durable checkpoint.\n\nThe checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope."
+      ]
+    },
+    {
+      "requirement": "Checkpoint-aware bounded execution skips unchanged work",
+      "rules": [
+        "A synthetic or publication-safe execution MUST establish an explicit available checkpoint read and a stable work identity before inference. The identity MUST bind accepted-source fingerprint, analysis version and task/scope, and the ordered evidence payload and coverage/currentness; a transient packet ID MUST NOT by itself create new work.\n\nA matching previously committed checkpoint MUST result in zero inference calls. An unavailable checkpoint read, inconsistent or untrusted packet, or empty non-current/incomplete intake MUST NOT be treated as proof of new or absent work. No accepted new evidence MUST result in zero calls.\n\nOnly successful completion of both required independent passes with observed normal finish MAY yield a checkpoint candidate. A candidate is not proof of durable commit, source completeness or a concurrency lease. The caller must separately establish durable commit before presenting the candidate as a committed checkpoint."
+      ]
+    },
+    {
+      "requirement": "Private-data egress is separately authorized",
+      "rules": [
+        "Even after a valid reader exists, sending private conversation evidence to an external model requires a separate provider/data-class authorization and retention/budget review.\n\nRead authority does not imply model-egress authority."
+      ]
+    },
+    {
+      "requirement": "Least privilege is preferred over broad SQL",
+      "rules": [
+        "If a database-facing route is used, it MUST expose the smallest bounded read contract needed by the worker.\n\nDirect arbitrary SQL against one derived search shard MUST NOT be represented as federated or source-complete Session Search evidence."
+      ]
+    },
+    {
+      "requirement": "Intake failure remains visible",
+      "rules": [
+        "Unavailable reader state, stale coverage, partial shards, source/index lag, or unverified currentness MUST remain explicit.\n\nThe worker MUST NOT convert these states into `NO_DATA` or absence claims."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "requirement": "Intake authority is explicit",
+      "name": "App OAuth is the only available credential",
+      "given": [
+        "the only demonstrated read route is a human/App OAuth session"
+      ],
+      "when": [
+        "unattended worker intake is considered"
+      ],
+      "then": [
+        "the route remains unauthorized for the worker",
+        "AND no credential is copied into the worker runtime"
+      ]
+    },
+    {
+      "requirement": "Query retrieval is not treated as an accepted-source delta feed",
+      "name": "Search returns NO_SIGNAL",
+      "given": [
+        "a bounded Session Search query returns no matching text"
+      ],
+      "when": [
+        "the worker decides whether new accepted source material exists"
+      ],
+      "then": [
+        "the search miss is not accepted as proof that no new source material exists"
+      ]
+    },
+    {
+      "requirement": "Source authority and indexed projection remain separate",
+      "name": "A shard generation changes",
+      "given": [
+        "a materialized shard receives a new generation identifier"
+      ],
+      "when": [
+        "the worker evaluates source change"
+      ],
+      "then": [
+        "it does not infer that one new message or conversation was accepted solely from that generation change"
+      ]
+    },
+    {
+      "requirement": "A future delta reader preserves exact provenance",
+      "name": "Reader emits a candidate delta without stable source identity",
+      "given": [
+        "a future reader returns text but no accepted-source identity or reproducible evidence reference"
+      ],
+      "when": [
+        "the worker attempts to form an evidence packet"
+      ],
+      "then": [
+        "intake is rejected as insufficiently provenance-bearing"
+      ]
+    },
+    {
+      "requirement": "Checkpoint advances only after bounded success",
+      "name": "Evidence is read but provider analysis fails",
+      "given": [
+        "a bounded delta was read",
+        "AND required analysis fails before terminal success"
+      ],
+      "when": [
+        "checkpoint persistence is considered"
+      ],
+      "then": [
+        "the checkpoint does not advance over the failed evidence"
+      ]
+    },
+    {
+      "requirement": "Checkpoint-aware bounded execution skips unchanged work",
+      "name": "Repeated stable work",
+      "given": [
+        "a previously committed checkpoint for the same accepted source, analysis intent and evidence payload"
+      ],
+      "when": [
+        "the packet ID changes but the work identity does not"
+      ],
+      "then": [
+        "no inference is invoked"
+      ]
+    },
+    {
+      "requirement": "Checkpoint-aware bounded execution skips unchanged work",
+      "name": "Intake or checkpoint state is uncertain",
+      "given": [
+        "an unavailable checkpoint, malformed or ambiguous evidence, or no accepted new evidence"
+      ],
+      "when": [
+        "execution is considered"
+      ],
+      "then": [
+        "no inference is invoked",
+        "AND incomplete empty intake is not reported as proof of source absence"
+      ]
+    },
+    {
+      "requirement": "Checkpoint-aware bounded execution skips unchanged work",
+      "name": "Bounded execution completes or fails",
+      "given": [
+        "admissible new work"
+      ],
+      "when": [
+        "both independent passes complete with normal finish"
+      ],
+      "then": [
+        "a candidate checkpoint is returned without persistence",
+        "AND partial, failed or completion-unknown results do not produce a candidate"
+      ]
+    },
+    {
+      "requirement": "Private-data egress is separately authorized",
+      "name": "Read access exists but provider approval does not",
+      "given": [
+        "the worker can read private evidence",
+        "AND no explicit provider/data-class egress authorization exists"
+      ],
+      "when": [
+        "analysis is requested"
+      ],
+      "then": [
+        "no external model call is made"
+      ]
+    },
+    {
+      "requirement": "Least privilege is preferred over broad SQL",
+      "name": "One shard database is directly queryable",
+      "given": [
+        "a credential can query one derived shard directly"
+      ],
+      "when": [
+        "the worker reads that shard"
+      ],
+      "then": [
+        "the result is not described as federated or source-complete Session Search evidence"
+      ]
+    },
+    {
+      "requirement": "Intake failure remains visible",
+      "name": "Coverage is partial or currentness is unknown",
+      "given": [
+        "the source/index state is partial, stale, or unknown"
+      ],
+      "when": [
+        "evidence is prepared"
+      ],
+      "then": [
+        "that state survives into the evidence packet",
+        "AND the worker does not turn it into an absence claim"
+      ]
+    }
+  ],
+  "contentHashes": {
+    "spec.md": "sha256:19483701ad12b33c57ab7de848aaf1e13c978f0aa2bf3402d017af0edd7d035a",
+    "verify.md": "sha256:a02d070c17b06d227f77ffe51f9b610aec041d98aab254c03f2412073c6a406a"
+  },
+  "generatedBy": "core"
+}

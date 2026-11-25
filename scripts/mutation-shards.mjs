@@ -22,6 +22,14 @@ export const MUTATION_SHARDS = Object.freeze({
       'test/pilot2-live-composition.test.mjs',
     ]),
   }),
+  checkpoint: Object.freeze({
+    mutate: Object.freeze([
+      'src/dreaming/checkpoint-pilot2.ts',
+    ]),
+    tests: Object.freeze([
+      'test/checkpoint-pilot2.test.mjs',
+    ]),
+  }),
   serializer: Object.freeze({
     mutate: Object.freeze([
       'src/dreaming/serializer-benchmark.ts',
