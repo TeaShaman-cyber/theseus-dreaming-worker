@@ -70,6 +70,12 @@ For a synthetic recovery candidate, the adapter MUST bind trusted source metadat
 
 The adapter MUST preserve partial/unknown coverage and exact source lineage separately from the stable scoped content-dependent work identity. Blank messages MUST be accounted for even if not passed to the model. Empty usable evidence MUST NOT invoke inference or advance a checkpoint. A changed generation or archive link alone MUST NOT change the work identity. Decoding trusted inputs is not authentication, authority, durable completion or batch acknowledgement.
 
+### Requirement: Exact source batch acknowledgement candidate
+
+For synthetic recovery the receipt builder MUST derive every work identity from the exact selected session set and verified bounded pages under the same trusted handoff and analysis intent. Missing, duplicate, extra, removed or unusable selections MUST NOT yield an acknowledgement candidate. Every derived work MUST have a verified durable completion whose proposal references match admitted evidence. Unavailable, corrupt or missing completion MUST NOT advance the source checkpoint.
+
+The receipt MUST bind the expected predecessor, full source handoff, analysis intent, selected work and completion fingerprints, and exact current source witness. Original inference packet identity MUST remain distinct from a later equivalent source witness. The candidate MUST contain no evidence text and MUST NOT invoke inference, write storage or authorize access. A candidate is not durable acknowledgement.
+
 ### Requirement: Checkpoint advances only after bounded success
 
 The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.

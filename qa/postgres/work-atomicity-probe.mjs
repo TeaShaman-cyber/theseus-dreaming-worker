@@ -522,6 +522,18 @@ try {
     assert.equal((await runDurablePilot2(entry.input, sourceRoutes, restarted)).decision, 'ALREADY_PROCESSED');
   }
   assert.equal(sourceCalls, 4);
+  const { prepareSourceBatchReceipt } = await import('../../src/dreaming/source-batch-receipt.ts');
+  const runtimeCandidate = await prepareSourceBatchReceipt({
+    candidate: fixture.candidate, expected: fixture.expected, previousCheckpoint: sourceRootKey,
+    task, analysisVersion, maxSessions: 2, bounds: { maxPages: 20, maxChars: 1000, maxMessages: 50 },
+    entries: fixture.entries.map(e => ({ sessionId: e.session_id, index: e.index, pages: e.pages })),
+  }, restarted);
+  assert.equal(runtimeCandidate.status, 'RECEIPT_CANDIDATE');
+  assert.deepEqual(runtimeCandidate.receipt.handoff, handoff);
+  assert.deepEqual(runtimeCandidate.receipt.work.map(e => e.workFingerprint).sort(), integratedReceipt.work);
+  assert.equal(runtimeCandidate.receipt.checkpointAdvanced, false);
+  assert.equal(sourceCalls, 4);
+  console.log('SOURCE_BATCH_RECEIPT_PG_PASS exact_selected=2 real_completion_readback=true writes=0 extra_inference=0');
   console.log('VERIFIED_SOURCE_BATCH_PG_PASS selected=2 pages=12 partial=blocked missing=blocked duplicate=blocked lineage=readback ack_loss=resolved replay_extra_calls=0 external_calls=0');
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
 } finally {

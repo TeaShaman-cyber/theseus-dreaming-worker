@@ -199,3 +199,27 @@ before a source receipt is published; durable pending-batch custody and
 exact resume semantics still require implementation. The fixture itself
 is restricted to the disposable dreaming_worker_contract database by
 the existing probe schema. No new Neon allocation.
+
+### Portable source-batch receipt builder
+
+`prepareSourceBatchReceipt` derives the exact selected work set itself
+from the trusted recovery candidate and bounded reader pages, rather than
+accepting a caller-provided list of work keys. It validates all selected
+inputs before reading completions, and rejects missing, duplicate, extra,
+removed, blank-only or over-budget work. The caller owns trusted predecessor
+and catalog observation. Missing completion returns PENDING; failed or
+inconsistent readback returns STORAGE_UNKNOWN.
+
+It independently validates completion identities, recomputes the original
+request fingerprint with the stored original packet ID, and checks every
+proposal reference against admitted evidence. A later equivalent source
+witness is not represented as the original inference custody. The receipt
+binds full handoff/membership, predecessor, task/version, exact work and
+completion fingerprints, original packet identity and current witness.
+The digest uses sorted keys in a versioned JS-local encoding. No message
+bodies are stored in the receipt. No write or inference is performed.
+Existing PostgreSQL QA reads actual durable completions through this
+function. Pending batch custody, durable source store/chain enforcement
+and no-work/removal disposition remain open; the predecessor key itself
+must be verified by that store before any acknowledgement. No real intake
+or source permissions are enabled.
