@@ -38,6 +38,12 @@ When a validated complete candidate cannot be confirmed as committed, the truste
 
 Only an observed absent completion MAY permit one transaction using the original reservation correlation and unchanged candidate. Independently verify the result by readback even after an error. Recovery MUST NOT acquire another reservation, invoke inference, change the candidate or take over an unresolved reservation. The envelope is trusted caller custody, not a new authorization mechanism. Lost or incomplete analysis is outside this recovery boundary.
 
+### Requirement: Durable source batch acknowledgement
+
+The synthetic source store MUST initialize a root only explicitly from a trusted predecessor membership. Acknowledgement MUST bind one existing predecessor and its exact membership, provider, scope, task and analysis version. It MUST derive the receipt using the existing verified batch builder and read completions within the existing transaction/lock boundary. No caller-provided work list or receipt may bypass this derivation.
+
+Source checkpoints MUST be append-only with one root and at most one successor per predecessor and chain. A missing or conflicting predecessor, incomplete work, corrupt storage or unresolved removal MUST NOT advance the chain. An ambiguous write MUST be resolved by independent exact readback or remain UNKNOWN. Acknowledgement MUST NOT invoke inference, enable real history access or imply source completeness.
+
 ### Requirement: Read behavior
 
 Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.

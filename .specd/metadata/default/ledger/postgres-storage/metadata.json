@@ -30,6 +30,12 @@
       ]
     },
     {
+      "requirement": "Durable source batch acknowledgement",
+      "rules": [
+        "The synthetic source store MUST initialize a root only explicitly from a trusted predecessor membership. Acknowledgement MUST bind one existing predecessor and its exact membership, provider, scope, task and analysis version. It MUST derive the receipt using the existing verified batch builder and read completions within the existing transaction/lock boundary. No caller-provided work list or receipt may bypass this derivation.\n\nSource checkpoints MUST be append-only with one root and at most one successor per predecessor and chain. A missing or conflicting predecessor, incomplete work, corrupt storage or unresolved removal MUST NOT advance the chain. An ambiguous write MUST be resolved by independent exact readback or remain UNKNOWN. Acknowledgement MUST NOT invoke inference, enable real history access or imply source completeness."
+      ]
+    },
+    {
       "requirement": "Read behavior",
       "rules": [
         "Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.\n\nPersisted rows therefore do not gain authority merely by being stored in PostgreSQL."
@@ -180,11 +186,39 @@
         "an exact matching completion is returned without writing, otherwise state remains unknown",
         "AND malformed candidate and wrong reservation correlation do not create a completion"
       ]
+    },
+    {
+      "requirement": "Durable source batch acknowledgement",
+      "name": "Explicit root and exact successor",
+      "given": [
+        "an explicitly initialized trusted synthetic predecessor and all verified completions"
+      ],
+      "when": [
+        "the source store acknowledges the batch"
+      ],
+      "then": [
+        "exactly one successor is stored and independently read back",
+        "AND replay requires no new inference"
+      ]
+    },
+    {
+      "requirement": "Durable source batch acknowledgement",
+      "name": "Incomplete or conflicting source checkpoint",
+      "given": [
+        "missing predecessor, incompatible membership, incomplete work or a competing successor"
+      ],
+      "when": [
+        "acknowledgement is attempted"
+      ],
+      "then": [
+        "the chain does not advance incorrectly",
+        "AND ambiguous commit is resolved only by exact readback"
+      ]
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:90d5021d0793c5e0e87ba09efc7bab8b4932c7a45ce3cf1c6127e80b867ca8df",
-    "verify.md": "sha256:bc88df28b2d5ea1bbfb52babf9377be24de715392e6cef28ef1d5f85a17dd54a"
+    "spec.md": "sha256:be2c734c6cd8835710d3385e91ac818c5fb1c2d9f9d3df678a841b95c9b1339c",
+    "verify.md": "sha256:27fc47ec8409d6ce6b697e9ef8bce19be1d0ae1c42df1099d3be951e3f169309"
   },
   "generatedBy": "core"
 }

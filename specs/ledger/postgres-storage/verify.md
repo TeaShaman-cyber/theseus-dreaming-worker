@@ -91,3 +91,19 @@
 - **WHEN** recovery reads an existing completion or the read is unavailable
 - **THEN** an exact matching completion is returned without writing, otherwise state remains unknown
 - **AND** malformed candidate and wrong reservation correlation do not create a completion
+
+### Requirement: Durable source batch acknowledgement
+
+#### Scenario: Explicit root and exact successor
+
+- **GIVEN** an explicitly initialized trusted synthetic predecessor and all verified completions
+- **WHEN** the source store acknowledges the batch
+- **THEN** exactly one successor is stored and independently read back
+- **AND** replay requires no new inference
+
+#### Scenario: Incomplete or conflicting source checkpoint
+
+- **GIVEN** missing predecessor, incompatible membership, incomplete work or a competing successor
+- **WHEN** acknowledgement is attempted
+- **THEN** the chain does not advance incorrectly
+- **AND** ambiguous commit is resolved only by exact readback

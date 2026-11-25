@@ -86,7 +86,7 @@ DO $$
 DECLARE
   t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['work_reservations','work_completions','work_membership'] LOOP
+  FOREACH t IN ARRAY ARRAY['work_reservations','work_completions','work_membership','source_checkpoints'] LOOP
     IF to_regclass('dw_ledger.' || t) IS NULL
       OR NOT has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'SELECT')
       OR NOT has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'INSERT')
@@ -96,5 +96,22 @@ BEGIN
     THEN RAISE EXCEPTION 'WORK_TABLE_GRANTS_INVALID: %', t;
     END IF;
   END LOOP;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_index
+    WHERE indrelid='dw_ledger.source_checkpoints'::regclass
+      AND indisunique AND indnullsnotdistinct
+      AND pg_get_indexdef(indexrelid) LIKE '%(chain_id, previous_checkpoint)%'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='dw_ledger.source_checkpoints'::regclass AND contype='f'
+      AND confrelid=conrelid
+      AND pg_get_constraintdef(oid) LIKE 'FOREIGN KEY (chain_id, previous_checkpoint)%'
+  ) THEN RAISE EXCEPTION 'SOURCE_CHECKPOINT_CHAIN_CONSTRAINT_INVALID';
+  END IF;
 END
 $$;

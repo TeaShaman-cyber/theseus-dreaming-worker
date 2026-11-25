@@ -8,7 +8,7 @@ import { pilot1RequestFingerprint } from './pilot1-runner.ts';
 import { sha256Fingerprint } from './proposal-schema.ts';
 
 type SessionInput = Parameters<typeof prepareVerifiedSessionWork>[0];
-type BatchInput = Pick<SessionInput, 'candidate' | 'expected' | 'task' | 'analysisVersion' | 'bounds'> & {
+export type BatchInput = Pick<SessionInput, 'candidate' | 'expected' | 'task' | 'analysisVersion' | 'bounds'> & {
   entries: Pick<SessionInput, 'sessionId' | 'index' | 'pages'>[];
   maxSessions: number;
   previousCheckpoint: string;
@@ -22,6 +22,8 @@ function canonical(value: unknown): string {
   }
   return JSON.stringify(value);
 }
+
+export const sourceReceiptFingerprint = (payload: unknown) => sha256Fingerprint(canonical(payload));
 
 /** Read-only synthetic receipt preparation. Trusted predecessor and catalog
  * observation are supplied by the caller; no durable source ack is made.
@@ -82,5 +84,5 @@ export async function prepareSourceBatchReceipt(raw: BatchInput, store: Pick<Wor
     checkpointAdvanced: false as const,
   };
   return { status: 'RECEIPT_CANDIDATE' as const,
-    receipt: { ...payload, receiptFingerprint: sha256Fingerprint(canonical(payload)) } };
+    receipt: { ...payload, receiptFingerprint: sourceReceiptFingerprint(payload) } };
 }
