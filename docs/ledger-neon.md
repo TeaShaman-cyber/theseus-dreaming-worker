@@ -333,3 +333,29 @@ and acknowledgement binds the expanded membership with original plan
 pointers for both generations. No duplicate model calls, real provider
 traffic, local PostgreSQL or live source migration. This verifies the
 consumer recovery boundary, not live cross-generation source transport.
+
+### Bounded synthetic batch invocation
+
+The portable runSourceBatch function composes existing source store
+primitives with an explicit attempted-pass budget (0..200), complete
+verified batch input and two independent caller-supplied routes. It
+snapshots inputs and validates the plan and routes before storage access.
+No implicit bootstrap occurs: an absent or incompatible source tip
+blocks. An exact already acknowledged tip is verified again without
+inference. Otherwise stage the exact plan, then process canonical
+selected work in order. Each possible new work requires two remaining
+pass units. Calls through the provided routes are counted and capped;
+known completed work uses zero units. Stop immediately on an uncertain
+or incomplete work; no retry or takeover. When every work is terminal,
+the existing store validates and acknowledges the full batch. A partial
+run leaves the source checkpoint unchanged; the next explicit invocation
+can reuse completed work. The returned summary includes only identities,
+decisions, attempted-pass counts and a verified source receipt, not
+transcript bodies. It is not a scheduler or a provider token/spend
+authorization mechanism.
+
+The fast tests exercise budgeted continuation, exact replay, invalid
+input/route, missing root, mismatched or unavailable staging and unresolved
+reservation. The existing PostgreSQL contract exercises two separate
+two-pass invocations and a zero-budget exact replay. Actual source
+acquisition and real unattended authorization remain out of scope.

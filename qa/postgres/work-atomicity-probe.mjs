@@ -691,6 +691,28 @@ try {
   assert.equal((await restartedAfterRefresh.acknowledge(newArgs)).status, 'ALREADY_ACKNOWLEDGED');
   assert.equal(sourceCalls, callsBeforeRefresh + 8);
   console.log('SOURCE_REFRESH_RECOVERY_PG_PASS producer=actual serving=simulated old=2 new=4 reused=1 new_work=3 replay_extra_calls=0');
+  // The normal bounded composition uses the same durable store, not a second worker.
+  const { runSourceBatch } = await import('../../src/dreaming/source-batch-run.ts');
+  const batchRunInput = { ...oldArgs, analysisVersion: 'bounded-batch-run-v1' };
+  const batchRunRoot = await sourceStore.initialize(batchRunInput);
+  assert.equal(batchRunRoot.status, 'ACKNOWLEDGED');
+  batchRunInput.previousCheckpoint = batchRunRoot.receipt.receiptFingerprint;
+  const batchRunCalls = sourceCalls;
+  const batchRunFirst = await runSourceBatch(batchRunInput, sourceRoutes, sourceStore, 2);
+  assert.equal(batchRunFirst.status, 'BUDGET_EXHAUSTED');
+  assert.equal(batchRunFirst.attemptedPasses, 2);
+  assert.deepEqual(await sourceStore.readTip(batchRunInput), batchRunRoot.receipt);
+  const batchRunRestart = createPostgresSourceBatchStore({ connectionString });
+  const batchRunSecond = await runSourceBatch(batchRunInput, sourceRoutes, batchRunRestart, 2);
+  assert.equal(batchRunSecond.status, 'ACKNOWLEDGED');
+  assert.deepEqual(batchRunSecond.work.map(w => w.decision), ['ALREADY_PROCESSED', 'COMMITTED']);
+  assert.equal(batchRunSecond.attemptedPasses, 2);
+  assert.deepEqual(await batchRunRestart.readTip(batchRunInput), batchRunSecond.receipt);
+  const batchRunReplay = await runSourceBatch(batchRunInput, sourceRoutes, batchRunRestart, 0);
+  assert.equal(batchRunReplay.status, 'ALREADY_ACKNOWLEDGED');
+  assert.deepEqual(batchRunReplay.receipt, batchRunSecond.receipt);
+  assert.equal(sourceCalls, batchRunCalls + 4);
+  console.log('SOURCE_BOUNDED_RUN_PG_PASS budget=2 restart=verified exact_replay=0 partial_checkpoint=unchanged');
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
 } finally {
   await Promise.allSettled(sourceClients.map(client => client.end()));
