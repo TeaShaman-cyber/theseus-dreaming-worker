@@ -11,7 +11,12 @@ printf '%s\n' '== repository contract =='
 node scripts/verify-repo.mjs
 
 printf '%s\n' '== upstream SpecD structural validation =='
+if [ "${GITHUB_ACTIONS:-}" = true ] && [ -z "${SPECD_DIFF_BASE:-}" ]; then
+  echo "SpecD QA requires the exact event base SHA" >&2
+  exit 1
+fi
 ./tools/dev/specd-check
+unset SPECD_DIFF_BASE
 
 printf '%s\n' '== lint =='
 npm run lint

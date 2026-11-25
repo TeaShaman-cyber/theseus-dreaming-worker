@@ -231,3 +231,20 @@ The lane is deliberately narrower than production deployment:
 The workflow is intentionally committed before credential enablement. Creating the project-scoped key, storing it in GitHub, and setting `NEON_PREVIEW_ENABLED=true` are separate permission-bearing actions.
 
 This design follows current Neon guidance for GitHub Actions, schema diff, project-scoped API keys, and schema-only branches rather than installing the default GitHub integration with a broader account/organization key.
+
+### SpecD runtime diff coverage
+
+The required hosted QA supplies the exact PR base (or previous main SHA on
+push). It checks protected runtime changes against fresh native archived
+changes absent from that base. Runtime paths include files in `src/`, `tools/agent/`, `tools/cloudflare/`,
+`config/`, `infra/` (except README.md and AGENTS.md), runtime entrypoint
+scripts and root build/dependency configuration. Renames/deletions cannot disappear
+through rename detection. Native archive status and exact validated design
+file entries are checked in a disposable snapshot of committed Git blobs.
+Existing implementation links constrain the spec scope where available.
+Documentation and test-only diffs do not require an archive. Use native no-op
+deltas for behavior-preserving runtime refactors. Local explicit diff check:
+`SPECD_DIFF_BASE=$(git merge-base HEAD origin/main) ./tools/dev/specd-check`.
+Without an explicit base, local QA checks structure and active change state
+only. Hosted canonical QA fails if its base is missing. Path coverage is not
+proof of semantic adequacy, truthful lifecycle claims, or review acceptance.

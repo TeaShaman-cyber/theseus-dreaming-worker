@@ -29,6 +29,7 @@ const required = [
   'tools/dev/specd-check',
   'tools/specd/install',
   'tools/specd/check-changes.py',
+  'tools/specd/check-diff.py',
   'tools/specd/package.json',
   'tools/specd/package-lock.json',
   'tools/ci/build-check',
@@ -100,6 +101,12 @@ if (!qaWorkflow.includes('./tools/dev/check')) {
 const devCheck = readFileSync('tools/dev/check', 'utf8');
 if (!devCheck.split('\n').includes('./tools/dev/specd-check') || !qaWorkflow.includes('run: ./tools/specd/install')) {
   throw new Error('REPO_VERIFY_FAIL missing unconditional SpecD QA wiring');
+}
+
+const specdCheck = readFileSync('tools/dev/specd-check', 'utf8');
+if (!qaWorkflow.includes('SPECD_DIFF_BASE:') || !devCheck.includes('unset SPECD_DIFF_BASE') ||
+    !specdCheck.includes('python3 tools/specd/check-diff.py "$SPECD_DIFF_BASE"')) {
+  throw new Error('REPO_VERIFY_FAIL missing SpecD diff base wiring');
 }
 
 const mutationWorkflow = readFileSync('.github/workflows/mutation.yml', 'utf8');

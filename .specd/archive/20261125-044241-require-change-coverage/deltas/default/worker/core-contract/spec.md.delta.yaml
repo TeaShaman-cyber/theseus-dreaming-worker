@@ -1,0 +1,2 @@
+- op: no-op
+  description: Existing hybrid core requirement is unchanged; implement QA coverage.
