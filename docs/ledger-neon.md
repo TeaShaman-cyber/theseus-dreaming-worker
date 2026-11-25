@@ -240,9 +240,10 @@ readTip observes the current chain tip, not a grant to access source history.
 The schema and adapter have been exercised on disposable PostgreSQL 16
 using the existing heavy-postgres contract, including partial work,
 wrong predecessor/membership, competing successors, replay and append-only
-grants. The concurrent test injects a COMMIT acknowledgement error on one
-contender but does not force that contender to win; deterministic
-successful-insert acknowledgement-loss coverage remains a review item.
+grants. The concurrent regression now starts the second contender only after the
+first holds the ledger lock, asserts that the first COMMIT succeeded before
+the synthetic acknowledgement error, and checks exact independent readback.
+The hosted heavy-postgres workflow is the acceptance witness.
 Persisted receipt readback checks envelope, chain and digest; it assumes
 trusted ledger writers, not cryptographic authentication of source.
 No runtime migration of Neon, deployment, pending-batch custody,

@@ -562,23 +562,36 @@ try {
   alternate.entries[0].index.sessions[0].messages[0].sources.push({
     ...alternate.entries[0].index.sessions[0].messages[0].sources[0], member_name: 'synthetic-alternate-witness',
   });
+  let commitCount = 0;
+  let signalLock;
+  const lockAcquired = new Promise(resolve => { signalLock = resolve; });
   const lostAckStore = createPostgresSourceBatchStore({ connectionString, clientFactory: url => {
     const client = new Client({ connectionString: url });
     return {
       connect: () => client.connect(), end: () => client.end(),
       query: async (sql, values) => {
         const result = await client.query(sql, values);
-        if (sql === 'COMMIT') throw Error('simulated commit acknowledgement loss');
+        if (sql.includes('pg_advisory_xact_lock')) signalLock();
+        if (sql === 'COMMIT') {
+          commitCount++;
+          throw Error('simulated commit acknowledgement loss');
+        }
         return result;
       },
     };
   } });
-  const race = await Promise.all([lostAckStore.acknowledge(exact), sourceStore.acknowledge(alternate)]);
+  const first = lostAckStore.acknowledge(exact);
+  await Promise.race([lockAcquired, first.then(() => { throw Error('lock was not acquired'); })]);
+  const race = await Promise.all([first, sourceStore.acknowledge(alternate)]);
+  assert.equal(commitCount, 1);
+  assert.equal(race[0].status, 'ACKNOWLEDGED');
+  assert.equal(race[1].status, 'CONFLICT');
   assert.equal(race.filter(r => r.status === 'ACKNOWLEDGED').length, 1);
   assert.equal(race.filter(r => r.status === 'CONFLICT').length, 1);
   const winnerArgs = race[0].status === 'ACKNOWLEDGED' ? exact : alternate;
   const winning = race.find(r => r.status === 'ACKNOWLEDGED');
   assert.deepEqual(await sourceStore.readTip(args), winning.receipt);
+  console.log('SOURCE_BATCH_COMMIT_ACK_LOSS_PASS successful_commit=1 exact_readback=true');
   assert.equal((await sourceStore.acknowledge(winnerArgs)).status, 'ALREADY_ACKNOWLEDGED');
   assert.equal((await sourceStore.acknowledge({ ...winnerArgs, previousCheckpoint: winning.receipt.receiptFingerprint })).status, 'CONFLICT');
   assert.equal(sourceCalls, 4);
