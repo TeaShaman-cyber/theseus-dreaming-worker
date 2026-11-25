@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { Client } from 'pg';
 import { createProposalRecord } from '../../src/dreaming/proposal-ledger.ts';
 import { sha256Fingerprint } from '../../src/dreaming/proposal-schema.ts';
@@ -292,8 +293,13 @@ const { prepareCheckpointedPilot2 } = await import('../../src/dreaming/checkpoin
 const { readVerifiedCompletion } = await import('../../src/dreaming/durable-pilot2.ts');
 const batchScope = 'synthetic:source-checkpoint:v1';
 const rootReceipt = { scope: batchScope, previous: null, acceptedSet: fingerprint('initial-set'), work: [] };
-// Hash an ordered tuple, not JSONB object insertion order.
-const checkpointKey = receipt => fingerprint([receipt.scope, receipt.previous, receipt.acceptedSet, receipt.work]);
+// Hash the entire receipt, not JSONB object insertion order. This is a
+// JS-local fixture encoding, not the Python source wire digest.
+const canonicalReceipt = value => Array.isArray(value) ? '[' + value.map(canonicalReceipt).join(',') + ']'
+  : value !== null && typeof value === 'object'
+    ? '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + canonicalReceipt(value[k])).join(',') + '}'
+    : JSON.stringify(value);
+const checkpointKey = receipt => sha256Fingerprint(canonicalReceipt(receipt));
 const rootKey = checkpointKey(rootReceipt);
 const sourceClient = new Client({ connectionString });
 const peerClient = new Client({ connectionString });
@@ -324,14 +330,14 @@ async function readSuccessor(previous, scope = batchScope) {
   assert.equal(row.checkpoint_fingerprint, checkpointKey(row.receipt));
   return row;
 }
-async function appendCheckpoint(client, candidate, { loseAck = false } = {}) {
+async function appendCheckpoint(client, candidate, { loseAck = false, expectedScope = batchScope } = {}) {
   // Reference only: the caller supplies the complete expected set. Empty
   // batches require an independent non-work proof and are not admitted here.
-  assert.equal(candidate.scope, batchScope);
+  assert.equal(candidate.scope, expectedScope);
   assert.ok(candidate.work.length > 0);
   assert.deepEqual(candidate.work, [...new Set(candidate.work)].sort());
   const key = checkpointKey(candidate);
-  const existing = await readSuccessor(candidate.previous);
+  const existing = await readSuccessor(candidate.previous, expectedScope);
   if (existing) {
     return existing.checkpoint_fingerprint === key ? 'ALREADY_ACKNOWLEDGED' : 'CONFLICT';
   }
@@ -343,7 +349,7 @@ async function appendCheckpoint(client, candidate, { loseAck = false } = {}) {
     [candidate.scope, key, candidate.previous, JSON.stringify(candidate)],
   );
   if (loseAck) throw Error('SIMULATED_BATCH_ACK_LOST');
-  const persisted = await readSuccessor(candidate.previous);
+  const persisted = await readSuccessor(candidate.previous, expectedScope);
   return persisted?.checkpoint_fingerprint === key ? 'ACKNOWLEDGED' : 'CONFLICT';
 }
 try {
@@ -417,6 +423,106 @@ try {
   await assert.rejects(() => appendCheckpoint(sourceClient, orphan), { code: '23503' });
   assert.equal(await readSuccessor(orphan.previous), null);
   assert.equal(calls.length, beforeCalls + 4);
+  // Integrate the actual verified-session adapter, not manually invented work
+  // fingerprints. Fixture recorded from actual SS PG16 router/shard reads.
+  const { prepareVerifiedSessionWork } = await import('../../src/dreaming/verified-session-work.ts');
+  const { decodeSourceHandoff } = await import('../../src/dreaming/source-handoff.ts');
+  const fixture = JSON.parse(readFileSync(new URL('../../test/fixtures/source-reader.json', import.meta.url), 'utf8'));
+  const handoff = decodeSourceHandoff(fixture.candidate, fixture.expected);
+  const scope = handoff.scope + ':batch-reference-v1';
+  const task = 'Analyze synthetic selected session.';
+  const analysisVersion = 'batch-reference-v1';
+  const sourceRoot = { scope, previous: null, acceptedSet: handoff.previous_membership.accepted_set_sha256,
+    work: [], membership: handoff.previous_membership, task, analysisVersion };
+  const sourceRootKey = checkpointKey(sourceRoot);
+  await sourceClient.query(
+    'INSERT INTO dw_work_probe.source_checkpoints (scope,checkpoint_fingerprint,previous_checkpoint,receipt) VALUES ($1,$2,NULL,$3::jsonb)',
+    [scope, sourceRootKey, JSON.stringify(sourceRoot)],
+  );
+  const prepared = fixture.entries.map(entry => {
+    const result = prepareVerifiedSessionWork({
+      candidate: fixture.candidate, expected: fixture.expected, index: entry.index,
+      sessionId: entry.session_id, pages: entry.pages, task, analysisVersion,
+      bounds: { maxPages: 20, maxChars: 1000, maxMessages: 50 },
+    });
+    assert.equal(result.status, 'PREPARED');
+    const { workFingerprint } = prepareCheckpointedPilot2({
+      ...result.input, checkpoint: { status: 'AVAILABLE', committed: null },
+    });
+    return { ...result, workFingerprint };
+  });
+  // Fixture-only composition. No disposition for empty or removed sessions
+  // is invented. Exhaustive selected-set binding precedes any acknowledgement.
+  async function receiptFor(entries) {
+    assert.deepEqual(handoff.removed, []);
+    assert.ok(handoff.selected.length > 0);
+    assert.deepEqual(entries.map(e => e.provenance.session.session_id).sort(),
+      handoff.selected.map(e => e.session_id).sort());
+    const lineage = [];
+    for (const entry of entries) {
+      assert.equal(entry.provenance.candidate_sha256, handoff.candidate_sha256);
+      const completion = await readVerifiedCompletion(store, entry.workFingerprint);
+      if (!completion) return null;
+      const refs = entry.input.request.packet.evidence.map(e => ({
+        source_ref: e.sourceRef, evidence_hash: e.evidenceHash,
+      }));
+      for (const record of completion.records) {
+        assert.deepEqual(record.proposal.source_refs, refs);
+      }
+      lineage.push({ workFingerprint: entry.workFingerprint,
+        completionFingerprint: completion.projectionFingerprint, provenance: entry.provenance });
+    }
+    return { scope, previous: sourceRootKey, acceptedSet: handoff.current_membership.accepted_set_sha256,
+      work: lineage.map(e => e.workFingerprint).sort(), task, analysisVersion, handoff,
+      lineage: lineage.sort((a,b) => a.workFingerprint.localeCompare(b.workFingerprint)) };
+  }
+  let sourceCalls = 0;
+  const sourceRoutes = ['a', 'b'].map(id => ({
+    id, provider: 'synthetic', model: id, modelFamily: id,
+    infer: async request => {
+      sourceCalls++;
+      return { provider: 'synthetic', model: id, finishReason: 'stop',
+        text: JSON.stringify({ schema: 'theseus.dreaming-worker.proposals.v1', proposals: [{
+          type: 'FACT', claim: 'Synthetic selected-session observation.',
+          source_refs: request.packet.evidence.map(e => ({
+            source_ref: e.sourceRef, evidence_hash: e.evidenceHash,
+          })),
+        }] }) };
+    },
+  }));
+  assert.equal(prepared.length, 2);
+  await assert.rejects(() => receiptFor(prepared.slice(0,1)));
+  await assert.rejects(() => receiptFor([prepared[0], prepared[0]]));
+  assert.equal(await receiptFor(prepared), null);
+  assert.equal((await runDurablePilot2(prepared[0].input, sourceRoutes, store)).decision, 'COMMITTED');
+  assert.equal(await receiptFor(prepared), null);
+  assert.equal(await readSuccessor(sourceRootKey, scope), null);
+  // Fresh store instance represents a restarted executor.
+  const restarted = createPostgresWorkStore({ connectionString });
+  assert.equal((await runDurablePilot2(prepared[0].input, sourceRoutes, restarted)).decision, 'ALREADY_PROCESSED');
+  assert.equal(sourceCalls, 2);
+  assert.equal((await runDurablePilot2(prepared[1].input, sourceRoutes, restarted)).decision, 'COMMITTED');
+  const integratedReceipt = await receiptFor(prepared);
+  assert.ok(integratedReceipt);
+  const integratedKey = checkpointKey(integratedReceipt);
+  // A lineage change must affect the entire receipt fingerprint.
+  const tampered = structuredClone(integratedReceipt);
+  tampered.lineage[0].provenance.session.messages[0].sources[0].source_object_sha256 = '0'.repeat(64);
+  assert.notEqual(checkpointKey(tampered), integratedKey);
+  await assert.rejects(() => appendCheckpoint(sourceClient, integratedReceipt, { expectedScope: scope, loseAck: true }),
+    /SIMULATED_BATCH_ACK_LOST/);
+  const storedReceipt = await readSuccessor(sourceRootKey, scope);
+  assert.equal(storedReceipt.checkpoint_fingerprint, integratedKey);
+  assert.deepEqual(storedReceipt.receipt, integratedReceipt);
+  assert.deepEqual(storedReceipt.receipt.handoff.current_membership, handoff.current_membership);
+  assert.ok(storedReceipt.receipt.lineage.every(e => e.provenance.session.messages.every(m =>
+    !Object.hasOwn(m, 'text') && m.sources.length > 0)));
+  assert.equal(await appendCheckpoint(peerClient, integratedReceipt, { expectedScope: scope }), 'ALREADY_ACKNOWLEDGED');
+  for (const entry of prepared) {
+    assert.equal((await runDurablePilot2(entry.input, sourceRoutes, restarted)).decision, 'ALREADY_PROCESSED');
+  }
+  assert.equal(sourceCalls, 4);
+  console.log('VERIFIED_SOURCE_BATCH_PG_PASS selected=2 pages=12 partial=blocked missing=blocked duplicate=blocked lineage=readback ack_loss=resolved replay_extra_calls=0 external_calls=0');
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
 } finally {
   await Promise.allSettled(sourceClients.map(client => client.end()));

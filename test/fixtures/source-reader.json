@@ -1,0 +1,706 @@
+{
+  "candidate": {
+    "schema": "theseus.session-search-recovery-handoff-candidate.v1",
+    "status": "HANDOFF_CANDIDATE",
+    "provider": "chatgpt",
+    "scope": "synthetic:chatgpt",
+    "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+    "delta_contract": "theseus.session-search-rederived-session-delta.v1",
+    "baseline_verification": "rederived_under_current_contract",
+    "previous_membership": {
+      "schema": "theseus.session-search-accepted-membership.v1",
+      "scope": "synthetic:chatgpt",
+      "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+      "verification_level": "projection_consistency",
+      "members": [
+        {
+          "artifact_sha256": "081c8f20fc84dbcc0768a7ff2ebc1b0757e3a7085a8323a56d28128fb0cc5cc3",
+          "ledger_sha256": "0f4de84a2b0ae09c2df1c06d06f4a0e99cf97dc02d4b8095fe78e9da3ee9b445"
+        },
+        {
+          "artifact_sha256": "0d6aee22f77ad76b668e3aa0a8eec3f98d13ee814699461b24419a5203716a8e",
+          "ledger_sha256": "04749a8ef70285e88459e918dadba5acb800108122aeeca8b9af583e1a3e3710"
+        },
+        {
+          "artifact_sha256": "9a24155536d852ecaa5104c7b8b90f72c9315b63afb9588a1ea39580a2b07793",
+          "ledger_sha256": "28c16d0d4616992a3771905c6fd23c8c01937660f5ab21803c57a700f3703b4c"
+        }
+      ],
+      "accepted_set_sha256": "909f88c5eee52aea56c642bea454dadd93aaf471552dc3888a2a80781d94256c",
+      "snapshot_sha256": "f6888d075aa3cae847e10d1eba037f260479486d6fc282e70000997166760e6d"
+    },
+    "current_membership": {
+      "schema": "theseus.session-search-accepted-membership.v1",
+      "scope": "synthetic:chatgpt",
+      "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+      "verification_level": "projection_consistency",
+      "members": [
+        {
+          "artifact_sha256": "081c8f20fc84dbcc0768a7ff2ebc1b0757e3a7085a8323a56d28128fb0cc5cc3",
+          "ledger_sha256": "0f4de84a2b0ae09c2df1c06d06f4a0e99cf97dc02d4b8095fe78e9da3ee9b445"
+        },
+        {
+          "artifact_sha256": "0d6aee22f77ad76b668e3aa0a8eec3f98d13ee814699461b24419a5203716a8e",
+          "ledger_sha256": "04749a8ef70285e88459e918dadba5acb800108122aeeca8b9af583e1a3e3710"
+        },
+        {
+          "artifact_sha256": "3277fe3e990a360853c1faa9bfad3019910bde3fda93d4b02248ac2954dc7158",
+          "ledger_sha256": "3b4ef35b735e8f840d3d974d366ed984df110d287e3ae0a791493070b352d8d6"
+        },
+        {
+          "artifact_sha256": "9a24155536d852ecaa5104c7b8b90f72c9315b63afb9588a1ea39580a2b07793",
+          "ledger_sha256": "28c16d0d4616992a3771905c6fd23c8c01937660f5ab21803c57a700f3703b4c"
+        },
+        {
+          "artifact_sha256": "b8e1b23f9606c1b54a1a867689b8fa66713af287e7827110aaa48ce92eb0109e",
+          "ledger_sha256": "2bbb87fc082646543b3dd612e66aa7968a56e0f28ce8dfe610b13908f1b99991"
+        },
+        {
+          "artifact_sha256": "c04c0b82a59a8c927c966af46876a0b0e72077d907ff382953f012f76a43ca95",
+          "ledger_sha256": "bd887f6809b8cff97526b8559fd43938a860ef3402a26d2ea5d3d609c9eed003"
+        },
+        {
+          "artifact_sha256": "c052f3819e6dcc52cd1e3548aecbc2c1dbad5be6b0ee48e54cb53bc25c4cb038",
+          "ledger_sha256": "de5d57b11f6eeb0b016584177916796080193a048258a818fee2a7b9115997f0"
+        }
+      ],
+      "accepted_set_sha256": "46764b50b05789e82c9c2d82a89b0767226621c1c238ed0ddb8094f4cb6787f1",
+      "snapshot_sha256": "c22a0d911cc7df567b2ef1ca12deaf1f97c1874782d097aa211725cc7fd3ce6c"
+    },
+    "promotion_receipt_sha256": "3a35e24e77dd1830bc84e8e436f81692a85808654e110d6b00def558f7c82a06",
+    "catalog": [
+      {
+        "shard_id": "chatgpt-0001",
+        "provider": "chatgpt",
+        "generation_id": "6e7c6b27f136c853d50ae13a8138de296c7378365b282bf89bbd41bfb152e8d9"
+      },
+      {
+        "shard_id": "chatgpt-0002",
+        "provider": "chatgpt",
+        "generation_id": "5e4e56ee6415341459d5a75d43181b5645739913dc9738f7117462d8e4837c08"
+      },
+      {
+        "shard_id": "xai-0001",
+        "provider": "xai",
+        "generation_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      }
+    ],
+    "selected": [
+      {
+        "session_id": "changed",
+        "shard_id": "chatgpt-0002",
+        "generation_id": "5e4e56ee6415341459d5a75d43181b5645739913dc9738f7117462d8e4837c08",
+        "source_manifest_sha256": "b370f6e86f9faf23924186cf99e44a30ef697fde33829e96bf7d4d88f15a829f",
+        "bundle_sha256": "3140899b49ab05c040bd7eca398a7530b02bb5e56ec796f84fd1608579e28d2e",
+        "change": "CHANGED"
+      },
+      {
+        "session_id": "changed~branch-5dd4066adc85",
+        "shard_id": "chatgpt-0001",
+        "generation_id": "6e7c6b27f136c853d50ae13a8138de296c7378365b282bf89bbd41bfb152e8d9",
+        "source_manifest_sha256": "5f64ea2271d4bb0b8dbafa7575b1940b47c7c21d532895093b19f1b9c609bb61",
+        "bundle_sha256": "139cd01d8c470e17a8fe1b8a3818299aab1dc6d5e7bcb4ba30440ca5d567604c",
+        "change": "ADDED"
+      }
+    ],
+    "removed": [],
+    "checkpoint_advanced": false,
+    "candidate_sha256": "119aed9e598abf2fec5ac4d8416708bf63d86fc1391c3b9c616ff5058b6aa172"
+  },
+  "expected": {
+    "provider": "chatgpt",
+    "scope": "synthetic:chatgpt",
+    "previousSnapshotSha256": "f6888d075aa3cae847e10d1eba037f260479486d6fc282e70000997166760e6d",
+    "catalog": [
+      {
+        "provider": "chatgpt",
+        "shard_id": "chatgpt-0001",
+        "generation_id": "6e7c6b27f136c853d50ae13a8138de296c7378365b282bf89bbd41bfb152e8d9",
+        "state": "READY"
+      },
+      {
+        "provider": "chatgpt",
+        "shard_id": "chatgpt-0002",
+        "generation_id": "5e4e56ee6415341459d5a75d43181b5645739913dc9738f7117462d8e4837c08",
+        "state": "READY"
+      },
+      {
+        "provider": "xai",
+        "shard_id": "xai-0001",
+        "generation_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "state": "READY"
+      }
+    ]
+  },
+  "entries": [
+    {
+      "index": {
+        "schema": "theseus.session-search-source-evidence-index.v1",
+        "provider": "chatgpt",
+        "shard_id": "chatgpt-0001",
+        "generation_id": "6e7c6b27f136c853d50ae13a8138de296c7378365b282bf89bbd41bfb152e8d9",
+        "source_manifest_sha256": "5f64ea2271d4bb0b8dbafa7575b1940b47c7c21d532895093b19f1b9c609bb61",
+        "membership_snapshot_sha256": "c22a0d911cc7df567b2ef1ca12deaf1f97c1874782d097aa211725cc7fd3ce6c",
+        "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+        "sessions": [
+          {
+            "session_id": "changed~branch-5dd4066adc85",
+            "title": "Synthetic ChatGPT",
+            "coverage_state": "PARTIAL_SESSION_SLICE",
+            "messages": [
+              {
+                "ordinal": 0,
+                "message_id": "m-u",
+                "role": "user",
+                "search_class": "dialogue",
+                "create_time": 10.0,
+                "text_sha256": "1f5087db919ced5c123c7f507d3fcce818cb0cf6e77c2f95a8a35e951e03fdb9",
+                "canonical_message_sha256": "e84a5e4141cb114b9479e661efecd3fe825a33de1ff24290ac28f0661d1b3db1",
+                "sources": [
+                  {
+                    "artifact_sha256": "081c8f20fc84dbcc0768a7ff2ebc1b0757e3a7085a8323a56d28128fb0cc5cc3",
+                    "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                    "page_position": 0,
+                    "source_message_id": "m-u",
+                    "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                  },
+                  {
+                    "artifact_sha256": "c052f3819e6dcc52cd1e3548aecbc2c1dbad5be6b0ee48e54cb53bc25c4cb038",
+                    "member_name": "optional/conversation-chatgpt-changed~branch-5dd4066adc85-e10375156e96.bin",
+                    "page_position": 0,
+                    "source_message_id": "m-u",
+                    "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                  }
+                ]
+              },
+              {
+                "ordinal": 1,
+                "message_id": "m-b",
+                "role": "assistant",
+                "search_class": "dialogue",
+                "create_time": 30.0,
+                "text_sha256": "cd7079c4057e3d19d9143037d56b9c538604fe0a0e89c2c0a97054960e01ab8c",
+                "canonical_message_sha256": "e09659c85b7e3a51214b01b1e300f3c36dc46dd41e2a381cf7c69a4716cb25ec",
+                "sources": [
+                  {
+                    "artifact_sha256": "081c8f20fc84dbcc0768a7ff2ebc1b0757e3a7085a8323a56d28128fb0cc5cc3",
+                    "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                    "page_position": 1,
+                    "source_message_id": "m-b",
+                    "source_object_sha256": "0b04664c125c7411f417fc958ea38fb573683983cd9fa57d1709be84d35784c6"
+                  },
+                  {
+                    "artifact_sha256": "c052f3819e6dcc52cd1e3548aecbc2c1dbad5be6b0ee48e54cb53bc25c4cb038",
+                    "member_name": "optional/conversation-chatgpt-changed~branch-5dd4066adc85-e10375156e96.bin",
+                    "page_position": 1,
+                    "source_message_id": "m-b",
+                    "source_object_sha256": "0b04664c125c7411f417fc958ea38fb573683983cd9fa57d1709be84d35784c6"
+                  }
+                ]
+              }
+            ],
+            "content_sha256": "8d37d037e74081737eec8865e9236f3c4445f9cb72a83437933a2b895de2981b"
+          }
+        ]
+      },
+      "session_id": "changed~branch-5dd4066adc85",
+      "pages": [
+        {
+          "status": "OK",
+          "has_more": true,
+          "messages": [
+            {
+              "role": "user",
+              "text": "que",
+              "ordinal": 0,
+              "message_id": "m-u",
+              "create_time": 10,
+              "text_offset": 0,
+              "search_class": "dialogue",
+              "complete_message": false,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0001",
+          "session_id": "changed~branch-5dd4066adc85",
+          "generation_id": "6e7c6b27f136c853d50ae13a8138de296c7378365b282bf89bbd41bfb152e8d9",
+          "next_position": {
+            "offset": 3,
+            "ordinal": 0,
+            "message_id": "m-u"
+          },
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": "eyJ2IjoxLCJzIjoiY2hhbmdlZH5icmFuY2gtNWRkNDA2NmFkYzg1Iiwic2hhcmQiOiJjaGF0Z3B0LTAwMDEiLCJnIjoiNmU3YzZiMjdmMTM2Yzg1M2Q1MGFlMTNhODEzOGRlMjk2YzczNzgzNjViMjgyYmY4OWJiZDQxYmZiMTUyZThkOSIsIm8iOjAsIm1pZCI6Im0tdSIsIm9mZnNldCI6M30",
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0001"
+          ],
+          "unavailable_shards": []
+        },
+        {
+          "status": "OK",
+          "has_more": true,
+          "messages": [
+            {
+              "role": "user",
+              "text": "sti",
+              "ordinal": 0,
+              "message_id": "m-u",
+              "create_time": 10,
+              "text_offset": 3,
+              "search_class": "dialogue",
+              "complete_message": false,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0001",
+          "session_id": "changed~branch-5dd4066adc85",
+          "generation_id": "6e7c6b27f136c853d50ae13a8138de296c7378365b282bf89bbd41bfb152e8d9",
+          "next_position": {
+            "offset": 6,
+            "ordinal": 0,
+            "message_id": "m-u"
+          },
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": "eyJ2IjoxLCJzIjoiY2hhbmdlZH5icmFuY2gtNWRkNDA2NmFkYzg1Iiwic2hhcmQiOiJjaGF0Z3B0LTAwMDEiLCJnIjoiNmU3YzZiMjdmMTM2Yzg1M2Q1MGFlMTNhODEzOGRlMjk2YzczNzgzNjViMjgyYmY4OWJiZDQxYmZiMTUyZThkOSIsIm8iOjAsIm1pZCI6Im0tdSIsIm9mZnNldCI6Nn0",
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0001"
+          ],
+          "unavailable_shards": []
+        },
+        {
+          "status": "OK",
+          "has_more": true,
+          "messages": [
+            {
+              "role": "user",
+              "text": "on",
+              "ordinal": 0,
+              "message_id": "m-u",
+              "create_time": 10,
+              "text_offset": 6,
+              "search_class": "dialogue",
+              "complete_message": true,
+              "text_total_chars": 8
+            },
+            {
+              "role": "assistant",
+              "text": "a",
+              "ordinal": 1,
+              "message_id": "m-b",
+              "create_time": 30,
+              "text_offset": 0,
+              "search_class": "dialogue",
+              "complete_message": false,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0001",
+          "session_id": "changed~branch-5dd4066adc85",
+          "generation_id": "6e7c6b27f136c853d50ae13a8138de296c7378365b282bf89bbd41bfb152e8d9",
+          "next_position": {
+            "offset": 1,
+            "ordinal": 1,
+            "message_id": "m-b"
+          },
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": "eyJ2IjoxLCJzIjoiY2hhbmdlZH5icmFuY2gtNWRkNDA2NmFkYzg1Iiwic2hhcmQiOiJjaGF0Z3B0LTAwMDEiLCJnIjoiNmU3YzZiMjdmMTM2Yzg1M2Q1MGFlMTNhODEzOGRlMjk2YzczNzgzNjViMjgyYmY4OWJiZDQxYmZiMTUyZThkOSIsIm8iOjEsIm1pZCI6Im0tYiIsIm9mZnNldCI6MX0",
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0001"
+          ],
+          "unavailable_shards": []
+        },
+        {
+          "status": "OK",
+          "has_more": true,
+          "messages": [
+            {
+              "role": "assistant",
+              "text": "nsw",
+              "ordinal": 1,
+              "message_id": "m-b",
+              "create_time": 30,
+              "text_offset": 1,
+              "search_class": "dialogue",
+              "complete_message": false,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0001",
+          "session_id": "changed~branch-5dd4066adc85",
+          "generation_id": "6e7c6b27f136c853d50ae13a8138de296c7378365b282bf89bbd41bfb152e8d9",
+          "next_position": {
+            "offset": 4,
+            "ordinal": 1,
+            "message_id": "m-b"
+          },
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": "eyJ2IjoxLCJzIjoiY2hhbmdlZH5icmFuY2gtNWRkNDA2NmFkYzg1Iiwic2hhcmQiOiJjaGF0Z3B0LTAwMDEiLCJnIjoiNmU3YzZiMjdmMTM2Yzg1M2Q1MGFlMTNhODEzOGRlMjk2YzczNzgzNjViMjgyYmY4OWJiZDQxYmZiMTUyZThkOSIsIm8iOjEsIm1pZCI6Im0tYiIsIm9mZnNldCI6NH0",
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0001"
+          ],
+          "unavailable_shards": []
+        },
+        {
+          "status": "OK",
+          "has_more": true,
+          "messages": [
+            {
+              "role": "assistant",
+              "text": "er ",
+              "ordinal": 1,
+              "message_id": "m-b",
+              "create_time": 30,
+              "text_offset": 4,
+              "search_class": "dialogue",
+              "complete_message": false,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0001",
+          "session_id": "changed~branch-5dd4066adc85",
+          "generation_id": "6e7c6b27f136c853d50ae13a8138de296c7378365b282bf89bbd41bfb152e8d9",
+          "next_position": {
+            "offset": 7,
+            "ordinal": 1,
+            "message_id": "m-b"
+          },
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": "eyJ2IjoxLCJzIjoiY2hhbmdlZH5icmFuY2gtNWRkNDA2NmFkYzg1Iiwic2hhcmQiOiJjaGF0Z3B0LTAwMDEiLCJnIjoiNmU3YzZiMjdmMTM2Yzg1M2Q1MGFlMTNhODEzOGRlMjk2YzczNzgzNjViMjgyYmY4OWJiZDQxYmZiMTUyZThkOSIsIm8iOjEsIm1pZCI6Im0tYiIsIm9mZnNldCI6N30",
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0001"
+          ],
+          "unavailable_shards": []
+        },
+        {
+          "status": "OK",
+          "has_more": false,
+          "messages": [
+            {
+              "role": "assistant",
+              "text": "B",
+              "ordinal": 1,
+              "message_id": "m-b",
+              "create_time": 30,
+              "text_offset": 7,
+              "search_class": "dialogue",
+              "complete_message": true,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0001",
+          "session_id": "changed~branch-5dd4066adc85",
+          "generation_id": "6e7c6b27f136c853d50ae13a8138de296c7378365b282bf89bbd41bfb152e8d9",
+          "next_position": null,
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": null,
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0001"
+          ],
+          "unavailable_shards": []
+        }
+      ]
+    },
+    {
+      "index": {
+        "schema": "theseus.session-search-source-evidence-index.v1",
+        "provider": "chatgpt",
+        "shard_id": "chatgpt-0002",
+        "generation_id": "5e4e56ee6415341459d5a75d43181b5645739913dc9738f7117462d8e4837c08",
+        "source_manifest_sha256": "b370f6e86f9faf23924186cf99e44a30ef697fde33829e96bf7d4d88f15a829f",
+        "membership_snapshot_sha256": "c22a0d911cc7df567b2ef1ca12deaf1f97c1874782d097aa211725cc7fd3ce6c",
+        "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+        "sessions": [
+          {
+            "session_id": "changed",
+            "title": "Synthetic ChatGPT",
+            "coverage_state": "PARTIAL_SESSION_SLICE",
+            "messages": [
+              {
+                "ordinal": 0,
+                "message_id": "m-u",
+                "role": "user",
+                "search_class": "dialogue",
+                "create_time": 10.0,
+                "text_sha256": "1f5087db919ced5c123c7f507d3fcce818cb0cf6e77c2f95a8a35e951e03fdb9",
+                "canonical_message_sha256": "e84a5e4141cb114b9479e661efecd3fe825a33de1ff24290ac28f0661d1b3db1",
+                "sources": [
+                  {
+                    "artifact_sha256": "b8e1b23f9606c1b54a1a867689b8fa66713af287e7827110aaa48ce92eb0109e",
+                    "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                    "page_position": 0,
+                    "source_message_id": "m-u",
+                    "source_object_sha256": "3db58469438717efe07711da7f2d8e30e573bae8e530d0fb0727028f2aac9294"
+                  }
+                ]
+              },
+              {
+                "ordinal": 1,
+                "message_id": "m-a",
+                "role": "assistant",
+                "search_class": "dialogue",
+                "create_time": 20.0,
+                "text_sha256": "63992b1ee060a416f2830d955e143153382fc4e6672b983758b37ac23d71a14c",
+                "canonical_message_sha256": "0099108e3a83dd9f51c57ab12fe25ea35aca9d2ccb6dac4b4c92424c54e10223",
+                "sources": [
+                  {
+                    "artifact_sha256": "b8e1b23f9606c1b54a1a867689b8fa66713af287e7827110aaa48ce92eb0109e",
+                    "member_name": "optional/conversation-chatgpt-changed-d67e2e944994.bin",
+                    "page_position": 1,
+                    "source_message_id": "m-a",
+                    "source_object_sha256": "16b7451059f80c7e70b540a7f60bfa5744546a6591303cf733daf8b245e785b7"
+                  }
+                ]
+              }
+            ],
+            "content_sha256": "d91e6b36536b493b68dc735901c0c3e25209415a8aef83943692c91930d23c28"
+          }
+        ]
+      },
+      "session_id": "changed",
+      "pages": [
+        {
+          "status": "OK",
+          "has_more": true,
+          "messages": [
+            {
+              "role": "user",
+              "text": "que",
+              "ordinal": 0,
+              "message_id": "m-u",
+              "create_time": 10,
+              "text_offset": 0,
+              "search_class": "dialogue",
+              "complete_message": false,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0002",
+          "session_id": "changed",
+          "generation_id": "5e4e56ee6415341459d5a75d43181b5645739913dc9738f7117462d8e4837c08",
+          "next_position": {
+            "offset": 3,
+            "ordinal": 0,
+            "message_id": "m-u"
+          },
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": "eyJ2IjoxLCJzIjoiY2hhbmdlZCIsInNoYXJkIjoiY2hhdGdwdC0wMDAyIiwiZyI6IjVlNGU1NmVlNjQxNTM0MTQ1OWQ1YTc1ZDQzMTgxYjU2NDU3Mzk5MTNkYzk3MzhmNzExNzQ2MmQ4ZTQ4MzdjMDgiLCJvIjowLCJtaWQiOiJtLXUiLCJvZmZzZXQiOjN9",
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0002"
+          ],
+          "unavailable_shards": []
+        },
+        {
+          "status": "OK",
+          "has_more": true,
+          "messages": [
+            {
+              "role": "user",
+              "text": "sti",
+              "ordinal": 0,
+              "message_id": "m-u",
+              "create_time": 10,
+              "text_offset": 3,
+              "search_class": "dialogue",
+              "complete_message": false,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0002",
+          "session_id": "changed",
+          "generation_id": "5e4e56ee6415341459d5a75d43181b5645739913dc9738f7117462d8e4837c08",
+          "next_position": {
+            "offset": 6,
+            "ordinal": 0,
+            "message_id": "m-u"
+          },
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": "eyJ2IjoxLCJzIjoiY2hhbmdlZCIsInNoYXJkIjoiY2hhdGdwdC0wMDAyIiwiZyI6IjVlNGU1NmVlNjQxNTM0MTQ1OWQ1YTc1ZDQzMTgxYjU2NDU3Mzk5MTNkYzk3MzhmNzExNzQ2MmQ4ZTQ4MzdjMDgiLCJvIjowLCJtaWQiOiJtLXUiLCJvZmZzZXQiOjZ9",
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0002"
+          ],
+          "unavailable_shards": []
+        },
+        {
+          "status": "OK",
+          "has_more": true,
+          "messages": [
+            {
+              "role": "user",
+              "text": "on",
+              "ordinal": 0,
+              "message_id": "m-u",
+              "create_time": 10,
+              "text_offset": 6,
+              "search_class": "dialogue",
+              "complete_message": true,
+              "text_total_chars": 8
+            },
+            {
+              "role": "assistant",
+              "text": "a",
+              "ordinal": 1,
+              "message_id": "m-a",
+              "create_time": 20,
+              "text_offset": 0,
+              "search_class": "dialogue",
+              "complete_message": false,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0002",
+          "session_id": "changed",
+          "generation_id": "5e4e56ee6415341459d5a75d43181b5645739913dc9738f7117462d8e4837c08",
+          "next_position": {
+            "offset": 1,
+            "ordinal": 1,
+            "message_id": "m-a"
+          },
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": "eyJ2IjoxLCJzIjoiY2hhbmdlZCIsInNoYXJkIjoiY2hhdGdwdC0wMDAyIiwiZyI6IjVlNGU1NmVlNjQxNTM0MTQ1OWQ1YTc1ZDQzMTgxYjU2NDU3Mzk5MTNkYzk3MzhmNzExNzQ2MmQ4ZTQ4MzdjMDgiLCJvIjoxLCJtaWQiOiJtLWEiLCJvZmZzZXQiOjF9",
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0002"
+          ],
+          "unavailable_shards": []
+        },
+        {
+          "status": "OK",
+          "has_more": true,
+          "messages": [
+            {
+              "role": "assistant",
+              "text": "nsw",
+              "ordinal": 1,
+              "message_id": "m-a",
+              "create_time": 20,
+              "text_offset": 1,
+              "search_class": "dialogue",
+              "complete_message": false,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0002",
+          "session_id": "changed",
+          "generation_id": "5e4e56ee6415341459d5a75d43181b5645739913dc9738f7117462d8e4837c08",
+          "next_position": {
+            "offset": 4,
+            "ordinal": 1,
+            "message_id": "m-a"
+          },
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": "eyJ2IjoxLCJzIjoiY2hhbmdlZCIsInNoYXJkIjoiY2hhdGdwdC0wMDAyIiwiZyI6IjVlNGU1NmVlNjQxNTM0MTQ1OWQ1YTc1ZDQzMTgxYjU2NDU3Mzk5MTNkYzk3MzhmNzExNzQ2MmQ4ZTQ4MzdjMDgiLCJvIjoxLCJtaWQiOiJtLWEiLCJvZmZzZXQiOjR9",
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0002"
+          ],
+          "unavailable_shards": []
+        },
+        {
+          "status": "OK",
+          "has_more": true,
+          "messages": [
+            {
+              "role": "assistant",
+              "text": "er ",
+              "ordinal": 1,
+              "message_id": "m-a",
+              "create_time": 20,
+              "text_offset": 4,
+              "search_class": "dialogue",
+              "complete_message": false,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0002",
+          "session_id": "changed",
+          "generation_id": "5e4e56ee6415341459d5a75d43181b5645739913dc9738f7117462d8e4837c08",
+          "next_position": {
+            "offset": 7,
+            "ordinal": 1,
+            "message_id": "m-a"
+          },
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": "eyJ2IjoxLCJzIjoiY2hhbmdlZCIsInNoYXJkIjoiY2hhdGdwdC0wMDAyIiwiZyI6IjVlNGU1NmVlNjQxNTM0MTQ1OWQ1YTc1ZDQzMTgxYjU2NDU3Mzk5MTNkYzk3MzhmNzExNzQ2MmQ4ZTQ4MzdjMDgiLCJvIjoxLCJtaWQiOiJtLWEiLCJvZmZzZXQiOjd9",
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0002"
+          ],
+          "unavailable_shards": []
+        },
+        {
+          "status": "OK",
+          "has_more": false,
+          "messages": [
+            {
+              "role": "assistant",
+              "text": "A",
+              "ordinal": 1,
+              "message_id": "m-a",
+              "create_time": 20,
+              "text_offset": 7,
+              "search_class": "dialogue",
+              "complete_message": true,
+              "text_total_chars": 8
+            }
+          ],
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0002",
+          "session_id": "changed",
+          "generation_id": "5e4e56ee6415341459d5a75d43181b5645739913dc9738f7117462d8e4837c08",
+          "next_position": null,
+          "session_title": "Synthetic ChatGPT",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "next_cursor": null,
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0002"
+          ],
+          "unavailable_shards": []
+        }
+      ]
+    }
+  ],
+  "producer_commit": "3b7b5360050cc2ecdcb60f485a657f2b763751e4"
+}
