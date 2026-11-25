@@ -58,6 +58,12 @@ A future unattended reader MUST provide enough information to construct a stable
 - explicit gap/partial state;
 - an immutable or reproducible checkpoint identity.
 
+### Requirement: Recovery handoff candidate validation
+
+Before using a trusted source recovery candidate, the consumer MUST strictly validate its version, canonical digest, both membership receipts, append-only membership, expected previous snapshot, explicit scope/provider, and exact independently supplied complete catalog vector. Selected and removed session identities MUST be ordered, unique and disjoint; each placement MUST match its provider, shard, generation and source manifest identity.
+
+Decoding MUST preserve unknown source currentness and removal obligations, and MUST NOT create evidence text, authorize access, invoke inference or advance a checkpoint. The caller MUST establish source custody and catalog observation independently. A valid digest is not authentication.
+
 ### Requirement: Checkpoint advances only after bounded success
 
 The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.

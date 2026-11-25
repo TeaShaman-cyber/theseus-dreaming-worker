@@ -1,0 +1,23 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: A future delta reader preserves exact provenance$'
+  content: |
+    ### Requirement: Recovery handoff candidate validation
+
+    #### Scenario: Exact trusted recovery candidate
+
+    - **GIVEN** a synthetic source candidate and independently expected predecessor and catalog
+    - **WHEN** the consumer validates its wire identity
+    - **THEN** the exact candidate is returned with unknown currentness and removals preserved
+    - **AND** no inference or checkpoint mutation occurs
+
+    #### Scenario: Inconsistent recovery candidate
+
+    - **GIVEN** invalid digest, membership, scope, catalog or placement
+    - **WHEN** the consumer validates the candidate
+    - **THEN** the candidate is rejected even if an inconsistent payload was rehashed
