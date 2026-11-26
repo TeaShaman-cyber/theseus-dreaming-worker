@@ -135,6 +135,14 @@ Private or unclassified Session Search evidence remains outside Pilot 2 until a 
 
 If Pilot 0 returns `NO_DATA`, Pilot 2 MUST make zero external model calls.
 
+### Requirement: Bounded model pool selection
+
+A separate pure pool selector MAY choose the routes for two independent first-pass slots, or the one missing slot if an independently validated perspective is already frozen. It MUST use explicit caller-supplied free research admission, current catalog presence, task qualification, finite remaining attempt budget, prior attempted route identities, and known route/provider cooldowns. Catalog presence alone MUST NOT establish permission or quality. Unknown entitlement or stale/unknown catalog MUST NOT be eligible.
+
+A ready selection MUST contain only unattempted, eligible, currently ready routes of distinct configured model families, also distinct from the frozen perspective family. A frozen perspective MUST NOT be invalidated solely because its old route retires. Prefer different configured provider domains among ready choices, then deterministic rotation. An unresolved earlier attempt MUST block selection.
+
+When an eligible independent selection exists only after cooldown, report its earliest feasible wake time (all required slots must be feasible before catalog evidence expires). Revalidate on wake. Insufficient eligibility or budget is not NO_DATA. The selector MUST NOT invoke inference, reserve work, infer entitlement, establish semantic quality or advance a checkpoint. Integration with durable recovery requires separate acceptance; existing fixed-pair execution is unchanged.
+
 ## First Implementation Boundary
 
 The first code increment SHOULD implement:

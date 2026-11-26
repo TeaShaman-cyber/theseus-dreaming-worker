@@ -74,6 +74,12 @@
       "rules": [
         "If Pilot 0 returns `NO_DATA`, Pilot 2 MUST make zero external model calls."
       ]
+    },
+    {
+      "requirement": "Bounded model pool selection",
+      "rules": [
+        "A separate pure pool selector MAY choose the routes for two independent first-pass slots, or the one missing slot if an independently validated perspective is already frozen. It MUST use explicit caller-supplied free research admission, current catalog presence, task qualification, finite remaining attempt budget, prior attempted route identities, and known route/provider cooldowns. Catalog presence alone MUST NOT establish permission or quality. Unknown entitlement or stale/unknown catalog MUST NOT be eligible.\n\nA ready selection MUST contain only unattempted, eligible, currently ready routes of distinct configured model families, also distinct from the frozen perspective family. A frozen perspective MUST NOT be invalidated solely because its old route retires. Prefer different configured provider domains among ready choices, then deterministic rotation. An unresolved earlier attempt MUST block selection.\n\nWhen an eligible independent selection exists only after cooldown, report its earliest feasible wake time (all required slots must be feasible before catalog evidence expires). Revalidate on wake. Insufficient eligibility or budget is not NO_DATA. The selector MUST NOT invoke inference, reserve work, infer entitlement, establish semantic quality or advance a checkpoint. Integration with durable recovery requires separate acceptance; existing fixed-pair execution is unchanged."
+      ]
     }
   ],
   "scenarios": [
@@ -311,11 +317,39 @@
         "external model calls equal zero",
         "AND outcome is NO_DATA"
       ]
+    },
+    {
+      "requirement": "Bounded model pool selection",
+      "name": "Retirement and bounded replacement",
+      "given": [
+        "explicitly admitted task-qualified routes of distinct families and one frozen perspective"
+      ],
+      "when": [
+        "a route retires or a known failure excludes an attempted route"
+      ],
+      "then": [
+        "only the missing slot is selected from other eligible families",
+        "AND unknown prior execution blocks any selection"
+      ]
+    },
+    {
+      "requirement": "Bounded model pool selection",
+      "name": "Feasible wake and independent pair",
+      "given": [
+        "known provider and route cooldowns and expiring catalog observations"
+      ],
+      "when": [
+        "no ready independent pair exists"
+      ],
+      "then": [
+        "deferral is only to the earliest time a full independent selection can be feasible",
+        "AND stale admission, exhausted budget or insufficient families cannot be converted into readiness"
+      ]
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:dd494019069743a7c49d67f28d694daa590086256d9cb46ff0c2ffd22f54c2f0",
-    "verify.md": "sha256:af365092c73890c0662fb641a959c48a3314087be97e06c4fcd05bc2db6a08b2"
+    "spec.md": "sha256:a7284b91443be78be41defe347f3d14d31e29ecd99ee888c3fae1e235ac90fed",
+    "verify.md": "sha256:a9be2f8e307053c918749c2870f24c90b3c6a2f741126fa415b90d6419faddd2"
   },
   "generatedBy": "core"
 }
