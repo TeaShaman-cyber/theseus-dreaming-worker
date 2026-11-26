@@ -1,0 +1,2 @@
+- op: no-op
+  description: Verify absent and explicit Builder model configuration in bundled Studio.

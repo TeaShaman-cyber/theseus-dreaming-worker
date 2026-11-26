@@ -6,6 +6,8 @@ import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const outputDir = resolve(process.argv[2] ?? '.mastra/output');
+const configuredModel = process.argv[3];
+const expectedBuilder = Boolean(configuredModel?.trim());
 const listener = createServer();
 listener.listen(0, '127.0.0.1');
 await once(listener, 'listening');
@@ -14,7 +16,7 @@ await new Promise((resolveClose, rejectClose) => listener.close(error => error ?
 
 const child = spawn(process.execPath, ['index.mjs'], {
   cwd: outputDir,
-  env: { PATH: process.env.PATH ?? '', HOME: outputDir, MASTRA_PORT: String(port) },
+  env: { PATH: process.env.PATH ?? '', HOME: outputDir, MASTRA_PORT: String(port), ...(configuredModel === undefined ? {} : { BUILDER_MODEL: configuredModel }) },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let tail = '';
@@ -44,6 +46,10 @@ try {
     try { graph = await request(); break; } catch { await delay(250); }
   }
   assert.ok(graph, 'built Studio workflow API did not become ready');
+  const agentsResponse = await fetch('http://127.0.0.1:' + port + '/api/agents', { signal: AbortSignal.timeout(3000) });
+  assert.equal(agentsResponse.status, 200);
+  const agents = await agentsResponse.json();
+  assert.equal(Object.hasOwn(agents, 'builder-agent'), expectedBuilder, 'Builder must have an explicit nonblank model');
   assert.deepEqual(graph.stepGraph.map(x => x.step.id), stages);
   assert.ok(Object.values(graph.steps).every(x => x.inputSchema && x.outputSchema));
   const { runId } = await request('/create-run', {});

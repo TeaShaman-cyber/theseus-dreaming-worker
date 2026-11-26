@@ -14,11 +14,11 @@ const storage = new LibSQLStore({
   url: 'file:./mastra.db',
 });
 
-const builderModel = getEnv('BUILDER_MODEL') ?? 'exe/nvidia/moonshotai/kimi-k3.1-pro';
+const builderModel = getEnv('BUILDER_MODEL');
 
 const editor = new MastraEditor({
   builder: {
-    enabled: true,
+    enabled: Boolean(builderModel),
     configuration: {
       agent: {
         workspace: { type: 'id', workspaceId: workspace.id },
@@ -34,9 +34,7 @@ export const mastra = new Mastra({
   storage,
   workspace,
   gateways: { exeGateway },
-  agents: {
-    builderAgent: createBuilderAgent({ model: builderModel }),
-  },
+  agents: builderModel ? { builderAgent: createBuilderAgent({ model: builderModel }) } : undefined,
   workflows: developmentWorkflows,
   bundler: {
     sourcemap: true,

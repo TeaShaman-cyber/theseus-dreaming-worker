@@ -1,0 +1,2 @@
+- op: no-op
+  description: No worker goal or authority change; development Builder selection is explicit.
