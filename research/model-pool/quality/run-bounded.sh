@@ -9,7 +9,9 @@ fi
 out=$1
 seconds=$2
 shift 2
-case "$seconds" in ''|*[!0-9]*|0) exit 2;; esac
+# Canonical positive decimal seconds, at most one hour. No zero/overflow.
+case "$seconds" in ''|*[!0-9]*|0*|?????*) exit 2;; esac
+[ "$seconds" -le 3600 ] || exit 2
 mkdir -- "$out"
 printf '%s\n' STARTED > "$out/state"
 # Conditional prevents inherited errexit from skipping status capture.

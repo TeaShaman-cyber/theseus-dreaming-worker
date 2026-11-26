@@ -26,6 +26,19 @@ class LauncherTest(unittest.TestCase):
                 self.assertNotEqual(again.returncode, 0)
                 self.assertEqual((out / "exit").read_bytes(), before)
 
+    def test_invalid_deadlines_do_not_start_child(self):
+        for seconds in ("", "0", "00", "000", "01", "-1", "1.5", "3601", "999999999999999999999"):
+            with self.subTest(seconds=seconds), tempfile.TemporaryDirectory() as tmp:
+                out = pathlib.Path(tmp) / "run"
+                marker = pathlib.Path(tmp) / "started"
+                p = subprocess.run(
+                    [str(LAUNCHER), str(out), seconds, "touch", str(marker)],
+                    capture_output=True, timeout=5,
+                )
+                self.assertEqual(p.returncode, 2)
+                self.assertFalse(out.exists())
+                self.assertFalse(marker.exists())
+
     def test_nonzero_stops_sequence(self):
         with tempfile.TemporaryDirectory() as tmp:
             a, b = (str(pathlib.Path(tmp) / x) for x in ("a", "b"))
