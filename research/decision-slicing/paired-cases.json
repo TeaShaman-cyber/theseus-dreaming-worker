@@ -1,0 +1,42 @@
+{
+  "cases": [
+    {
+      "id": "ash",
+      "decision": "Promote the exact Ash candidate to the synthetic release lane.",
+      "atoms": {
+        "A": "The release owner authorizes promotion of this exact candidate.",
+        "B": "The candidate passed independent full verification.",
+        "C": "The candidate passed independent targeted verification.",
+        "D": "The independent reviewer approved the targeted verification exception.",
+        "E": "The build dashboard is green."
+      },
+      "sources": {
+        "E1": "Release policy: owner authorization for the exact candidate is mandatory. In addition, either independent full verification must pass, or both independent targeted verification and independent reviewer approval of the exception must be established. A green dashboard is not a substitute.",
+        "E2": "Owner: I authorize promotion of exact Ash.",
+        "E3": "Independent full verifier: verification was not completed; result unknown.",
+        "E4": "Independent targeted verifier: exact Ash passed targeted verification.",
+        "E5": "Independent reviewer: I explicitly reject the targeted verification exception for Ash.",
+        "E6": "Dashboard: green."
+      }
+    },
+    {
+      "id": "birch",
+      "decision": "Accept the exact Birch research artifact as reproducibly verified.",
+      "atoms": {
+        "A": "An independent replay of the exact artifact succeeds.",
+        "B": "The exact artifact has an independently verified digest.",
+        "C": "Independent source provenance is established for the artifact.",
+        "D": "An independent signed attestation covers the exact artifact and its source.",
+        "E": "The artifact author reports successful verification."
+      },
+      "sources": {
+        "E1": "Acceptance policy: either an independent successful replay together with an independently verified digest and established source provenance, or an independent signed attestation covering the exact artifact and its source, suffices. Author self-report never suffices.",
+        "E2": "Independent replay worker: exact Birch replay succeeded.",
+        "E3": "Independent digest check: exact Birch digest verified.",
+        "E4": "Source inspector: provenance has not yet been inspected; no finding.",
+        "E5": "Independent attestation authority: signed attestation covering exact Birch and its source is verified.",
+        "E6": "Author: I verified the artifact."
+      }
+    }
+  ]
+}
