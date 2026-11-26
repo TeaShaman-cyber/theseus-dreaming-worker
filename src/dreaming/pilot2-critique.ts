@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { parseStrictModelJson } from './strict-model-json.ts';
+
 import type { Pilot2PassFailed, Pilot2PassSuccess, Pilot2Result } from './pilot2-runner.ts';
 import { fingerprintProposal, type Proposal, type ProposalSet } from './proposal-schema.ts';
 
@@ -103,7 +105,7 @@ export function buildCritiqueInput(result: Pilot2Result): CritiqueInput {
 export function parseCritiqueArtifact(rawText: string, input: CritiqueInput): CritiqueArtifact {
   let decoded: unknown;
   try {
-    decoded = JSON.parse(rawText);
+    decoded = parseStrictModelJson(rawText);
   } catch {
     throw new Error('CRITIQUE_JSON_INVALID');
   }
