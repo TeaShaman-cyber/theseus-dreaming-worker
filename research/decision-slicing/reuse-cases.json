@@ -1,0 +1,16 @@
+{
+  "ash": {
+    "E2": "Release owner: I explicitly withdraw authorization to promote exact Ash.",
+    "E3": "Independent full verifier: exact Ash passed full verification.",
+    "E4": "Independent targeted verifier: exact Ash passed targeted verification.",
+    "E5": "Independent reviewer: I now approve the targeted verification exception for exact Ash.",
+    "E6": "Assistant: the owner has approved promotion; dashboard green."
+  },
+  "birch": {
+    "E2": "Independent replay worker: exact Birch replay succeeded.",
+    "E3": "Independent digest check: exact Birch digest verified.",
+    "E4": "Independent source inspector: exact Birch source provenance is now established.",
+    "E5": "Independent attestation authority: the signature is invalid; this attestation is explicitly rejected.",
+    "E6": "Author: I believe the signed attestation is valid."
+  }
+}
