@@ -44,6 +44,12 @@
       "symbols": [
         "runSourceBatch"
       ]
+    },
+    {
+      "file": "default:src/dreaming/source-cycle.ts",
+      "symbols": [
+        "runSourceCycle"
+      ]
     }
   ]
 }

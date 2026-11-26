@@ -119,6 +119,21 @@
 - **WHEN** acquisition is attempted
 - **THEN** no batch ready for analysis is returned
 
+### Requirement: Bounded synthetic source cycle
+
+#### Scenario: Acquisition through durable completion
+
+- **GIVEN** a trusted synthetic handoff, bounded transport and existing source store
+- **WHEN** the cycle is invoked with a limited pass budget, continued and replayed
+- **THEN** complete admission precedes execution, only remaining work invokes inference, and the acknowledged receipt is independently readable
+
+#### Scenario: Explicit stopped cycle
+
+- **GIVEN** a rejected handoff or policy, incomplete acquisition, empty selection or unresolved removal
+- **WHEN** the cycle is invoked
+- **THEN** it returns an explicit stop without store access or inference and without advancing the source checkpoint
+- **AND** a validated empty selection or removal retains the candidate identity and unknown currentness
+
 ### Requirement: Checkpoint advances only after bounded success
 
 #### Scenario: Evidence is read but provider analysis fails

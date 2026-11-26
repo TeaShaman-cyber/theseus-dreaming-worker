@@ -18,21 +18,26 @@ type RunResult = {
   receipt: Stored | null;
 };
 
-/** Explicit synthetic composition, not an acquisition or authorization boundary.
- * The caller supplies trusted current source observations and permitted routes.
- * The store owns reservation, completion and acknowledgement verification.
- */
-export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], store: SourceStore,
-  maxPasses: number): Promise<RunResult> {
+export function prepareSourceRunPolicy(routes: Pilot2Route[], maxPasses: number) {
   const budget = z.number().int().min(0).max(200).parse(maxPasses);
-  const input = structuredClone(raw);
-  const plan = prepareSourceBatchPlan(input);
   const snapshot = routes.map(route => Object.freeze({ ...route }));
   if (snapshot.length !== 2 || snapshot.some(r => !r.id?.trim() || !r.provider?.trim()
     || !r.model?.trim() || !r.modelFamily?.trim() || typeof r.infer !== 'function')
     || snapshot[0].modelFamily.trim().toLowerCase() === snapshot[1].modelFamily.trim().toLowerCase()) {
     throw Error('SOURCE_RUN_ROUTE_PLAN');
   }
+  return { budget, routes: snapshot };
+}
+
+/** Explicit synthetic composition, not an acquisition or authorization boundary.
+ * The caller supplies trusted current source observations and permitted routes.
+ * The store owns reservation, completion and acknowledgement verification.
+ */
+export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], store: SourceStore,
+  maxPasses: number): Promise<RunResult> {
+  const { budget, routes: snapshot } = prepareSourceRunPolicy(routes, maxPasses);
+  const input = structuredClone(raw);
+  const plan = prepareSourceBatchPlan(input);
   let attemptedPasses = 0;
   const work: WorkSummary[] = [];
   const result = (status: RunStatus, receipt: Stored | null = null): RunResult =>

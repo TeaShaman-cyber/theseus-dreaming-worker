@@ -9,6 +9,8 @@ on:
       - 'src/dreaming/proposal-ledger-postgres.ts'
       - 'src/dreaming/source-batch-postgres.ts'
       - 'src/dreaming/source-batch-receipt.ts'
+      - 'src/dreaming/source-cycle.ts'
+      - 'test/source-cycle.test.mjs'
       - 'src/dreaming/source-batch-run.ts'
       - 'src/dreaming/source-batch-acquire.ts'
       - 'test/source-batch-acquire.test.mjs'

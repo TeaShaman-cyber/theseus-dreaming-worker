@@ -63,6 +63,12 @@
       ]
     },
     {
+      "requirement": "Bounded synthetic source cycle",
+      "rules": [
+        "One explicit synthetic cycle MUST validate the trusted handoff and execution policy, use bounded acquisition before durable execution, and return the existing verified execution disposition. Rejected or failed acquisition MUST NOT enter the store or invoke inference. A validated empty selection or unresolved removal MUST return an explicit non-advancing disposition with zero inference, preserving unknown currentness and binding the disposition to the observed candidate identity. An empty selection MUST NOT be described as source-complete or as proof of no new source material. No implicit bootstrap, retries, real source transport, scheduling or new authorization is provided."
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "rules": [
         "The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.\n\nA timestamp alone is insufficient as the durable checkpoint.\n\nThe checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope."
@@ -299,6 +305,33 @@
       ]
     },
     {
+      "requirement": "Bounded synthetic source cycle",
+      "name": "Acquisition through durable completion",
+      "given": [
+        "a trusted synthetic handoff, bounded transport and existing source store"
+      ],
+      "when": [
+        "the cycle is invoked with a limited pass budget, continued and replayed"
+      ],
+      "then": [
+        "complete admission precedes execution, only remaining work invokes inference, and the acknowledged receipt is independently readable"
+      ]
+    },
+    {
+      "requirement": "Bounded synthetic source cycle",
+      "name": "Explicit stopped cycle",
+      "given": [
+        "a rejected handoff or policy, incomplete acquisition, empty selection or unresolved removal"
+      ],
+      "when": [
+        "the cycle is invoked"
+      ],
+      "then": [
+        "it returns an explicit stop without store access or inference and without advancing the source checkpoint",
+        "AND a validated empty selection or removal retains the candidate identity and unknown currentness"
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "name": "Evidence is read but provider analysis fails",
       "given": [
@@ -396,8 +429,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:d545549a8136260fe1b2ca87ab0c43d1e2797e054a82b3962c928c9d6402f071",
-    "verify.md": "sha256:568734827aad9c61f93dfb52fc7996c869d0ae8abe2144e552799641c1f2ca67"
+    "spec.md": "sha256:e7b4ba62c72a58a345aaf718759a8c11fa7d246aa6e63ca9ae602baca70fe217",
+    "verify.md": "sha256:a6fb0cfc239de87dee3092e89f8bf5262105548869a191a7e858ac447397ec91"
   },
   "generatedBy": "core"
 }

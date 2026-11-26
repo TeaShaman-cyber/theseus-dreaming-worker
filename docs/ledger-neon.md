@@ -383,3 +383,23 @@ generation are blocked before shard dispatch. No live SQL or network.
 Hosted PostgreSQL composition now acquires those recorded pages before
 its budgeted run and exact replay. Real machine identity and source
 delivery remain deferred; no live migration.
+
+### One bounded synthetic source cycle
+
+The portable `runSourceCycle` entrypoint combines trusted handoff validation,
+explicit execution policy, bounded acquisition and the existing durable runner.
+The caller supplies all input, limits, transport, routes and store. There is
+no implicit source discovery, bootstrap, schedule, retry or production client.
+
+- INPUT_REJECTED and ACQUISITION_BLOCKED stop before ledger access/inference.
+- NO_SELECTED_WORK and REMOVAL_PENDING preserve the validated candidate digest,
+  observed unknown currentness and selected/removed counts. Neither advances
+  the source checkpoint or establishes source completeness. Changed-but-empty
+  membership and removals require a separate disposition policy.
+- Successful admission delegates to the existing runner and returns its exact
+  disposition and receipt. An unexpected execution exception is unknown, not
+  evidence of zero calls.
+
+The hosted PostgreSQL contract uses this entrypoint for acquisition failure,
+budget exhaustion, restart, exact replay and completion-only recovery. It
+reads recorded synthetic pages; it does not prove live source transport.

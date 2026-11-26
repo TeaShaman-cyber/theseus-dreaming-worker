@@ -691,16 +691,16 @@ try {
   assert.equal((await restartedAfterRefresh.acknowledge(newArgs)).status, 'ALREADY_ACKNOWLEDGED');
   assert.equal(sourceCalls, callsBeforeRefresh + 8);
   console.log('SOURCE_REFRESH_RECOVERY_PG_PASS producer=actual serving=simulated old=2 new=4 reused=1 new_work=3 replay_extra_calls=0');
-  // The normal bounded composition uses the same durable store, not a second worker.
-  const { runSourceBatch } = await import('../../src/dreaming/source-batch-run.ts');
-  const { acquireSourceBatch } = await import('../../src/dreaming/source-batch-acquire.ts');
+  // Exercise the actual worker entrypoint over recorded source pages and the real ledger.
+  const { runSourceCycle } = await import('../../src/dreaming/source-cycle.ts');
   const { entries: _entries, ...acquireIntent } = args;
-  const batchRunIntent = { ...acquireIntent, analysisVersion: 'bounded-batch-run-v1' };
+  const batchRunInput = {
+    ...acquireIntent, analysisVersion: 'bounded-batch-run-v1',
+    indexes: fixture.entries.map(e => ({ sessionId: e.session_id, index: e.index })),
+  };
   let acquiredPages = 0;
-  const batchRunInput = await acquireSourceBatch({
-    ...batchRunIntent, indexes: fixture.entries.map(e => ({ sessionId: e.session_id, index: e.index })),
-  }, { maxRequests: 20, maxPageBytes: 8000, maxTotalBytes: 100000, timeoutMs: 1000, pageMessages: 2, pageChars: 3 },
-  async request => {
+  const limits = { maxRequests: 20, maxPageBytes: 8000, maxTotalBytes: 100000, timeoutMs: 1000, pageMessages: 2, pageChars: 3 };
+  const transport = async request => {
     const entry = fixture.entries.find(e => e.session_id === request.session_id);
     assert.equal(request.generation_id, entry.index.generation_id);
     assert.equal(request.shard_id, entry.index.shard_id);
@@ -708,45 +708,55 @@ try {
     assert.ok(i >= 0 && i < entry.pages.length);
     acquiredPages++;
     return Response.json(entry.pages[i]);
-  });
-  assert.equal(acquiredPages, 12);
+  };
+  const cycle = (input, store, maxPasses, overrides = {}) =>
+    runSourceCycle(input, { limits, transport, routes: sourceRoutes, store, maxPasses, ...overrides });
   const batchRunRoot = await sourceStore.initialize(batchRunInput);
   assert.equal(batchRunRoot.status, 'ACKNOWLEDGED');
   batchRunInput.previousCheckpoint = batchRunRoot.receipt.receiptFingerprint;
   const batchRunCalls = sourceCalls;
-  const batchRunFirst = await runSourceBatch(batchRunInput, sourceRoutes, sourceStore, 2);
+  const rejected = await cycle(batchRunInput, sourceStore, 4, { limits: { ...limits, maxRequests: 1 } });
+  assert.equal(rejected.status, 'ACQUISITION_BLOCKED');
+  assert.equal(rejected.attemptedPasses, 0);
+  assert.equal(sourceCalls, batchRunCalls);
+  assert.deepEqual(await sourceStore.readTip(batchRunInput), batchRunRoot.receipt);
+  acquiredPages = 0;
+  const batchRunFirst = await cycle(batchRunInput, sourceStore, 2);
+  assert.equal(acquiredPages, 12);
   assert.equal(batchRunFirst.status, 'BUDGET_EXHAUSTED');
   assert.equal(batchRunFirst.attemptedPasses, 2);
   assert.deepEqual(await sourceStore.readTip(batchRunInput), batchRunRoot.receipt);
   const batchRunRestart = createPostgresSourceBatchStore({ connectionString });
-  const batchRunSecond = await runSourceBatch(batchRunInput, sourceRoutes, batchRunRestart, 2);
+  const batchRunSecond = await cycle(batchRunInput, batchRunRestart, 2);
   assert.equal(batchRunSecond.status, 'ACKNOWLEDGED');
-  assert.deepEqual(batchRunSecond.work.map(w => w.decision), ['ALREADY_PROCESSED', 'COMMITTED']);
+  assert.deepEqual(batchRunSecond.run.work.map(w => w.decision), ['ALREADY_PROCESSED', 'COMMITTED']);
   assert.equal(batchRunSecond.attemptedPasses, 2);
-  assert.deepEqual(await batchRunRestart.readTip(batchRunInput), batchRunSecond.receipt);
-  const batchRunReplay = await runSourceBatch(batchRunInput, sourceRoutes, batchRunRestart, 0);
+  assert.deepEqual(await batchRunRestart.readTip(batchRunInput), batchRunSecond.run.receipt);
+  const batchRunReplay = await cycle(batchRunInput, batchRunRestart, 0);
   assert.equal(batchRunReplay.status, 'ALREADY_ACKNOWLEDGED');
-  assert.deepEqual(batchRunReplay.receipt, batchRunSecond.receipt);
+  assert.deepEqual(batchRunReplay.run.receipt, batchRunSecond.run.receipt);
+  assert.equal(acquiredPages, 36);
   assert.equal(sourceCalls, batchRunCalls + 4);
   console.log('SOURCE_BOUNDED_RUN_PG_PASS acquired_pages=12 budget=2 restart=verified exact_replay=0 partial_checkpoint=unchanged');
+  console.log('SOURCE_CYCLE_PG_PASS acquisition_blocked=1 resume=verified replay_calls=0 pages_per_run=12');
   // Simulate a stopped caller after both completions, before source acknowledgement.
   const zeroPassInput = { ...batchRunInput, analysisVersion: 'zero-pass-recovery-v1' };
   const zeroRoot = await sourceStore.initialize(zeroPassInput);
   assert.equal(zeroRoot.status, 'ACKNOWLEDGED');
   zeroPassInput.previousCheckpoint = zeroRoot.receipt.receiptFingerprint;
   const zeroCalls = sourceCalls;
-  const interrupted = await runSourceBatch(zeroPassInput, sourceRoutes, {
+  const interrupted = await cycle(zeroPassInput, {
     ...sourceStore, acknowledge: async () => { throw Error('synthetic stop before acknowledgement'); },
   }, 4);
   assert.equal(interrupted.status, 'STORAGE_UNKNOWN');
   assert.equal(sourceCalls, zeroCalls + 4);
   assert.deepEqual(await sourceStore.readTip(zeroPassInput), zeroRoot.receipt);
   const zeroRestart = createPostgresSourceBatchStore({ connectionString });
-  const zeroRecovered = await runSourceBatch(zeroPassInput, sourceRoutes, zeroRestart, 0);
+  const zeroRecovered = await cycle(zeroPassInput, zeroRestart, 0);
   assert.equal(zeroRecovered.status, 'ACKNOWLEDGED');
   assert.equal(zeroRecovered.attemptedPasses, 0);
-  assert.equal(zeroRecovered.receipt.work.length, 2);
-  assert.deepEqual(await zeroRestart.readTip(zeroPassInput), zeroRecovered.receipt);
+  assert.equal(zeroRecovered.run.receipt.work.length, 2);
+  assert.deepEqual(await zeroRestart.readTip(zeroPassInput), zeroRecovered.run.receipt);
   assert.equal(sourceCalls, zeroCalls + 4);
   console.log('SOURCE_ZERO_PASS_RECOVERY_PG_PASS completed=2 additional_calls=0');
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
