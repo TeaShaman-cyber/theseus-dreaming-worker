@@ -205,3 +205,24 @@ proof of general accuracy or a latency SLA. For this task keep medium as
 candidate; no new model policy or production activation. Account-level
 quota and billing remain unverified, although free trial terms are explicit.
 Five observation logs and 17 negative receipt mutations verified offline.
+
+## Paired policy isolation pilot
+
+Executed 0c724db4cdd5330e36777aab3c00a70633bd005f. Two new synthetic cases,
+Ash and Birch; exact candidate atoms, policy/evidence and gold frozen before
+execution. Same Ultra medium, cap3072 and 60s timeout; Ash joint then rule,
+Birch rule then joint. Rule-only sees E1 and atoms/decision, no current
+evidence. At evaluation it receives manually annotated reference states,
+not a second model result. Enumerate all 243 T/F/U valuations of five atoms
+per extracted rule; compare to gold rule under the identical valuations.
+This tests rule translation, not natural-language atom discovery or end-to-end
+two-stage inference. Four HTTP200/stop responses, cost not reported.
+
+Ash joint exact: 394/1248 input/output tokens, 29.781s; rule-only exact
+253/634, 14.924s. Birch rule-only exact 259/303, 7.050s; joint 408/586,
+12.735s returns only D (current attestation succeeds), omitting ABC.
+Current ALLOW is correct but 27/243 valuations disagree (24 false DENIED,
+3 false DEFER). Rule-only 0/486 disagreements, joint 27/486.
+No false ALLOW in these four outputs, not a safety guarantee.
+Both rule-only stages are smaller/faster on these samples, but end-to-end
+split cost is not measured until actual evidence binding. No production change.
