@@ -59,3 +59,8 @@ No durable database, Neon/Turso choice, checkpoint/lease, scheduler, private Ses
 - `TeaShaman-cyber/theseus-research#32`
 - `default:worker/core-contract`
 - `default:pilot2/critique-contract`
+
+## Spec Dependencies
+
+- `default:worker/core-contract`
+- `default:pilot2/critique-contract`

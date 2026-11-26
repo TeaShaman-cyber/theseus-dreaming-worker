@@ -1,0 +1,120 @@
+{
+  "title": "Pilot 1 Bounded Inference",
+  "description": "Pilot 1 may ask one external model to propose typed hypotheses only after the outer runner has accepted explicitly safe evidence. The model is not an authority for execution facts, tool use, memory use, or canonical state.",
+  "context": [
+    "Pilot 1 may ask one external model to propose typed hypotheses only after the outer runner has accepted explicitly safe evidence. The model is not an authority for execution facts, tool use, memory use, or canonical state."
+  ],
+  "rules": [
+    {
+      "requirement": "External inference is scope-gated",
+      "rules": [
+        "The outer runner MUST reject any request whose scope is not `SYNTHETIC_FIXTURE` or `PUBLICATION_SAFE` before invoking the model."
+      ]
+    },
+    {
+      "requirement": "No accepted evidence means no model call",
+      "rules": [
+        "When Pilot 0 returns `NO_DATA`, Pilot 1 MUST return without invoking external inference."
+      ]
+    },
+    {
+      "requirement": "A valid Pilot 1 run is bounded to one model inference",
+      "rules": [
+        "A valid proposed run MUST contain exactly one model inference. Observed extra model inferences MUST fail closed."
+      ]
+    },
+    {
+      "requirement": "Pilot 1 performs no tool or memory operations",
+      "rules": [
+        "Observed real tool calls or memory operations MUST fail closed. Workspace bookkeeping MUST remain distinguishable from real tool use."
+      ]
+    },
+    {
+      "requirement": "Runtime receipt authority remains outside model prose",
+      "rules": [
+        "Model output MAY propose typed `FACT`, `INFERENCE`, `HYPOTHESIS`, and `UNKNOWN` items, but MUST NOT determine runtime receipt facts. The deterministic outer runner MUST construct execution counts and receipt fields from controlled execution/readback."
+      ]
+    }
+  ],
+  "constraints": [
+    "Model fluency or self-report MUST NOT upgrade a hypothesis into a runtime fact.",
+    "Private or unclassified evidence MUST NOT reach external inference in this phase.",
+    "Canonical memory/preferences MUST NOT be written by Pilot 1.",
+    "Runtime evidence, semantic proposal validity, and repository desired state remain separate claims."
+  ],
+  "scenarios": [
+    {
+      "requirement": "External inference is scope-gated",
+      "name": "Unapproved scope is rejected before inference",
+      "given": [
+        "an evidence packet whose requested scope is not SYNTHETIC_FIXTURE or PUBLICATION_SAFE"
+      ],
+      "when": [
+        "Pilot 1 validates the request"
+      ],
+      "then": [
+        "it rejects the request",
+        "AND the inference callback is not invoked"
+      ]
+    },
+    {
+      "requirement": "No accepted evidence means no model call",
+      "name": "Pilot 0 reports NO_DATA",
+      "given": [
+        "Pilot 0 accepts no new evidence"
+      ],
+      "when": [
+        "Pilot 1 runs"
+      ],
+      "then": [
+        "the outcome is NO_DATA",
+        "AND external model calls equal zero"
+      ]
+    },
+    {
+      "requirement": "A valid Pilot 1 run is bounded to one model inference",
+      "name": "Trace reports more than one inference",
+      "given": [
+        "a synthetically safe Pilot 1 request"
+      ],
+      "when": [
+        "runtime trace evidence reports more than one model inference"
+      ],
+      "then": [
+        "Pilot 1 rejects the run as a policy violation"
+      ]
+    },
+    {
+      "requirement": "Pilot 1 performs no tool or memory operations",
+      "name": "Runtime trace reports a tool or memory operation",
+      "given": [
+        "a synthetically safe Pilot 1 request"
+      ],
+      "when": [
+        "runtime trace evidence reports a real tool call or memory operation"
+      ],
+      "then": [
+        "Pilot 1 rejects the run as a policy violation"
+      ]
+    },
+    {
+      "requirement": "Runtime receipt authority remains outside model prose",
+      "name": "Model prose lies about runtime counts",
+      "given": [
+        "model output that claims an incorrect external model call count"
+      ],
+      "when": [
+        "the outer runner constructs the receipt"
+      ],
+      "then": [
+        "the receipt reflects the actual controlled invocation/readback",
+        "AND the model-authored count does not control receipt fields"
+      ]
+    }
+  ],
+  "contentHashes": {
+    "spec.md": "sha256:5bd9c439fc882497217a9c1e8644bbb1f57e018389a244c4af07ee41caa546e2",
+    "verify.md": "sha256:8e4c86a6428da6c6cb347b9cb170cb70e38a51f36553c3b97d1b006312aeaf73"
+  },
+  "generatedBy": "core"
+}

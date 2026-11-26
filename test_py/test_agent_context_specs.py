@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,19 +28,23 @@ class AgentContextSpecTests(unittest.TestCase):
         self.assertIn("accepted-source delta feed", spec)
         self.assertIn("Read authority does not imply model-egress authority", spec)
 
-    def test_future_specs_do_not_claim_implementation_links_yet(self):
-        for rel in [
-            "specs/worker/core-contract/spec-lock.json",
-            "specs/intake/session-search-boundary/spec-lock.json",
-        ]:
-            with self.subTest(path=rel):
-                self.assertFalse((ROOT / rel).exists())
+    def test_synthetic_intake_links_do_not_claim_real_source_reader(self):
+        self.assertFalse((ROOT / "specs/worker/core-contract/spec-lock.json").exists())
+        lock = json.loads((ROOT / "specs/intake/session-search-boundary/spec-lock.json").read_text())
+        self.assertEqual(lock["dependsOn"], ["default:worker/core-contract"])
+        self.assertEqual({entry["file"]: entry["symbols"] for entry in lock["implementation"]}, {
+            "default:src/dreaming/source-handoff.ts": ["decodeSourceHandoff"],
+            "default:src/dreaming/verified-session-work.ts": ["prepareVerifiedSessionWork"],
+            "default:src/dreaming/source-batch-receipt.ts": ["prepareSourceBatchExecution", "prepareSourceBatchReceipt"],
+            "default:src/dreaming/checkpoint-pilot2.ts": ["prepareCheckpointedPilot2", "runCheckpointedPilot2"],
+        })
 
     def test_spec_index_points_to_immediate_next_coding_task(self):
         index = (ROOT / "specs/README.md").read_text(encoding="utf-8")
         self.assertIn("Immediate next coding task", index)
         self.assertIn("pilot2/critique-contract", index)
-        self.assertIn("bounded Dreaming Worker persistence call", index)
+        self.assertIn("separately authorized bounded persistence canary", index)
+        self.assertIn("accepted in hosted PostgreSQL 18", index)
         self.assertIn("DERIVED_ONLY", index)
         self.assertIn("private Session Search intake", index)
         self.assertIn("Clef remains a separate", index)

@@ -13,12 +13,12 @@ This directory is the durable map from project intent to implementation work.
 - `pilot2/live-critique` — one bounded live critique call over frozen perspectives with deterministic `DERIVED_ONLY` validation.
 - `ledger/append-only-proposals` — append-only proposal history contract with content-addressed records and explicit supersession semantics.
 
-### Designed, not applied
+### Implemented and verified in isolated environments; not operational
 
-- `ledger/neon-persistence` — dedicated `dw_ledger` Neon/Postgres persistence boundary and future Session Search read seam; SQL is versioned but not applied.
+- `ledger/neon-persistence` — dedicated `dw_ledger` Neon/Postgres persistence boundary and future Session Search read seam; SQL is versioned and tested on disposable PostgreSQL and Neon schema-only previews; no live application claimed.
 - `ledger/postgres-storage` — `pg` storage adapter plus hosted PostgreSQL contract lane over the existing Hyperdrive boundary.
 
-### Recovered core design
+### Core contract and bounded intake
 
 - `worker/core-contract` — what Dreaming Worker is and is not.
 - `intake/session-search-boundary` — why real unattended Session Search history is still a separate authorization/reader problem.
@@ -27,11 +27,11 @@ This directory is the durable map from project intent to implementation work.
 
 A spec without `spec-lock.json` is not claimed to have an implementation link yet.
 
-The general worker contract and the real Session Search intake boundary remain specifications for future work. Their implementation links should be generated only when stable implementation symbols actually exist.
+The worker contract remains a cross-cutting contract. The intake implementation links cover only the verified synthetic consumer, not the future real-data reader. The legacy spec-lock mappings are checked independently of the native graph; SpecD 0.2.0 uses generated metadata for native dependency context.
 
 ## Immediate next coding task
 
-After the storage adapter is accepted, connect it to one bounded Dreaming Worker persistence call in the cloud development/test runtime:
+The storage adapter and synthetic source-batch recovery are accepted in hosted PostgreSQL 18. The next operational boundary is a separately authorized bounded persistence canary in the cloud development/test runtime:
 
 1. reuse the existing Hyperdrive binding;
 2. persist only already-validated ledger events;

@@ -1,0 +1,84 @@
+{
+  "title": "Neon Ledger Persistence Boundary",
+  "description": "Persist the already-defined append-only proposal ledger in the existing Dreaming Worker Neon boundary without coupling ledger history to Session Search shard storage or Mastra internal tables.",
+  "dependsOn": [
+    "default:ledger/append-only-proposals",
+    "default:worker/core-contract"
+  ],
+  "context": [
+    "Persist the already-defined append-only proposal ledger in the existing Dreaming Worker Neon boundary without coupling ledger history to Session Search shard storage or Mastra internal tables."
+  ],
+  "rules": [
+    {
+      "requirement": "Physical boundary",
+      "rules": [
+        "The intended durable boundary is the existing issue-owned Dreaming Worker Neon project/database:\n\n- project: `theseus-ss-dreaming-issue23`;\n- database: `dreaming_issue23`;\n- existing Mastra schema: `dw_issue23`;\n- ledger schema: `dw_ledger`.\n\n`dw_ledger` MUST remain separate from `dw_issue23`. Session Search shard projects and the Session Search feedback store are separate ownership surfaces and MUST NOT be reused for Dreaming Worker ledger tables."
+      ]
+    },
+    {
+      "requirement": "Tables",
+      "rules": [
+        "`proposal_records` stores immutable Proposal v1 records with exact proposal, route and source/provenance fingerprints.\n\n`supersession_events` stores immutable links from one existing proposal record to another. PostgreSQL foreign keys enforce that both endpoints exist and a CHECK rejects self-supersession.\n\nDatabase persistence does not replace application-ledger validation. The application contract remains responsible for content-addressed ID recomputation, exact Proposal v1 fingerprint verification and supersession-cycle detection before insert."
+      ]
+    },
+    {
+      "requirement": "Runtime authority",
+      "rules": [
+        "The existing Hyperdrive runtime role `dw_runtime_issue23` may receive:\n\n- `USAGE` on `dw_ledger`;\n- `SELECT` and `INSERT` on ledger tables;\n- sequence usage required by identity columns.\n\nIt MUST NOT receive `CREATE`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES` or `TRIGGER` authority on ledger objects. Schema/bootstrap remains an owner/control-plane operation.\n\nEvery persisted ledger record remains `DERIVED_ONLY`. PostgreSQL persistence does not promote a hypothesis into source truth, memory, instruction or permission."
+      ]
+    },
+    {
+      "requirement": "Session Search read boundary",
+      "rules": [
+        "The future ChatGPT-facing route should remain inside the Session Search product surface while preserving authority separation:\n\n`Session Search tool -> bounded Dreaming Worker ledger reader -> dw_ledger`.\n\nSession Search MUST NOT receive the Dreaming Worker runtime database credential. A future tool such as `session_hypotheses` should expose a bounded read-only representation whose results are explicitly marked `DERIVED_ONLY` and are not merged invisibly into ordinary source/shard search hits."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "requirement": "Ledger and Mastra storage are separate",
+      "name": "Ledger schema is inspected",
+      "then": [
+        "ledger objects are created only under dw_ledger",
+        "AND no ledger table is created under dw_issue23"
+      ]
+    },
+    {
+      "requirement": "Runtime writes are append-only",
+      "name": "Runtime role grants are inspected",
+      "then": [
+        "dw_runtime_issue23 has SELECT and INSERT only for ledger tables",
+        "AND has no CREATE, UPDATE, DELETE, TRUNCATE, REFERENCES or TRIGGER ledger authority"
+      ]
+    },
+    {
+      "requirement": "Durable rows preserve derived authority",
+      "name": "Ledger row authority is checked",
+      "then": [
+        "proposal and supersession rows enforce authority = DERIVED_ONLY"
+      ]
+    },
+    {
+      "requirement": "Supersession references real proposal records",
+      "name": "Supersession constraints are checked",
+      "then": [
+        "both supersession endpoints use foreign keys to proposal_records(record_id)",
+        "AND self-supersession is rejected"
+      ]
+    },
+    {
+      "requirement": "Session Search remains a read interface, not the ledger owner",
+      "name": "Future read seam is reviewed",
+      "then": [
+        "future Session Search access uses a bounded read seam",
+        "AND Session Search receives no Dreaming Worker runtime database credential",
+        "AND derived ledger results remain distinguishable from source/shard search hits"
+      ]
+    }
+  ],
+  "contentHashes": {
+    "spec.md": "sha256:4211c856497e8537f9c89de2bcf2c062f1ef03d9d316dfcca845243bcc761981",
+    "verify.md": "sha256:e7b6c9a29656b610e28f6325a462f71089dacff4a59d64445354276ba2e0bc67"
+  },
+  "generatedBy": "core"
+}

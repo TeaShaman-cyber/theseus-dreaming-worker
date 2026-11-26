@@ -1,0 +1,114 @@
+{
+  "title": "Pilot 2 — Bounded Live Critique",
+  "description": "This layer performs exactly one bounded critique-model call over an already frozen `CritiqueInput`.\n\nIt does not change Pilot 2 first-pass artifacts, does not retrieve new evidence, and does not decide truth. The returned critique remains `DERIVED_ONLY` and is accepted only after deterministic `parseCritiqueArtifact` validation.",
+  "dependsOn": [
+    "default:pilot2/critique-contract",
+    "default:pilot2/independent-perspectives",
+    "default:worker/core-contract"
+  ],
+  "context": [
+    "This layer performs exactly one bounded critique-model call over an already frozen `CritiqueInput`.\n\nIt does not change Pilot 2 first-pass artifacts, does not retrieve new evidence, and does not decide truth. The returned critique remains `DERIVED_ONLY` and is accepted only after deterministic `parseCritiqueArtifact` validation."
+  ],
+  "rules": [
+    {
+      "requirement": "Input",
+      "rules": [
+        "- one `CritiqueInput` built from a frozen Pilot 2 `COMPLETE` or `PARTIAL` result;\n- one explicit provider route with id, provider, model, model-family, base URL, timeout, output-token bound, and optional runtime bearer credential.\n\nThe model receives only the supplied critique input. No tools, memory, retrieval, private Session Search context, or canonical state are available.\n\nWire-level OpenAI-compatible HTTP/SSE execution is delegated to the shared provider transport used by the existing provider adapter. This layer owns only critique-specific prompt construction, transport-code mapping, deterministic artifact validation, and the critique receipt. Provider-specific/model semantics MUST NOT be moved into the shared transport."
+      ]
+    },
+    {
+      "requirement": "Model-facing contract",
+      "rules": [
+        "The system prompt MUST embed `critiqueArtifactJsonSchema`, generated from the same Zod contract used by `parseCritiqueArtifact`.\n\nThe critic MUST be instructed to:\n\n- return one JSON object only;\n- compare frozen perspectives without choosing a winner or declaring truth;\n- use only supplied proposal/evidence references;\n- keep authority exactly `DERIVED_ONLY`."
+      ]
+    },
+    {
+      "requirement": "Execution bounds",
+      "rules": [
+        "One invocation performs at most one external critique-model call.\n\nThe route MUST provide a positive integer `maxOutputTokens`. Timeout is bounded explicitly or by the bounded default.\n\nThere are no retries in this increment."
+      ]
+    },
+    {
+      "requirement": "Failure semantics",
+      "rules": [
+        "Transport and analytical validity remain distinct. The live layer preserves typed failures for rate limiting, timeout with unknown provider state, empty final content, output-budget exhaustion, ordinary HTTP failure, malformed transport response, invalid critique JSON/schema, and invented proposal/evidence references.\n\nFree prose or structurally invalid model output is not partial success."
+      ]
+    },
+    {
+      "requirement": "Receipt",
+      "rules": [
+        "The outer receipt records configured route identity separately from observed provider/model metadata, explicit bounds, one attempted external call, and zero tools, memory, and canonical writes.\n\nModel prose is never authoritative for provider identity or execution metadata. Runtime credentials are transport-only: they are sent only in request headers and MUST NOT appear in model input or receipts."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "requirement": "Exactly one bounded call",
+      "name": "Critique succeeds",
+      "given": [
+        "a valid frozen CritiqueInput and valid critique route"
+      ],
+      "when": [
+        "live critique executes"
+      ],
+      "then": [
+        "exactly one provider request is made",
+        "AND output tokens and timeout are bounded",
+        "AND no retry, tool, memory, or canonical write occurs"
+      ]
+    },
+    {
+      "requirement": "Critique remains derived-only",
+      "name": "Model returns a valid artifact",
+      "when": [
+        "the artifact is accepted"
+      ],
+      "then": [
+        "authority is DERIVED_ONLY",
+        "AND all proposal/evidence references are validated against the frozen input",
+        "AND original Pilot 2 perspectives remain unchanged"
+      ]
+    },
+    {
+      "requirement": "Invalid model output fails explicitly",
+      "name": "Model returns free prose",
+      "then": [
+        "outcome is FAILED with CRITIQUE_JSON_INVALID"
+      ]
+    },
+    {
+      "requirement": "Invalid model output fails explicitly",
+      "name": "Model invents a proposal or evidence reference",
+      "then": [
+        "outcome is FAILED with the corresponding deterministic critique reference failure"
+      ]
+    },
+    {
+      "requirement": "Transport failures stay visible",
+      "name": "Provider times out, returns empty final content, or exhausts output budget",
+      "then": [
+        "those outcomes remain distinct typed failures",
+        "AND no automatic retry occurs"
+      ]
+    },
+    {
+      "requirement": "Runtime credentials remain transport-only",
+      "name": "A direct provider requires bearer authentication",
+      "given": [
+        "a route with a runtime apiKey"
+      ],
+      "when": [
+        "live critique sends the provider request"
+      ],
+      "then": [
+        "the key is sent only as the Authorization header",
+        "AND it is absent from model input and the outer receipt"
+      ]
+    }
+  ],
+  "contentHashes": {
+    "spec.md": "sha256:f686dc3980c4738a966ec7d4b8c6506cc2c0ecaf2ca41d0fca7faa51aea26d6a",
+    "verify.md": "sha256:05bb64d4a67f7340ef7f263241948524b407e7e8931e0d13fae0e924c17afea8"
+  },
+  "generatedBy": "core"
+}

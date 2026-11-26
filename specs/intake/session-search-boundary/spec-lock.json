@@ -1,0 +1,37 @@
+{
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "dependsOn": [
+    "default:worker/core-contract"
+  ],
+  "implementation": [
+    {
+      "file": "default:src/dreaming/source-handoff.ts",
+      "symbols": [
+        "decodeSourceHandoff"
+      ]
+    },
+    {
+      "file": "default:src/dreaming/verified-session-work.ts",
+      "symbols": [
+        "prepareVerifiedSessionWork"
+      ]
+    },
+    {
+      "file": "default:src/dreaming/source-batch-receipt.ts",
+      "symbols": [
+        "prepareSourceBatchExecution",
+        "prepareSourceBatchReceipt"
+      ]
+    },
+    {
+      "file": "default:src/dreaming/checkpoint-pilot2.ts",
+      "symbols": [
+        "prepareCheckpointedPilot2",
+        "runCheckpointedPilot2"
+      ]
+    }
+  ]
+}

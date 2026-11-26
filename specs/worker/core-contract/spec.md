@@ -153,13 +153,14 @@ Implemented and verified:
 - exact source-reference and evidence-hash validation;
 - deterministic outer receipt;
 - one-inference / zero-tool / zero-memory runtime witness;
-- safe synthetic/publication-safe scope.
+- safe synthetic/publication-safe scope;
+- durable work reservation, completion and completion-only recovery in the PostgreSQL adapter;
+- synthetic source handoff and selected-page validation, staged metadata-only plans and original-plan-bound source acknowledgement, including cross-generation recovery on hosted PostgreSQL 18 (#77).
 
 Not yet implemented:
 
 - multi-step or iterative conclave beyond one bounded critique call;
-- durable hypothesis ledger;
-- durable worker checkpoint;
+- long-lived Neon ledger schema application and operational worker integration;
 - unattended accepted-source delta reader;
 - private Session Search evidence egress.
 

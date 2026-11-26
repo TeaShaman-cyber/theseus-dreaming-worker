@@ -1,0 +1,123 @@
+{
+  "title": "Pilot 2 — Bounded Critique Contract",
+  "description": "This layer analyzes already-frozen Pilot 2 perspectives. It does not choose a winner and does not redefine source evidence.\n\nThe critique artifact is a derived interpretation only. Original Pilot 2 proposal sets, failures, provenance, and receipts remain authoritative records of what the first passes actually produced.",
+  "dependsOn": [
+    "default:pilot2/independent-perspectives",
+    "default:worker/core-contract"
+  ],
+  "context": [
+    "This layer analyzes already-frozen Pilot 2 perspectives. It does not choose a winner and does not redefine source evidence.\n\nThe critique artifact is a derived interpretation only. Original Pilot 2 proposal sets, failures, provenance, and receipts remain authoritative records of what the first passes actually produced."
+  ],
+  "rules": [
+    {
+      "requirement": "Input Contract",
+      "rules": [
+        "Critique input may be built only from a Pilot 2 `COMPLETE` or `PARTIAL` result with at least one valid perspective.\n\nThe input must preserve:\n\n- Pilot 2 packet/request fingerprints;\n- configured perspective identity;\n- each validated proposal unchanged;\n- a stable fingerprint for each proposal;\n- original source references and evidence hashes;\n- failed perspective information when Pilot 2 was `PARTIAL`.\n\n`NO_DATA` and `FAIL_CLOSED` results do not create critique work."
+      ]
+    },
+    {
+      "requirement": "Critique Artifact",
+      "rules": [
+        "A critique artifact uses schema `theseus.dreaming-worker.critique.v1` and authority `DERIVED_ONLY`.\n\nIt may classify a relation as:\n\n- `AGREEMENT` — two or more distinct perspectives support a materially aligned interpretation;\n- `DISAGREEMENT` — two or more distinct perspectives materially diverge;\n- `UNRESOLVED` — available frozen proposals are insufficient to classify the relation honestly.\n\nEvery relation must reference existing frozen proposal fingerprints and evidence references. Invented proposal or evidence references are rejected deterministically.\n\n`AGREEMENT` and `DISAGREEMENT` require proposal references from at least two perspectives. `DISAGREEMENT` and `UNRESOLVED` must state what additional evidence could reduce the uncertainty."
+      ]
+    },
+    {
+      "requirement": "Authority Boundary",
+      "rules": [
+        "Critique must never:\n\n- rewrite or delete a frozen first-pass proposal;\n- promote agreement, majority vote, or model confidence into truth;\n- change original FACT / INFERENCE / HYPOTHESIS / UNKNOWN classifications;\n- alter permissions or runtime authority;\n- write canonical memory or user preferences;\n- publish externally;\n- fetch new evidence on its own."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "requirement": "Frozen first-pass artifacts remain the source of critique references",
+      "name": "Pilot 2 has two valid perspectives",
+      "given": [
+        "a COMPLETE Pilot 2 result"
+      ],
+      "when": [
+        "critique input is built"
+      ],
+      "then": [
+        "both validated proposal sets are copied into critique input",
+        "AND stable proposal fingerprints match the Pilot 2 comparison fingerprints",
+        "AND source references and evidence hashes remain unchanged"
+      ]
+    },
+    {
+      "requirement": "Partial execution remains visible",
+      "name": "Exactly one Pilot 2 pass is valid",
+      "given": [
+        "a PARTIAL Pilot 2 result"
+      ],
+      "when": [
+        "critique input is built"
+      ],
+      "then": [
+        "the valid perspective is preserved",
+        "AND the failed perspective and typed failure remain visible"
+      ]
+    },
+    {
+      "requirement": "No valid perspective means no critique",
+      "name": "Pilot 2 fails closed",
+      "given": [
+        "no valid Pilot 2 perspective"
+      ],
+      "when": [
+        "critique input is requested"
+      ],
+      "then": [
+        "critique input construction fails",
+        "AND no critique work is implied"
+      ]
+    },
+    {
+      "requirement": "Critique cannot invent provenance",
+      "name": "Critique references a proposal that does not exist",
+      "when": [
+        "critique artifact validation runs"
+      ],
+      "then": [
+        "validation fails with CRITIQUE_PROPOSAL_REF_REJECTED"
+      ]
+    },
+    {
+      "requirement": "Critique cannot invent provenance",
+      "name": "Critique references evidence not carried by its referenced proposals",
+      "when": [
+        "critique artifact validation runs"
+      ],
+      "then": [
+        "validation fails with CRITIQUE_EVIDENCE_REF_REJECTED"
+      ]
+    },
+    {
+      "requirement": "Relation labels have bounded semantics",
+      "name": "Agreement or disagreement cites only one perspective",
+      "then": [
+        "critique schema validation fails"
+      ]
+    },
+    {
+      "requirement": "Relation labels have bounded semantics",
+      "name": "Disagreement or unresolved relation requests no further evidence",
+      "then": [
+        "critique schema validation fails"
+      ]
+    },
+    {
+      "requirement": "Critique is derived only",
+      "name": "A critique artifact is accepted",
+      "then": [
+        "its authority is exactly DERIVED_ONLY",
+        "AND it does not replace the frozen Pilot 2 artifacts"
+      ]
+    }
+  ],
+  "contentHashes": {
+    "spec.md": "sha256:865d8c1be398f2706bf601202bf11d875b8d7b1d1d4347eabd6fad0354670647",
+    "verify.md": "sha256:84e71fe8362a7da31e2b1959c2f5fb2885f8b75130dab594393ef7354136c9df"
+  },
+  "generatedBy": "core"
+}

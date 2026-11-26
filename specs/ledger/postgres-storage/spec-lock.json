@@ -1,17 +1,37 @@
 {
-  "schema": { "name": "schema-std", "version": 1 },
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
   "dependsOn": [
     "default:ledger/append-only-proposals",
-    "default:ledger/neon-persistence"
+    "default:ledger/neon-persistence",
+    "default:intake/session-search-boundary"
   ],
   "implementation": [
     {
       "file": "default:src/dreaming/proposal-ledger-postgres.ts",
-      "symbols": ["createPostgresProposalLedger"]
+      "symbols": [
+        "createPostgresProposalLedger",
+        "createPostgresWorkStore"
+      ]
     },
     {
       "file": "default:infra/postgres/dw_ledger_v1.sql",
       "symbols": []
+    },
+    {
+      "file": "default:src/dreaming/durable-pilot2.ts",
+      "symbols": [
+        "runDurablePilot2",
+        "recoverDurableCompletion"
+      ]
+    },
+    {
+      "file": "default:src/dreaming/source-batch-postgres.ts",
+      "symbols": [
+        "createPostgresSourceBatchStore"
+      ]
     }
   ]
 }

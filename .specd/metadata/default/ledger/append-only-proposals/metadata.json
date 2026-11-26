@@ -1,0 +1,110 @@
+{
+  "title": "Append-only Proposal Ledger Contract",
+  "description": "The ledger preserves model-derived proposals as immutable history without turning them into source truth, user preferences, instructions, or canonical memory.\n\nThis increment defines only the ledger event contract and deterministic in-memory semantics. It deliberately does not choose or configure a durable storage backend.",
+  "dependsOn": [
+    "default:worker/core-contract",
+    "default:pilot2/critique-contract"
+  ],
+  "context": [
+    "The ledger preserves model-derived proposals as immutable history without turning them into source truth, user preferences, instructions, or canonical memory.\n\nThis increment defines only the ledger event contract and deterministic in-memory semantics. It deliberately does not choose or configure a durable storage backend."
+  ],
+  "rules": [
+    {
+      "requirement": "Proposal record",
+      "rules": [
+        "A proposal record contains:\n\n- exact Proposal v1 payload and its canonical proposal fingerprint;\n- packet, request, and evidence fingerprints;\n- perspective identity and configured route identity;\n- authority fixed to `DERIVED_ONLY`;\n- a deterministic content-addressed record ID.\n\nHypotheses therefore retain their falsifier, required evidence, competing explanations, uncertainty, and exact evidence references unchanged."
+      ]
+    },
+    {
+      "requirement": "Append-only invariant",
+      "rules": [
+        "Once a proposal record is appended, later operations MUST NOT mutate or delete it.\n\nA revision is represented only by a separate `SUPERSEDE` event linking an existing record to another existing record. Supersession changes only the derived materialized view; it does not rewrite either record and does not imply that the replacement is true."
+      ]
+    },
+    {
+      "requirement": "Content-addressed identity",
+      "rules": [
+        "Record/event identity is derived deterministically from canonical event payload content. Append MUST independently recompute both the embedded Proposal v1 fingerprint and the outer event ID; a forged/stale proposal fingerprint or event ID fails closed.\n\nProposal fingerprints reuse the same Proposal v1 fingerprint function used by Pilot 2 critique references."
+      ]
+    },
+    {
+      "requirement": "Supersession safety",
+      "rules": [
+        "Supersession requires two existing distinct proposal records.\n\nThe ledger MUST reject:\n\n- missing proposal references;\n- self-supersession;\n- duplicate event IDs;\n- cycles in the supersession graph.\n\nThe materialized view retains all historical events and records, marks superseded records explicitly, and never deletes history."
+      ]
+    },
+    {
+      "requirement": "Authority boundary",
+      "rules": [
+        "`ACTIVE` means only \"not superseded in this ledger view\". It MUST NOT be interpreted as `FACT`, accepted truth, memory promotion, instruction, ranking authority, or permission to act."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "requirement": "History is append-only",
+      "name": "A newer proposal supersedes an older one",
+      "given": [
+        "two existing immutable proposal records"
+      ],
+      "when": [
+        "a valid supersession event is appended"
+      ],
+      "then": [
+        "both proposal records remain present unchanged",
+        "AND the materialized view marks only the older record as SUPERSEDED"
+      ]
+    },
+    {
+      "requirement": "Identity is content-addressed",
+      "name": "Event content or event ID is forged",
+      "when": [
+        "append revalidates the event"
+      ],
+      "then": [
+        "it fails with LEDGER_EVENT_ID_MISMATCH"
+      ]
+    },
+    {
+      "requirement": "Supersession graph fails closed",
+      "name": "A supersession references a missing record",
+      "then": [
+        "append fails with LEDGER_SUPERSESSION_REF_MISSING"
+      ]
+    },
+    {
+      "requirement": "Supersession graph fails closed",
+      "name": "A supersession points to itself",
+      "then": [
+        "creation/append fails with LEDGER_SELF_SUPERSESSION"
+      ]
+    },
+    {
+      "requirement": "Supersession graph fails closed",
+      "name": "A new edge would create a cycle",
+      "then": [
+        "append fails with LEDGER_SUPERSESSION_CYCLE"
+      ]
+    },
+    {
+      "requirement": "Hypothesis semantics are preserved",
+      "name": "A HYPOTHESIS proposal is recorded",
+      "then": [
+        "its falsifier and required evidence remain exact",
+        "AND authority remains DERIVED_ONLY"
+      ]
+    },
+    {
+      "requirement": "Hypothesis semantics are preserved",
+      "name": "Proposal fingerprint does not match embedded Proposal v1 payload",
+      "then": [
+        "append fails with LEDGER_PROPOSAL_FINGERPRINT_MISMATCH"
+      ]
+    }
+  ],
+  "contentHashes": {
+    "spec.md": "sha256:8ca80e2810a8505cb31646b06c4fc45b03ca5c1c99ffbba4620c53ea0ff0cab9",
+    "verify.md": "sha256:a5ab25bde3f3d2aed3e3fde1a95c2aecbdedfa76e789550ec4425fa591c40494"
+  },
+  "generatedBy": "core"
+}
