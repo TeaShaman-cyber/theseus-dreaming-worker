@@ -32,6 +32,20 @@ jobs:
       - name: Install locked SpecD QA toolchain
         run: ./tools/specd/install
 
+      - name: Checkout pinned JSONTestSuite corpus
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: nst/JSONTestSuite
+          ref: 1ef36fa01286573e846ac449e8683f8833c5b26a
+          path: .qa-json-testsuite
+          sparse-checkout: test_parsing
+          persist-credentials: false
+
+      - name: Run JSON conformance checks
+        run: |
+          node tools/dev/json-conformance.mjs .qa-json-testsuite
+          rm -rf .qa-json-testsuite
+
       - name: Run canonical repository QA
         env:
           SPECD_DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}

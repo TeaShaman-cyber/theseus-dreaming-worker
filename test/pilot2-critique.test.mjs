@@ -352,3 +352,23 @@ test('agreement may be recorded without requesting additional evidence', async (
   assert.equal(artifact.relations[0].relation, 'AGREEMENT');
   assert.deepEqual(artifact.relations[0].requested_evidence, []);
 });
+
+test('rejects duplicate decoded critique fields before schema validation', async () => {
+  const input = buildCritiqueInput(await completePilot2());
+  const perspective = input.perspectives[0];
+  const raw = JSON.stringify({
+    schema: 'theseus.dreaming-worker.critique.v1',
+    authority: 'DERIVED_ONLY',
+    relations: [{
+      relation: 'UNRESOLVED',
+      summary: 'Fixture summary.',
+      proposal_refs: [{ perspective_id: perspective.perspectiveId, proposal_fingerprint: perspective.proposals[0].proposalFingerprint }],
+      evidence_refs: [{ source_ref: 'fixture:critique#1', evidence_hash: 'sha256:critique-1' }],
+      requested_evidence: ['More evidence.'],
+    }],
+  });
+  for (const key of ['summary', String.raw`summ\u0061ry`]) {
+    const ambiguous = raw.replace('"summary":', '"' + key + '":"Discarded summary","summary":');
+    assert.throws(() => parseCritiqueArtifact(ambiguous, input), /CRITIQUE_JSON_INVALID/);
+  }
+});

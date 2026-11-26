@@ -1,0 +1,2 @@
+- op: no-op
+  description: Reject literal and escape-equivalent duplicate keys in proposal and critique artifacts.

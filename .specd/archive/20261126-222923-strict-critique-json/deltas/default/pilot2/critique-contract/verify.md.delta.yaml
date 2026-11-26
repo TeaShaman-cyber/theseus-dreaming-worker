@@ -1,0 +1,2 @@
+- op: no-op
+  description: Duplicate decoded critique fields reject before schema validation.
