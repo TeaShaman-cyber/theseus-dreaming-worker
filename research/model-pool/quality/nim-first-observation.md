@@ -21,3 +21,32 @@ A future separately admitted research cycle needs its own bounded latency
 condition and must not treat this unknown result as known failure or replay
 the same outstanding work blindly. No evidence here for model rejection,
 quota exhaustion, or production entitlement.
+
+## Separate independent probe after launcher repair
+
+The historical GLM observation above is unchanged. New condition: Lightning,
+authority case only, 3072 output tokens, 60-second request timeout, 80-second
+outer deadline. Not a retry of GLM or a controlled single-variable comparison.
+Exact executed source 1b53f8d211e880930cf6b3d3a885cfb7160a759f.
+
+Actual HTTP 200 after 19378 ms; 1424 input and 3072 output tokens, all 3072
+reported as reasoning; finish=length, no usable final content. Cost unreported.
+Process exit 0 denotes a completed measurement, not a validated proposal.
+No semantic quality score. No paid entitlement or production route inferred.
+
+See nim-lightning-observation.jsonl and nim-lightning-process.json. The process
+log matched the captured observation bytes. New launcher runs one explicit
+bounded command, records STARTED, captures timeout/child exit even with
+errexit, atomically renames the exit receipt and state, and returns that exit.
+It rejects an existing run directory. An abrupt loss of the launcher itself
+may still leave STARTED or a partial receipt; missing exit is UNKNOWN, not 0.
+The attempt event is a pre-dispatch witness, not independent proof that an
+upstream server received the request. Do not retry unknown outcomes blindly.
+
+Reproduce the launcher QA without external requests:
+```sh
+python3 -m unittest discover -s research/model-pool/quality -p 'test_launcher.py'
+node research/model-pool/quality/run-nim.mjs --check
+```
+Next investigate model-specific documented reasoning controls and bounded
+output requirements, not simply raising token limits indefinitely.

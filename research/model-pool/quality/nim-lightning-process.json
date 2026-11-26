@@ -1,0 +1,7 @@
+{
+  "runner_commit": "1b53f8d211e880930cf6b3d3a885cfb7160a759f",
+  "process_state": "EXIT_RECORDED",
+  "process_exit": 0,
+  "observation_sha256": "3a219a6d44833d845bcb24cca667daa702a46b1c614d12001477c06c8b3331bd",
+  "process_log_matches_observations": true
+}
