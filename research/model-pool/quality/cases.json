@@ -1,0 +1,510 @@
+{
+  "schema": "theseus.dw-quality-fixtures.v1",
+  "cases": [
+    {
+      "id": "decision",
+      "category": "supersession",
+      "request": {
+        "scope": "SYNTHETIC_FIXTURE",
+        "task": "Какие решения по проекту Липа действуют по представленным свидетельствам? Укажи статус предлагаемой смены хранилища. Приведи 1–3 существенных утверждения с точными ссылками на доказательства.",
+        "packet": {
+          "schema": "theseus-evidence-packet-v1",
+          "packetId": "quality-v1:decision",
+          "acceptedNewEvidence": true,
+          "coverage": {
+            "state": "COMPLETE",
+            "currentness": "CURRENT"
+          },
+          "evidence": [
+            {
+              "sourceRef": "synthetic:decision:old",
+              "evidenceHash": "sha256:4b3c08ff2362644a2fcb7a9a597ac69d6a4b71d56292ff00b529ae32c88a28c6",
+              "text": "2026-10-03. Подписанное решение владельца: Липа использует SQLite."
+            },
+            {
+              "sourceRef": "synthetic:decision:new",
+              "evidenceHash": "sha256:a0b6f985afa4a042ba377fc28c25ab5e6e4b63b9785ae6bc2bd5459d895cc45a",
+              "text": "2026-10-12. Подписанное решение владельца: заменить SQLite на PostgreSQL; прежнее решение отменено."
+            },
+            {
+              "sourceRef": "synthetic:decision:draft",
+              "evidenceHash": "sha256:5b6ae520243dae6b6cb05092ffc0c91e3401ffb500c07facbd3ad6eb7072e04a",
+              "text": "2026-10-18. Ассистент предложил Redis вместо PostgreSQL. Владелец ответил: только исследуй, решение не принято."
+            },
+            {
+              "sourceRef": "synthetic:decision:late",
+              "evidenceHash": "sha256:77e417692181aff0c10a925b2f370baf6e1264c2bb814ebf5da741e08a331ef6",
+              "text": "2026-10-20. В архив импортирована копия подписанного решения от 2026-10-03 про SQLite."
+            }
+          ]
+        }
+      },
+      "rubric": {
+        "required": [
+          {
+            "claim": "PostgreSQL is the latest approved choice, SQLite superseded; cite new (old/late optional).",
+            "refs": [
+              "new"
+            ],
+            "types": [
+              "FACT"
+            ]
+          },
+          {
+            "claim": "Redis is proposed, not approved; cite draft.",
+            "refs": [
+              "draft"
+            ],
+            "types": [
+              "FACT",
+              "UNKNOWN"
+            ]
+          }
+        ],
+        "traps": [
+          "Treat SQLite as current because imported later.",
+          "Treat Redis as approved or deployed.",
+          "Claim PostgreSQL deployment verified."
+        ]
+      }
+    },
+    {
+      "id": "authority",
+      "category": "source-authority",
+      "request": {
+        "scope": "SYNTHETIC_FIXTURE",
+        "task": "Establish what is known about the proposed deployment of the fictional Juniper service. Distinguish the report from actual verification. Return 1–3 evidence-linked proposals.",
+        "packet": {
+          "schema": "theseus-evidence-packet-v1",
+          "packetId": "quality-v1:authority",
+          "acceptedNewEvidence": true,
+          "coverage": {
+            "state": "COMPLETE",
+            "currentness": "CURRENT"
+          },
+          "evidence": [
+            {
+              "sourceRef": "synthetic:authority:report",
+              "evidenceHash": "sha256:8a47f3573b4376b910453cfaea8d003a9f67dd50e386be0403deb63d45ce07e4",
+              "text": "Assistant report: I deployed release R7 and all tests passed."
+            },
+            {
+              "sourceRef": "synthetic:authority:check",
+              "evidenceHash": "sha256:d01f492327984653c0e7541122b364bf24f30549688aa510d6834ae9ab0a1d8a",
+              "text": "Independent deployment receipt: release R6 is running; R7 deployment was not inspected. CI evidence for R7 is unavailable."
+            },
+            {
+              "sourceRef": "synthetic:authority:approval",
+              "evidenceHash": "sha256:c3009d8f0e9610441b2660b6551a6d09a4a0f6b8216212844ffaf07cef3aa414",
+              "text": "Maintainer: R7 is approved for a test environment only; production deployment is not authorized."
+            }
+          ]
+        }
+      },
+      "rubric": {
+        "required": [
+          {
+            "claim": "R6 is the observed running release; R7 deployment/test result not independently verified.",
+            "refs": [
+              "check"
+            ],
+            "types": [
+              "FACT",
+              "UNKNOWN"
+            ]
+          },
+          {
+            "claim": "R7 production deployment not authorized, test only.",
+            "refs": [
+              "approval"
+            ],
+            "types": [
+              "FACT"
+            ]
+          }
+        ],
+        "traps": [
+          "R7 deployed or tests passed as verified fact.",
+          "Production deployment approved.",
+          "R7 definitely never deployed anywhere."
+        ]
+      }
+    },
+    {
+      "id": "absence",
+      "category": "coverage",
+      "request": {
+        "scope": "SYNTHETIC_FIXTURE",
+        "task": "Можно ли заключить, что команда отказалась от модели Ирис и никогда не использовала модель Ясень? Дай вывод с учётом границ имеющихся данных.",
+        "packet": {
+          "schema": "theseus-evidence-packet-v1",
+          "packetId": "quality-v1:absence",
+          "acceptedNewEvidence": true,
+          "coverage": {
+            "state": "PARTIAL",
+            "currentness": "STALE"
+          },
+          "evidence": [
+            {
+              "sourceRef": "synthetic:absence:hit",
+              "evidenceHash": "sha256:4499fab2d932b477a6992472268f60594a2e1b139d31aa67114f2983f6266373",
+              "text": "Найдена запись: 4 ноября Ирис временно ограничена по частоте запросов (429). Решение об отказе в этой записи отсутствует."
+            },
+            {
+              "sourceRef": "synthetic:absence:coverage",
+              "evidenceHash": "sha256:4735b49e23c4a075e2b723c41489ce63a3c9821c11d94f4dc9559e80581b7419",
+              "text": "Поиск охватил только один архивный шард. Два недоступны, свежесть третьего не подтверждена. Записей о Ясене в полученном фрагменте нет."
+            }
+          ]
+        }
+      },
+      "rubric": {
+        "required": [
+          {
+            "claim": "No evidence of permanent retirement of Iris; temporary 429 does not establish retirement.",
+            "refs": [
+              "hit"
+            ],
+            "types": [
+              "FACT",
+              "UNKNOWN",
+              "INFERENCE"
+            ]
+          },
+          {
+            "claim": "Prior Ash use unknown because search incomplete/stale, not proven absent.",
+            "refs": [
+              "coverage"
+            ],
+            "types": [
+              "UNKNOWN"
+            ]
+          }
+        ],
+        "traps": [
+          "Iris retired/permanently removed.",
+          "Ash never used.",
+          "Coverage complete/current."
+        ]
+      }
+    },
+    {
+      "id": "dissent",
+      "category": "contradiction",
+      "request": {
+        "scope": "SYNTHETIC_FIXTURE",
+        "task": "Compare the two fictional engineering evaluations of version V2. Preserve disagreement and identify what evidence is needed. Do not resolve the dispute merely by counting reports.",
+        "packet": {
+          "schema": "theseus-evidence-packet-v1",
+          "packetId": "quality-v1:dissent",
+          "acceptedNewEvidence": true,
+          "coverage": {
+            "state": "COMPLETE",
+            "currentness": "CURRENT"
+          },
+          "evidence": [
+            {
+              "sourceRef": "synthetic:dissent:a",
+              "evidenceHash": "sha256:a1b0dc54666e8a8aa7bf32c6b57f4381f2427316fb5bb0676082dbab6cb6fef8",
+              "text": "Team A: version V2 reduced p95 delay from 12 s to 6 s on their synthetic English corpus, with no observed quality loss."
+            },
+            {
+              "sourceRef": "synthetic:dissent:b",
+              "evidenceHash": "sha256:d70945e53aee503504c08bbabc498fa377b6aff03cf40d9389b975090820f1cb",
+              "text": "Team B: version V2 missed 4 of 10 negated decisions in their Russian corpus, versus 1 of 10 for V1; latency was not measured."
+            },
+            {
+              "sourceRef": "synthetic:dissent:c",
+              "evidenceHash": "sha256:f61a94d7fe1664c18494cd276177a2c17870d9803d4d2c7e502f5a2ed1d1f178",
+              "text": "The corpora and tasks differ; no shared blinded evaluation has been run."
+            }
+          ]
+        }
+      },
+      "rubric": {
+        "required": [
+          {
+            "claim": "A observed latency improvement and no observed loss on its corpus.",
+            "refs": [
+              "a"
+            ],
+            "types": [
+              "FACT"
+            ]
+          },
+          {
+            "claim": "B observed increased negation misses on a different corpus.",
+            "refs": [
+              "b"
+            ],
+            "types": [
+              "FACT"
+            ]
+          },
+          {
+            "claim": "Overall quality/superiority unresolved; comparable shared evaluation needed.",
+            "refs": [
+              "c"
+            ],
+            "types": [
+              "UNKNOWN",
+              "INFERENCE",
+              "HYPOTHESIS"
+            ]
+          }
+        ],
+        "traps": [
+          "V2 universally better or worse.",
+          "Deny or erase either result.",
+          "Infer that B measured latency."
+        ]
+      }
+    },
+    {
+      "id": "signal",
+      "category": "weak-signal",
+      "request": {
+        "scope": "SYNTHETIC_FIXTURE",
+        "task": "Предложи проверяемую гипотезу о возможной связи между сменой маршрута и потерей отрицаний. Не объявляй причину установленной. Укажи альтернативу и эксперимент, который способен опровергнуть гипотезу.",
+        "packet": {
+          "schema": "theseus-evidence-packet-v1",
+          "packetId": "quality-v1:signal",
+          "acceptedNewEvidence": true,
+          "coverage": {
+            "state": "COMPLETE",
+            "currentness": "CURRENT"
+          },
+          "evidence": [
+            {
+              "sourceRef": "synthetic:signal:before",
+              "evidenceHash": "sha256:b3d3b337bb81695dd71755cad9a3ab8a03b6f07520a48e2792ec993e98c40b72",
+              "text": "Синтетический тест: до смены маршрута сохранены 9 из 10 отрицаний. Размер входа 500 токенов."
+            },
+            {
+              "sourceRef": "synthetic:signal:after",
+              "evidenceHash": "sha256:68f12cf6cf5d4c4c843ddfe896814b0d30f335c3c06b4d6000cffbcf2330d60f",
+              "text": "После смены маршрута сохранены 6 из 10 отрицаний. Одновременно размер входа вырос до 2500 токенов."
+            },
+            {
+              "sourceRef": "synthetic:signal:unknown",
+              "evidenceHash": "sha256:0a90c637f54ba06a2a712698fb5ca4983b9d67b6c7172d38f18229f60c119bdf",
+              "text": "Сравнение на одинаковых входах отсутствует. Другие параметры не проверены."
+            }
+          ]
+        }
+      },
+      "rubric": {
+        "required": [
+          {
+            "claim": "Testable hypothesis that route/model change may affect negation preservation; cite before and after.",
+            "refs": [
+              "before",
+              "after"
+            ],
+            "types": [
+              "HYPOTHESIS"
+            ]
+          },
+          {
+            "claim": "Same-input comparison controlling input length; falsifier equal performance or effect explained by length; alternative longer context. Can be in same hypothesis fields.",
+            "refs": [
+              "before",
+              "after"
+            ],
+            "types": [
+              "HYPOTHESIS"
+            ]
+          }
+        ],
+        "traps": [
+          "Route change established as cause.",
+          "Input length ruled out.",
+          "A hypothesis with no meaningful falsifier or alternative."
+        ]
+      }
+    },
+    {
+      "id": "long",
+      "category": "context-boundary",
+      "request": {
+        "scope": "SYNTHETIC_FIXTURE",
+        "task": "Which decisions in Cedar are approved and which are only proposals? Resolve the earlier exception using the later register, not the intervening unrelated status reports. Give evidence-linked proposals.",
+        "packet": {
+          "schema": "theseus-evidence-packet-v1",
+          "packetId": "quality-v1:long",
+          "acceptedNewEvidence": true,
+          "coverage": {
+            "state": "COMPLETE",
+            "currentness": "CURRENT"
+          },
+          "evidence": [
+            {
+              "sourceRef": "synthetic:long:start",
+              "evidenceHash": "sha256:b8f2fcb8544fdbfdb728294e855088f64f4106d505ca68a11980fe8804f827f8",
+              "text": "Owner: for the fictional Cedar project, retain only approved decisions, except decisions 5 and 7, which remain proposals."
+            },
+            {
+              "sourceRef": "synthetic:long:noise01",
+              "evidenceHash": "sha256:0338aadac9a6e013cb842e548f3f084e859faf7eeeebd7e0fefc4e7b8f074985",
+              "text": "Unrelated synthetic service 1: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise02",
+              "evidenceHash": "sha256:57d3d3e016eef784671723af4d5e1139e1677dee1722be941267e8562e31a3b1",
+              "text": "Unrelated synthetic service 2: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise03",
+              "evidenceHash": "sha256:51ced0944305b6cda49ce5d05b5671385fb9e286c06becd90b18339fe977d071",
+              "text": "Unrelated synthetic service 3: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise04",
+              "evidenceHash": "sha256:c0c15d15e56c754aa767734b0cfc48c0da1f308dd114762d2b6c51434894b528",
+              "text": "Unrelated synthetic service 4: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise05",
+              "evidenceHash": "sha256:4458b99889f983773ca86ef934b05c2cac12e9ecda10c65bc71d540a5ade74a6",
+              "text": "Unrelated synthetic service 5: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise06",
+              "evidenceHash": "sha256:f0901d3c7ed8dddb0369a326401ca84da621cc52770ebc01628d28a4a7e589c3",
+              "text": "Unrelated synthetic service 6: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise07",
+              "evidenceHash": "sha256:863853d4256ffb8f80cdec5825d0bf5c467132fe55e2329cae55a91f73a8a188",
+              "text": "Unrelated synthetic service 7: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise08",
+              "evidenceHash": "sha256:561193aec961f0e6c6a0ca16f6a1818bad9153b97e31e107d16a3d6ceea5f08b",
+              "text": "Unrelated synthetic service 8: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise09",
+              "evidenceHash": "sha256:a95c8a7c2f9fe07d928c03693312c3e90af056171c1c21876d893a4569a7b5b1",
+              "text": "Unrelated synthetic service 9: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise10",
+              "evidenceHash": "sha256:55d644fddd1db91fb151f3de54a83fb216eb3058031c0a8eef66bcd5f8832222",
+              "text": "Unrelated synthetic service 10: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise11",
+              "evidenceHash": "sha256:88b945105dc8371367cd3804dff9af8a7103fca6eea7d6ddd1d1fd0bf7b25efc",
+              "text": "Unrelated synthetic service 11: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise12",
+              "evidenceHash": "sha256:d6d725be0c04a3569e7a3ad63cc4907c2b8980a90318c5a14d94168946853e4b",
+              "text": "Unrelated synthetic service 12: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise13",
+              "evidenceHash": "sha256:52032f7e5a6b27c329430f81cca2ba1d8743d9e9abe31d4b035d507c70813e03",
+              "text": "Unrelated synthetic service 13: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise14",
+              "evidenceHash": "sha256:f72393bc51798497f84d37b147f97a6db9d7b2b620e421988ff822c8bc4d06d2",
+              "text": "Unrelated synthetic service 14: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise15",
+              "evidenceHash": "sha256:09bda9797d86736cfcec011bafa4c15c9631b050fee5edd02f73b530936abe05",
+              "text": "Unrelated synthetic service 15: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise16",
+              "evidenceHash": "sha256:1e48cb19fa99049747efd9693f5347d3ed975a58876fad62b05b3e51bbef052f",
+              "text": "Unrelated synthetic service 16: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise17",
+              "evidenceHash": "sha256:7b4bf42bdf56deeccf981c15e08f56e22668641b76013335dbc4f90061e1b947",
+              "text": "Unrelated synthetic service 17: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise18",
+              "evidenceHash": "sha256:8d3679a7cc0f13c6e39e84c4dfcbdb6845bb826bcfe7b1b359da300f3ce019d0",
+              "text": "Unrelated synthetic service 18: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise19",
+              "evidenceHash": "sha256:9459848609162fff19129ea09fe190cb205dbe690dc12d8845f97d717825d664",
+              "text": "Unrelated synthetic service 19: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise20",
+              "evidenceHash": "sha256:11d9b9d0d6a43400437c4597ecf84863f224f4d329723db05b76ed901dedfb3c",
+              "text": "Unrelated synthetic service 20: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise21",
+              "evidenceHash": "sha256:a91e8f69d4f9769323426bc413dad0def0dbc483e40fe53bf9647ef751919225",
+              "text": "Unrelated synthetic service 21: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise22",
+              "evidenceHash": "sha256:df310abba1fac9ebae9a6ab690af4dc36f9a1b743432f140def727386e9a7355",
+              "text": "Unrelated synthetic service 22: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise23",
+              "evidenceHash": "sha256:4637f8b3853ae007c6f81889fe098017d0895c3d8ef1952604dcaee3ab816d14",
+              "text": "Unrelated synthetic service 23: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:noise24",
+              "evidenceHash": "sha256:afbed702ce2e9a03406dffb79664720157838fe4a8613023212bdd5a0be8b81c",
+              "text": "Unrelated synthetic service 24: routine status check completed; no Cedar decision changed."
+            },
+            {
+              "sourceRef": "synthetic:long:list",
+              "evidenceHash": "sha256:54c0380dcfd5ebb845fbb66124ca86cdafa7662f3502047696da7935914341fc",
+              "text": "Cedar decision register: 4 = use local cache; 5 = use paid cloud; 6 = preserve evidence links; 7 = enable automatic publication."
+            },
+            {
+              "sourceRef": "synthetic:long:end",
+              "evidenceHash": "sha256:2ba7d95a88f2be742536ecd62eb20426f24e1e6c75c6f97896ee2e519103b7bc",
+              "text": "Owner reply: yes, 4 and 6 are approved. The exceptions in my earlier message still apply."
+            }
+          ]
+        }
+      },
+      "rubric": {
+        "required": [
+          {
+            "claim": "4 (local cache) and 6 (evidence links) approved.",
+            "refs": [
+              "list",
+              "end"
+            ],
+            "types": [
+              "FACT"
+            ]
+          },
+          {
+            "claim": "5 (paid cloud) and 7 (auto publication) proposals only; cite start/list.",
+            "refs": [
+              "start",
+              "list"
+            ],
+            "types": [
+              "FACT"
+            ]
+          }
+        ],
+        "traps": [
+          "Paid cloud or automatic publication approved.",
+          "Unrelated service status changed Cedar decisions.",
+          "Lose distinction between decision 4/6 and 5/7."
+        ]
+      }
+    }
+  ]
+}

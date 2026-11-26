@@ -1,0 +1,1034 @@
+{
+  "schema": "theseus.dw-quality-observations.v1",
+  "fixture_commit": "b3c0b47d86762763664fd768532b80acb0075eb0",
+  "runner_commit": "8c9f8b3618ebfd821f35490e62edaa50d30c3441",
+  "fixture_sha256": "f328422d67be4f318ee1398fc8f9da183d5ac97994a78721fa9d3f6616dcc84f",
+  "review_method": "single assistant manual review of validated proposal fields versus frozen criteria; not independent blind adjudication",
+  "max_output_tokens": 1024,
+  "timeout_ms": 30000,
+  "rows": [
+    {
+      "kind": "catalog",
+      "route": "solar",
+      "provider": "nous",
+      "model": "upstage/solar-mini4:free",
+      "pricing": {
+        "prompt": "0",
+        "completion": "0",
+        "input_cache_read": "0"
+      },
+      "fixtureSha256": "f328422d67be4f318ee1398fc8f9da183d5ac97994a78721fa9d3f6616dcc84f"
+    },
+    {
+      "kind": "case",
+      "route": "solar",
+      "id": "decision",
+      "status": "VALIDATED",
+      "proposals": [
+        {
+          "type": "FACT",
+          "claim": "Руководство проекта Липа определило окончательные решения по СУБД: отменилось предыдущее использование SQLite и заявлено решение перейти на PostgreSQL.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:decision:new",
+              "evidence_hash": "sha256:a0b6f985afa4a042ba377fc28c25ab5e6e4b63b9785ae6bc2bd5459d895cc45a"
+            },
+            {
+              "source_ref": "synthetic:decision:old",
+              "evidence_hash": "sha256:4b3c08ff2362644a2fcb7a9a597ac69d6a4b71d56292ff00b529ae32c88a28c6"
+            }
+          ]
+        },
+        {
+          "type": "FACT",
+          "claim": "Предложение перехода на Redis от ассистента не было утверждено: владелец дал лишь условие исследовать этот вариант, и решение не принято.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:decision:draft",
+              "evidence_hash": "sha256:5b6ae520243dae6b6cb05092ffc0c91e3401ffb500c07facbd3ad6eb7072e04a"
+            }
+          ]
+        },
+        {
+          "type": "UNKNOWN",
+          "claim": "Статус смены хранилища пока нельзя считать завершённым, так как заявленное решение PostgreSQL выдвинуто как подписанное на 2026-10-12, но в архив импортирована старая копия решения от 2026-10-03, и требуется подтверждение актуальности финального текста.",
+          "why_unknown": "В архиве есть два разных подписанных решения за разные даты: одно о SQLite, другое о PostgreSQL. Пока нет утверждённого свода по порядку отмены старого решения и финальному приказу по PostgreSQL, факт окончательной смены хранилища остаётся под сомнением.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:decision:late",
+              "evidence_hash": "sha256:77e417692181aff0c10a925b2f370baf6e1264c2bb814ebf5da741e08a331ef6"
+            },
+            {
+              "source_ref": "synthetic:decision:new",
+              "evidence_hash": "sha256:a0b6f985afa4a042ba377fc28c25ab5e6e4b63b9785ae6bc2bd5459d895cc45a"
+            }
+          ],
+          "required_evidence": [
+            "финальное подписанное решение от 2026-10-12 с указанием PostgreSQL",
+            "подтверждение отмены решения от 2026-10-03 о SQLite",
+            "отчёт о практическом исследовании Redis или явное закрытие этого варианта"
+          ]
+        }
+      ],
+      "receipt": {
+        "schema": "theseus.dreaming-worker.pilot1-receipt.v1",
+        "scope": "SYNTHETIC_FIXTURE",
+        "packetId": "quality-v1:decision",
+        "evidenceFingerprint": "sha256:e52694da7457b33b2c07c2bdf2b354f6002acd8398a25cfd3f7fd61c0f4eb5df",
+        "requestFingerprint": "sha256:3d9b363026be0bee2d50c54fa9ac9b2c000665033a5c59c8c21e8148a2d538ef",
+        "evidenceCount": 4,
+        "toolsUsed": 0,
+        "memoryUsed": false,
+        "canonicalWrites": 0,
+        "externalModelCalls": 1,
+        "runtimeWitness": "CALLER_OBSERVED",
+        "workspaceActionsObserved": null,
+        "provider": "nous",
+        "model": "upstage/solar-mini4:free",
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 1548,
+          "outputTokens": 760,
+          "totalTokens": 2308,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        }
+      },
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "upstage/solar-mini4:free",
+        "cost": 0,
+        "finish": "stop",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "upstage/solar-mini4:free",
+        "configuredModelFamily": "solar",
+        "requestFingerprint": "sha256:3d9b363026be0bee2d50c54fa9ac9b2c000665033a5c59c8c21e8148a2d538ef",
+        "evidenceFingerprint": "sha256:e52694da7457b33b2c07c2bdf2b354f6002acd8398a25cfd3f7fd61c0f4eb5df",
+        "latencyMs": 9912,
+        "observedProvider": "nous",
+        "observedModel": "upstage/solar-mini4:free",
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1548,
+          "outputTokens": 760,
+          "totalTokens": 2308,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        },
+        "outcome": "SUCCESS",
+        "usableArtifact": true
+      },
+      "semantic_review": {
+        "required": [
+          true,
+          true
+        ],
+        "traps": [],
+        "additional_fidelity_issue": "Third proposal/why_unknown incorrectly casts doubt on already signed supersession because an old document was imported later. Actual deployment could remain unknown, but current approved decision is explicit."
+      }
+    },
+    {
+      "kind": "case",
+      "route": "solar",
+      "id": "authority",
+      "status": "VALIDATED",
+      "proposals": [
+        {
+          "type": "FACT",
+          "claim": "The report by the 'Assistant' states that release R7 was deployed and all tests passed.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:authority:report",
+              "evidence_hash": "sha256:8a47f3573b4376b910453cfaea8d003a9f67dd50e386be0403deb63d45ce07e4"
+            }
+          ]
+        },
+        {
+          "type": "FACT",
+          "claim": "Independent deployment receipt shows release R6 is running, R7 deployment was not inspected, and CI evidence for R7 is unavailable.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:authority:check",
+              "evidence_hash": "sha256:d01f492327984653c0e7541122b364bf24f30549688aa510d6834ae9ab0a1d8a"
+            }
+          ]
+        },
+        {
+          "type": "FACT",
+          "claim": "Maintainer approval states that R7 is approved for a test environment only and production deployment is not authorized.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:authority:approval",
+              "evidence_hash": "sha256:c3009d8f0e9610441b2660b6551a6d09a4a0f6b8216212844ffaf07cef3aa414"
+            }
+          ]
+        }
+      ],
+      "receipt": {
+        "schema": "theseus.dreaming-worker.pilot1-receipt.v1",
+        "scope": "SYNTHETIC_FIXTURE",
+        "packetId": "quality-v1:authority",
+        "evidenceFingerprint": "sha256:34e3f6fdedfb7bf8d6353fe16e1c98cc1e34b6b05344bf5ddc0dc36abb55e5ad",
+        "requestFingerprint": "sha256:38b91429b38f5467fc5a3c754e7006e830af6068f72f418d7d578998b1e39a73",
+        "evidenceCount": 3,
+        "toolsUsed": 0,
+        "memoryUsed": false,
+        "canonicalWrites": 0,
+        "externalModelCalls": 1,
+        "runtimeWitness": "CALLER_OBSERVED",
+        "workspaceActionsObserved": null,
+        "provider": "nous",
+        "model": "upstage/solar-mini4:free",
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 1394,
+          "outputTokens": 427,
+          "totalTokens": 1821,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        }
+      },
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "upstage/solar-mini4:free",
+        "cost": 0,
+        "finish": "stop",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "upstage/solar-mini4:free",
+        "configuredModelFamily": "solar",
+        "requestFingerprint": "sha256:38b91429b38f5467fc5a3c754e7006e830af6068f72f418d7d578998b1e39a73",
+        "evidenceFingerprint": "sha256:34e3f6fdedfb7bf8d6353fe16e1c98cc1e34b6b05344bf5ddc0dc36abb55e5ad",
+        "latencyMs": 27705,
+        "observedProvider": "nous",
+        "observedModel": "upstage/solar-mini4:free",
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1394,
+          "outputTokens": 427,
+          "totalTokens": 1821,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        },
+        "outcome": "SUCCESS",
+        "usableArtifact": true
+      },
+      "semantic_review": {
+        "required": [
+          true,
+          true
+        ],
+        "traps": [],
+        "additional_fidelity_issue": null
+      }
+    },
+    {
+      "kind": "case",
+      "route": "solar",
+      "id": "absence",
+      "status": "VALIDATED",
+      "proposals": [
+        {
+          "type": "UNKNOWN",
+          "claim": "Нельзя заключить, что команда отказалась от модели Ирис и никогда не использовала модель Ясень.",
+          "why_unknown": "Доступные данные ограничены: фрагмент архива охватывает только один шард, два шарда недоступны, и свежесть третьего не подтверждена. Запись о 4 ноября указывает лишь на временное ограничение Ириса по частоте (429), но не содержит решения об отказе. В полученном фрагменте отсутствуют записи о Ясене, поэтому невозможно выявить ни факт отказа, ни отсутствие использования этой модели. Вывод остаётся недоказанным на уровне частичной и устаревшей когнитивной обложки.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:absence:hit",
+              "evidence_hash": "sha256:4499fab2d932b477a6992472268f60594a2e1b139d31aa67114f2983f6266373"
+            },
+            {
+              "source_ref": "synthetic:absence:coverage",
+              "evidence_hash": "sha256:4735b49e23c4a075e2b723c41489ce63a3c9821c11d94f4dc9559e80581b7419"
+            }
+          ],
+          "required_evidence": [
+            "Запись с явным решением об отказе от Ириса, содержащая дату, ответственное лицо и основание",
+            "Полный или частично подтверждённый перечень запросов/использований Ириса и Ясени в период, охватываемый проверкой",
+            "Доказательства доступности или отсутствия трёх архивных шардов, а также подтверждение свежести данных, которые были исследованы"
+          ]
+        }
+      ],
+      "receipt": {
+        "schema": "theseus.dreaming-worker.pilot1-receipt.v1",
+        "scope": "SYNTHETIC_FIXTURE",
+        "packetId": "quality-v1:absence",
+        "evidenceFingerprint": "sha256:45d84de2eef16905a81e1bb0f406f43e280994235cc8374265f0a01f43fec7cf",
+        "requestFingerprint": "sha256:99ce910706db0eedabfe86f8021ce441697639d333d563e5aa316a50c72bdf07",
+        "evidenceCount": 2,
+        "toolsUsed": 0,
+        "memoryUsed": false,
+        "canonicalWrites": 0,
+        "externalModelCalls": 1,
+        "runtimeWitness": "CALLER_OBSERVED",
+        "workspaceActionsObserved": null,
+        "provider": "nous",
+        "model": "upstage/solar-mini4:free",
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 1343,
+          "outputTokens": 488,
+          "totalTokens": 1831,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        }
+      },
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "upstage/solar-mini4:free",
+        "cost": 0,
+        "finish": "stop",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "upstage/solar-mini4:free",
+        "configuredModelFamily": "solar",
+        "requestFingerprint": "sha256:99ce910706db0eedabfe86f8021ce441697639d333d563e5aa316a50c72bdf07",
+        "evidenceFingerprint": "sha256:45d84de2eef16905a81e1bb0f406f43e280994235cc8374265f0a01f43fec7cf",
+        "latencyMs": 6682,
+        "observedProvider": "nous",
+        "observedModel": "upstage/solar-mini4:free",
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1343,
+          "outputTokens": 488,
+          "totalTokens": 1831,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        },
+        "outcome": "SUCCESS",
+        "usableArtifact": true
+      },
+      "semantic_review": {
+        "required": [
+          true,
+          true
+        ],
+        "traps": [],
+        "additional_fidelity_issue": null
+      }
+    },
+    {
+      "kind": "case",
+      "route": "solar",
+      "id": "dissent",
+      "status": "FAILED",
+      "error": "PILOT1_OUTPUT_TRUNCATED",
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "upstage/solar-mini4:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "upstage/solar-mini4:free",
+        "configuredModelFamily": "solar",
+        "requestFingerprint": "sha256:9392a3bca36f4733a3be0063ab86d89033157c5e64ebd1e865cb8327019c36db",
+        "evidenceFingerprint": "sha256:c31cf20bf7f05d158625708581b3e6a14535aa93aa11599f5fa321145d2cac84",
+        "latencyMs": 9252,
+        "observedProvider": "nous",
+        "observedModel": "upstage/solar-mini4:free",
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1378,
+          "outputTokens": 1024,
+          "totalTokens": 2402,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        },
+        "outcome": "SUCCESS",
+        "usableArtifact": true
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "solar",
+      "id": "signal",
+      "status": "FAILED",
+      "error": "PILOT1_PROPOSAL_SCHEMA_INVALID: ✖ Unrecognized key: \"statement\"",
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "upstage/solar-mini4:free",
+        "cost": 0,
+        "finish": "stop",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "upstage/solar-mini4:free",
+        "configuredModelFamily": "solar",
+        "requestFingerprint": "sha256:c7b2c473e2550539151ae9a2b46a8253cf08db729de3e87378f30fa59d5ba96c",
+        "evidenceFingerprint": "sha256:d0ae2fafb9a7acb93ab2803eeff05900ce97e20517849b6488ac82f140c5a03f",
+        "latencyMs": 8258,
+        "observedProvider": "nous",
+        "observedModel": "upstage/solar-mini4:free",
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1453,
+          "outputTokens": 791,
+          "totalTokens": 2244,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        },
+        "outcome": "SUCCESS",
+        "usableArtifact": true
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "solar",
+      "id": "long",
+      "status": "VALIDATED",
+      "proposals": [
+        {
+          "type": "FACT",
+          "claim": "In the Cedar project, decisions 4 and 6 (use local cache; preserve evidence links) are approved.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:long:end",
+              "evidence_hash": "sha256:2ba7d95a88f2be742536ecd62eb20426f24e1e6c75c6f97896ee2e519103b7bc"
+            },
+            {
+              "source_ref": "synthetic:long:start",
+              "evidence_hash": "sha256:b8f2fcb8544fdbfdb728294e855088f64f4106d505ca68a11980fe8804f827f8"
+            }
+          ]
+        },
+        {
+          "type": "FACT",
+          "claim": "Decisions 5 and 7 (use paid cloud; enable automatic publication) remain proposals.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:long:start",
+              "evidence_hash": "sha256:b8f2fcb8544fdbfdb728294e855088f64f4106d505ca68a11980fe8804f827f8"
+            },
+            {
+              "source_ref": "synthetic:long:list",
+              "evidence_hash": "sha256:54c0380dcfd5ebb845fbb66124ca86cdafa7662f3502047696da7935914341fc"
+            }
+          ]
+        },
+        {
+          "type": "INFERENCE",
+          "claim": "The earlier exception is resolved by the later register and owner reply, not by the unrelated status reports.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:long:end",
+              "evidence_hash": "sha256:2ba7d95a88f2be742536ecd62eb20426f24e1e6c75c6f97896ee2e519103b7bc"
+            },
+            {
+              "source_ref": "synthetic:long:list",
+              "evidence_hash": "sha256:54c0380dcfd5ebb845fbb66124ca86cdafa7662f3502047696da7935914341fc"
+            }
+          ],
+          "assumptions": [
+            "The owner reply (end) overrides or supersedes the earlier exception based on the later register.",
+            "The noise entries (noise01-noise24) do not describe any Cedar decision change.",
+            "The register (list) provides the authoritative current decision list."
+          ],
+          "uncertainty": "LOW"
+        },
+        {
+          "type": "HYPOTHESIS",
+          "claim": "Applying the later register means only approved decisions 4 and 6 should be retained as decisions for Cedar.",
+          "why_plausible": "The owner explicitly confirms in the later reply that 4 and 6 are approved and that the earlier exceptions still apply, while the register lists 5 and 7 as separate entries that were not confirmed as approved.",
+          "source_refs": [
+            {
+              "source_ref": "synthetic:long:end",
+              "evidence_hash": "sha256:2ba7d95a88f2be742536ecd62eb20426f24e1e6c75c6f97896ee2e519103b7bc"
+            },
+            {
+              "source_ref": "synthetic:long:list",
+              "evidence_hash": "sha256:54c0380dcfd5ebb845fbb66124ca86cdafa7662f3502047696da7935914341fc"
+            }
+          ],
+          "falsifier": "If the owner reply or register were later found to be retracted, misformatted, or if one of the noise entries actually describes a Cedar decision change, the approved set would change.",
+          "required_evidence": [
+            "synthetic:long:end",
+            "synthetic:long:list"
+          ],
+          "competing_explanations": [
+            "The earlier exception could mean decisions 4 and 6 are not approved despite the owner reply.",
+            "The noise entries could contain unobserved Cedar decision changes.",
+            "The register could be outdated or incomplete."
+          ],
+          "uncertainty": "LOW"
+        }
+      ],
+      "receipt": {
+        "schema": "theseus.dreaming-worker.pilot1-receipt.v1",
+        "scope": "SYNTHETIC_FIXTURE",
+        "packetId": "quality-v1:long",
+        "evidenceFingerprint": "sha256:67884eb190f5f7e0e19e233a8f07edb2482c096b1e22baf9d551c62f94667eda",
+        "requestFingerprint": "sha256:da530e5a87f6538b91693e2b4a992ab11be469756f5ef1fec7482d8a56ce95e8",
+        "evidenceCount": 27,
+        "toolsUsed": 0,
+        "memoryUsed": false,
+        "canonicalWrites": 0,
+        "externalModelCalls": 1,
+        "runtimeWitness": "CALLER_OBSERVED",
+        "workspaceActionsObserved": null,
+        "provider": "nous",
+        "model": "upstage/solar-mini4:free",
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 3670,
+          "outputTokens": 941,
+          "totalTokens": 4611,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        }
+      },
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "upstage/solar-mini4:free",
+        "cost": 0,
+        "finish": "stop",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "upstage/solar-mini4:free",
+        "configuredModelFamily": "solar",
+        "requestFingerprint": "sha256:da530e5a87f6538b91693e2b4a992ab11be469756f5ef1fec7482d8a56ce95e8",
+        "evidenceFingerprint": "sha256:67884eb190f5f7e0e19e233a8f07edb2482c096b1e22baf9d551c62f94667eda",
+        "latencyMs": 11232,
+        "observedProvider": "nous",
+        "observedModel": "upstage/solar-mini4:free",
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 3670,
+          "outputTokens": 941,
+          "totalTokens": 4611,
+          "reasoningTokens": 0,
+          "cachedInputTokens": 0
+        },
+        "outcome": "SUCCESS",
+        "usableArtifact": true
+      },
+      "semantic_review": {
+        "required": [
+          false,
+          true
+        ],
+        "traps": [],
+        "additional_fidelity_issue": "First FACT states names from the register but cites start/end, not list; later INFERENCE/HYPOTHESIS do not replace the required FACT with both refs. Extra assumption says later reply supersedes the exception although reply preserves it."
+      }
+    },
+    {
+      "kind": "end",
+      "route": "solar",
+      "attempts": 6,
+      "stopped": false
+    },
+    {
+      "kind": "catalog",
+      "route": "ernie",
+      "provider": "openrouter",
+      "model": "baidu/ernie-5.5-flash-preview:free",
+      "pricing": {
+        "prompt": "0",
+        "completion": "0"
+      },
+      "fixtureSha256": "f328422d67be4f318ee1398fc8f9da183d5ac97994a78721fa9d3f6616dcc84f"
+    },
+    {
+      "kind": "case",
+      "route": "ernie",
+      "id": "decision",
+      "status": "FAILED",
+      "error": "Provider exhausted the output budget before producing usable final content",
+      "transport": {
+        "status": 200,
+        "provider": "Baidu",
+        "model": "baidu/ernie-5.5-flash-preview:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "openrouter",
+        "configuredModel": "baidu/ernie-5.5-flash-preview:free",
+        "configuredModelFamily": "ernie",
+        "requestFingerprint": "sha256:3d9b363026be0bee2d50c54fa9ac9b2c000665033a5c59c8c21e8148a2d538ef",
+        "evidenceFingerprint": "sha256:e52694da7457b33b2c07c2bdf2b354f6002acd8398a25cfd3f7fd61c0f4eb5df",
+        "latencyMs": 5159,
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1335,
+          "outputTokens": 1024,
+          "totalTokens": 2359,
+          "reasoningTokens": 1024,
+          "cachedInputTokens": 0
+        },
+        "outcome": "FAILURE",
+        "usableArtifact": false,
+        "failureCode": "OUTPUT_BUDGET_EXHAUSTED"
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "ernie",
+      "id": "authority",
+      "status": "FAILED",
+      "error": "Provider exhausted the output budget before producing usable final content",
+      "transport": {
+        "status": 200,
+        "provider": "Baidu",
+        "model": "baidu/ernie-5.5-flash-preview:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "openrouter",
+        "configuredModel": "baidu/ernie-5.5-flash-preview:free",
+        "configuredModelFamily": "ernie",
+        "requestFingerprint": "sha256:38b91429b38f5467fc5a3c754e7006e830af6068f72f418d7d578998b1e39a73",
+        "evidenceFingerprint": "sha256:34e3f6fdedfb7bf8d6353fe16e1c98cc1e34b6b05344bf5ddc0dc36abb55e5ad",
+        "latencyMs": 5769,
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1201,
+          "outputTokens": 1024,
+          "totalTokens": 2225,
+          "reasoningTokens": 1029,
+          "cachedInputTokens": 0
+        },
+        "outcome": "FAILURE",
+        "usableArtifact": false,
+        "failureCode": "OUTPUT_BUDGET_EXHAUSTED"
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "ernie",
+      "id": "absence",
+      "status": "FAILED",
+      "error": "PILOT1_OUTPUT_TRUNCATED",
+      "transport": {
+        "status": 200,
+        "provider": "Baidu",
+        "model": "baidu/ernie-5.5-flash-preview:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "openrouter",
+        "configuredModel": "baidu/ernie-5.5-flash-preview:free",
+        "configuredModelFamily": "ernie",
+        "requestFingerprint": "sha256:99ce910706db0eedabfe86f8021ce441697639d333d563e5aa316a50c72bdf07",
+        "evidenceFingerprint": "sha256:45d84de2eef16905a81e1bb0f406f43e280994235cc8374265f0a01f43fec7cf",
+        "latencyMs": 5593,
+        "observedProvider": "Baidu",
+        "observedModel": "baidu/ernie-5.5-flash-preview:free",
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1162,
+          "outputTokens": 1024,
+          "totalTokens": 2186,
+          "reasoningTokens": 932,
+          "cachedInputTokens": 512
+        },
+        "outcome": "SUCCESS",
+        "usableArtifact": true
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "ernie",
+      "id": "dissent",
+      "status": "FAILED",
+      "error": "PILOT1_OUTPUT_TRUNCATED",
+      "transport": {
+        "status": 200,
+        "provider": "Baidu",
+        "model": "baidu/ernie-5.5-flash-preview:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "openrouter",
+        "configuredModel": "baidu/ernie-5.5-flash-preview:free",
+        "configuredModelFamily": "ernie",
+        "requestFingerprint": "sha256:9392a3bca36f4733a3be0063ab86d89033157c5e64ebd1e865cb8327019c36db",
+        "evidenceFingerprint": "sha256:c31cf20bf7f05d158625708581b3e6a14535aa93aa11599f5fa321145d2cac84",
+        "latencyMs": 4854,
+        "observedProvider": "Baidu",
+        "observedModel": "baidu/ernie-5.5-flash-preview:free",
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1207,
+          "outputTokens": 1024,
+          "totalTokens": 2231,
+          "reasoningTokens": 591,
+          "cachedInputTokens": 512
+        },
+        "outcome": "SUCCESS",
+        "usableArtifact": true
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "ernie",
+      "id": "signal",
+      "status": "FAILED",
+      "error": "Provider exhausted the output budget before producing usable final content",
+      "transport": {
+        "status": 200,
+        "provider": "Baidu",
+        "model": "baidu/ernie-5.5-flash-preview:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "openrouter",
+        "configuredModel": "baidu/ernie-5.5-flash-preview:free",
+        "configuredModelFamily": "ernie",
+        "requestFingerprint": "sha256:c7b2c473e2550539151ae9a2b46a8253cf08db729de3e87378f30fa59d5ba96c",
+        "evidenceFingerprint": "sha256:d0ae2fafb9a7acb93ab2803eeff05900ce97e20517849b6488ac82f140c5a03f",
+        "latencyMs": 4956,
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1260,
+          "outputTokens": 1024,
+          "totalTokens": 2284,
+          "reasoningTokens": 1026,
+          "cachedInputTokens": 512
+        },
+        "outcome": "FAILURE",
+        "usableArtifact": false,
+        "failureCode": "OUTPUT_BUDGET_EXHAUSTED"
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "ernie",
+      "id": "long",
+      "status": "FAILED",
+      "error": "Provider exhausted the output budget before producing usable final content",
+      "transport": {
+        "status": 200,
+        "provider": "Baidu",
+        "model": "baidu/ernie-5.5-flash-preview:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "openrouter",
+        "configuredModel": "baidu/ernie-5.5-flash-preview:free",
+        "configuredModelFamily": "ernie",
+        "requestFingerprint": "sha256:da530e5a87f6538b91693e2b4a992ab11be469756f5ef1fec7482d8a56ce95e8",
+        "evidenceFingerprint": "sha256:67884eb190f5f7e0e19e233a8f07edb2482c096b1e22baf9d551c62f94667eda",
+        "latencyMs": 4843,
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 2947,
+          "outputTokens": 1024,
+          "totalTokens": 3971,
+          "reasoningTokens": 1025,
+          "cachedInputTokens": 512
+        },
+        "outcome": "FAILURE",
+        "usableArtifact": false,
+        "failureCode": "OUTPUT_BUDGET_EXHAUSTED"
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "end",
+      "route": "ernie",
+      "attempts": 6,
+      "stopped": false
+    },
+    {
+      "kind": "catalog",
+      "route": "tencent",
+      "provider": "nous",
+      "model": "tencent/hy4-flash:free",
+      "pricing": {
+        "prompt": "0",
+        "completion": "0",
+        "input_cache_read": "0"
+      },
+      "fixtureSha256": "f328422d67be4f318ee1398fc8f9da183d5ac97994a78721fa9d3f6616dcc84f"
+    },
+    {
+      "kind": "case",
+      "route": "tencent",
+      "id": "decision",
+      "status": "FAILED",
+      "error": "Provider exhausted the output budget before producing usable final content",
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "tencent/hy4-flash:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "tencent/hy4-flash:free",
+        "configuredModelFamily": "hy4",
+        "requestFingerprint": "sha256:3d9b363026be0bee2d50c54fa9ac9b2c000665033a5c59c8c21e8148a2d538ef",
+        "evidenceFingerprint": "sha256:e52694da7457b33b2c07c2bdf2b354f6002acd8398a25cfd3f7fd61c0f4eb5df",
+        "latencyMs": 10102,
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1423,
+          "outputTokens": 1024,
+          "totalTokens": 2447,
+          "reasoningTokens": 1024,
+          "cachedInputTokens": 0
+        },
+        "outcome": "FAILURE",
+        "usableArtifact": false,
+        "failureCode": "OUTPUT_BUDGET_EXHAUSTED"
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "tencent",
+      "id": "authority",
+      "status": "FAILED",
+      "error": "Provider exhausted the output budget before producing usable final content",
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "tencent/hy4-flash:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "tencent/hy4-flash:free",
+        "configuredModelFamily": "hy4",
+        "requestFingerprint": "sha256:38b91429b38f5467fc5a3c754e7006e830af6068f72f418d7d578998b1e39a73",
+        "evidenceFingerprint": "sha256:34e3f6fdedfb7bf8d6353fe16e1c98cc1e34b6b05344bf5ddc0dc36abb55e5ad",
+        "latencyMs": 7225,
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1273,
+          "outputTokens": 1024,
+          "totalTokens": 2297,
+          "reasoningTokens": 1024,
+          "cachedInputTokens": 0
+        },
+        "outcome": "FAILURE",
+        "usableArtifact": false,
+        "failureCode": "OUTPUT_BUDGET_EXHAUSTED"
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "tencent",
+      "id": "absence",
+      "status": "FAILED",
+      "error": "Provider exhausted the output budget before producing usable final content",
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "tencent/hy4-flash:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "tencent/hy4-flash:free",
+        "configuredModelFamily": "hy4",
+        "requestFingerprint": "sha256:99ce910706db0eedabfe86f8021ce441697639d333d563e5aa316a50c72bdf07",
+        "evidenceFingerprint": "sha256:45d84de2eef16905a81e1bb0f406f43e280994235cc8374265f0a01f43fec7cf",
+        "latencyMs": 14559,
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1241,
+          "outputTokens": 1024,
+          "totalTokens": 2265,
+          "reasoningTokens": 1024,
+          "cachedInputTokens": 0
+        },
+        "outcome": "FAILURE",
+        "usableArtifact": false,
+        "failureCode": "OUTPUT_BUDGET_EXHAUSTED"
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "tencent",
+      "id": "dissent",
+      "status": "FAILED",
+      "error": "Provider exhausted the output budget before producing usable final content",
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "tencent/hy4-flash:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "tencent/hy4-flash:free",
+        "configuredModelFamily": "hy4",
+        "requestFingerprint": "sha256:9392a3bca36f4733a3be0063ab86d89033157c5e64ebd1e865cb8327019c36db",
+        "evidenceFingerprint": "sha256:c31cf20bf7f05d158625708581b3e6a14535aa93aa11599f5fa321145d2cac84",
+        "latencyMs": 14010,
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1281,
+          "outputTokens": 1024,
+          "totalTokens": 2305,
+          "reasoningTokens": 1024,
+          "cachedInputTokens": 0
+        },
+        "outcome": "FAILURE",
+        "usableArtifact": false,
+        "failureCode": "OUTPUT_BUDGET_EXHAUSTED"
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "tencent",
+      "id": "signal",
+      "status": "FAILED",
+      "error": "Provider exhausted the output budget before producing usable final content",
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "tencent/hy4-flash:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "tencent/hy4-flash:free",
+        "configuredModelFamily": "hy4",
+        "requestFingerprint": "sha256:c7b2c473e2550539151ae9a2b46a8253cf08db729de3e87378f30fa59d5ba96c",
+        "evidenceFingerprint": "sha256:d0ae2fafb9a7acb93ab2803eeff05900ce97e20517849b6488ac82f140c5a03f",
+        "latencyMs": 9192,
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 1331,
+          "outputTokens": 1024,
+          "totalTokens": 2355,
+          "reasoningTokens": 1024,
+          "cachedInputTokens": 0
+        },
+        "outcome": "FAILURE",
+        "usableArtifact": false,
+        "failureCode": "OUTPUT_BUDGET_EXHAUSTED"
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "case",
+      "route": "tencent",
+      "id": "long",
+      "status": "FAILED",
+      "error": "Provider exhausted the output budget before producing usable final content",
+      "transport": {
+        "status": 200,
+        "provider": null,
+        "model": "tencent/hy4-flash:free",
+        "cost": 0,
+        "finish": "length",
+        "retryAfter": null
+      },
+      "providerEvidence": {
+        "configuredProvider": "nous",
+        "configuredModel": "tencent/hy4-flash:free",
+        "configuredModelFamily": "hy4",
+        "requestFingerprint": "sha256:da530e5a87f6538b91693e2b4a992ab11be469756f5ef1fec7482d8a56ce95e8",
+        "evidenceFingerprint": "sha256:67884eb190f5f7e0e19e233a8f07edb2482c096b1e22baf9d551c62f94667eda",
+        "latencyMs": 13833,
+        "status": 200,
+        "providerState": "RESPONDED",
+        "usageState": "PRESENT",
+        "usage": {
+          "inputTokens": 3096,
+          "outputTokens": 1024,
+          "totalTokens": 4120,
+          "reasoningTokens": 1024,
+          "cachedInputTokens": 0
+        },
+        "outcome": "FAILURE",
+        "usableArtifact": false,
+        "failureCode": "OUTPUT_BUDGET_EXHAUSTED"
+      },
+      "semantic_review": null
+    },
+    {
+      "kind": "end",
+      "route": "tencent",
+      "attempts": 6,
+      "stopped": false
+    }
+  ]
+}
