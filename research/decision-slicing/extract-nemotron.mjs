@@ -51,10 +51,11 @@ if(process.argv[2]==='--verify'){
   console.log('EXTRACTION_READBACK_PASS');process.exit(0);
 }
 const [output,route]=process.argv.slice(2);
-assert.ok(output&&['bothub-ultra','nim-lightning'].includes(route));
+assert.ok(output&&['bothub-ultra','nim-lightning','nim-ultra'].includes(route));
 const bothub=route==='bothub-ultra';
+const ultra=route==='nim-ultra';
 const baseURL=bothub?'https://bothub-api.int.exe.xyz/v1':'https://nvidi-nim.int.exe.xyz/v1';
-const model=bothub?'nemotron-3-ultra-550b-a55b:free':'nvidia/nemotron-3.5-lightning-30b-a3b';
+const model=bothub?'nemotron-3-ultra-550b-a55b:free':ultra?'nvidia/nemotron-3-ultra-550b-a55b':'nvidia/nemotron-3.5-lightning-30b-a3b';
 const cap=3072, timeoutMs=60000;
 const catalog=await fetch(baseURL+'/models',{signal:AbortSignal.timeout(10000)});
 assert.ok(catalog.ok);
@@ -85,12 +86,12 @@ globalThis.fetch=async(url,opts)=>{
   const body=JSON.parse(opts.body);
   assert.equal(body.model,model);assert.equal(body.max_tokens,cap);
   assert.ok(attempts<2);
-  const wire=JSON.stringify(bothub?body:{...body,reasoning_budget:768});
+  const wire=JSON.stringify(bothub?body:ultra?{...body,reasoning_effort:'medium'}:{...body,reasoning_budget:768});
   attempts++;
-  record('attempt',{id:active,wireSha:sha(wire),maxOutputTokens:cap,timeoutMs,reasoningBudget:bothub?null:768});
+  record('attempt',{id:active,wireSha:sha(wire),maxOutputTokens:cap,timeoutMs,reasoningBudget:bothub||ultra?null:768,reasoningEffort:ultra?'medium':null});
   const res=await original(url,{...opts,body:wire});
   const raw=await res.clone().json().catch(()=>({}));
-  transport={status:res.status,model:raw.model??null,provider:raw.provider??null,cost:raw.usage?.cost??raw.cost??null,finish:raw.choices?.[0]?.finish_reason??null};
+  transport={status:res.status,model:raw.model??null,provider:raw.provider??null,cost:raw.usage?.cost??raw.cost??null,finish:raw.choices?.[0]?.finish_reason??null,retryAfter:res.headers.get('retry-after')};
   return res;
 };
 let stopped=false;
@@ -103,7 +104,7 @@ for(const c of cases){
     assert.equal(transport?.model,model);
     assert.ok(transport.cost===null||transport.cost===0||transport.cost==='0','unexpected nonzero cost');
     assert.equal(result.finishReason,'stop');
-    if(!bothub&&result.usage?.reasoningTokens!=null)assert.ok(result.usage.reasoningTokens<=832,'reasoning budget exceeded');
+    if(!bothub&&!ultra&&result.usage?.reasoningTokens!=null)assert.ok(result.usage.reasoningTokens<=832,'reasoning budget exceeded');
     const evaluation=evaluate(parseStrictModelJson(result.text),c);
     record('case',{id:c.id,status:'VALIDATED',evaluation,rawFinal:result.text,usage:result.usage,transport,latencyMs:Date.now()-start});
     if(bothub&&transport.cost===null)stopped=true;
