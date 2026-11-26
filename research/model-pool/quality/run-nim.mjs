@@ -40,9 +40,8 @@ const cap=Number(capText);
 assert.ok([1024,3072].includes(cap));
 const latencyProbe=priorPath==='--independent-probe';
 const reasoningProbe=priorPath==='--reasoning-probe';
-const reasoningRest=priorPath==='--reasoning-rest';
 const schemaProbe=priorPath==='--schema-probe';
-const reasoningBudget=reasoningProbe||reasoningRest||schemaProbe?768:null;
+const reasoningBudget=reasoningProbe||schemaProbe?768:null;
 assert.equal(cap===3072,Boolean(priorPath));
 if(latencyProbe||reasoningBudget!==null)assert.equal(routeId,'lightning');
 const routes={
@@ -61,8 +60,6 @@ if (m.pricing) assert.ok(Object.keys(m.pricing).length&&Object.values(m.pricing)
 let selected=cases;
 if(reasoningProbe||schemaProbe){
  selected=cases.filter(c=>c.id==='authority');
-}else if(reasoningRest){
- selected=cases.filter(c=>c.id!=='authority');
 }else if(latencyProbe){
  selected=cases.filter(c=>c.id==='authority');
 }else if(priorPath){
@@ -77,7 +74,7 @@ if(reasoningProbe||schemaProbe){
 }
 
 writeFileSync(output,'',{flag:'wx',mode:0o600});
-record('catalog',{provider:route.provider,model:route.model,pricing:m.pricing??null,entitlement:'NVIDIA_DEVELOPER_RESEARCH',fixtureSha256:digest,cap,timeoutMs:cap===1024?30000:60000,reasoningBudget,condition:schemaProbe?'NATIVE_SCHEMA_PROBE':reasoningProbe?'REASONING_BUDGET_PROBE':reasoningRest?'REASONING_BUDGET_REST':latencyProbe?'INDEPENDENT_LATENCY_AND_BUDGET_PROBE':'COMPARISON',selected: selected.map(c=>c.id)});
+record('catalog',{provider:route.provider,model:route.model,pricing:m.pricing??null,entitlement:'NVIDIA_DEVELOPER_RESEARCH',fixtureSha256:digest,cap,timeoutMs:cap===1024?30000:60000,reasoningBudget,condition:schemaProbe?'NATIVE_SCHEMA_PROBE':reasoningProbe?'REASONING_BUDGET_PROBE':latencyProbe?'INDEPENDENT_LATENCY_AND_BUDGET_PROBE':'COMPARISON',selected: selected.map(c=>c.id)});
 let attempts=0, transport=null, providerEvidence=null, activeCase=null;
 const originalFetch=globalThis.fetch;
 globalThis.fetch=async(url,opts)=>{
