@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
+import { parseStrictModelJson } from './strict-model-json.ts';
+
 import type { EvidencePacket } from './dry-run.ts';
 
 const nonempty = z.string().trim().min(1);
@@ -88,7 +90,7 @@ export function fingerprintProposal(proposal: Proposal): string {
 export function parseProposalSet(rawText: string, packet: EvidencePacket): ProposalSet {
   let decoded: unknown;
   try {
-    decoded = JSON.parse(rawText);
+    decoded = parseStrictModelJson(rawText);
   } catch {
     throw new Error('PILOT1_PROPOSAL_JSON_INVALID');
   }

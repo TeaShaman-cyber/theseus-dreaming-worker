@@ -1,0 +1,224 @@
+{
+  "name": "strict-critique-json",
+  "createdAt": "2026-11-26T22:29:23.086Z",
+  "description": "Enforce existing critique artifact untrusted JSON boundary (#54)",
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "specIds": [
+    "default:pilot2/critique-contract"
+  ],
+  "artifacts": [
+    {
+      "type": "proposal",
+      "optional": false,
+      "requires": [],
+      "state": "complete",
+      "files": [
+        {
+          "key": "proposal",
+          "filename": "proposal.md",
+          "state": "complete",
+          "validatedHash": "sha256:a0cc1386a4aedaf7ed2b19f60b586eb795246fa9fd2ca98b5719c9e01e8fa8d9"
+        }
+      ]
+    },
+    {
+      "type": "specs",
+      "optional": false,
+      "requires": [
+        "proposal"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:pilot2/critique-contract",
+          "filename": "deltas/default/pilot2/critique-contract/spec.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:cede9542af9a8e08e7c8bd07fa45269a97c7dc4c7181eb97ac9f3d2e499e39f0"
+        }
+      ]
+    },
+    {
+      "type": "verify",
+      "optional": false,
+      "requires": [
+        "specs"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:pilot2/critique-contract",
+          "filename": "deltas/default/pilot2/critique-contract/verify.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:b2cbde09841127cbb4b7c215d8359cec7d053d0e93e8fec3161002ae96be040f"
+        }
+      ]
+    },
+    {
+      "type": "design",
+      "optional": false,
+      "requires": [
+        "proposal",
+        "specs",
+        "verify"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "design",
+          "filename": "design.md",
+          "state": "complete",
+          "validatedHash": "sha256:e87d399b77b8d23003829171e29a2d7a5902633495d6e029d9b3327fa0d80f65"
+        }
+      ]
+    },
+    {
+      "type": "tasks",
+      "optional": false,
+      "requires": [
+        "specs",
+        "design"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "tasks",
+          "filename": "tasks.md",
+          "state": "complete",
+          "validatedHash": "sha256:7098cd90089f421b5602057e3c340a6cf9599584b08d791eb769bb3a01a45dd9"
+        }
+      ]
+    }
+  ],
+  "history": [
+    {
+      "type": "created",
+      "at": "2026-11-26T22:29:23.086Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "specIds": [
+        "default:pilot2/critique-contract"
+      ],
+      "schemaName": "schema-std",
+      "schemaVersion": 1
+    },
+    {
+      "type": "artifacts-synced",
+      "at": "2026-11-26T22:29:23.110Z",
+      "by": {
+        "name": "specd",
+        "email": "system@getspecd.dev"
+      },
+      "typesAdded": [
+        "proposal",
+        "specs",
+        "verify",
+        "design",
+        "tasks"
+      ],
+      "typesRemoved": [],
+      "filesAdded": [
+        {
+          "type": "proposal",
+          "key": "proposal"
+        },
+        {
+          "type": "specs",
+          "key": "default:pilot2/critique-contract"
+        },
+        {
+          "type": "verify",
+          "key": "default:pilot2/critique-contract"
+        },
+        {
+          "type": "design",
+          "key": "design"
+        },
+        {
+          "type": "tasks",
+          "key": "tasks"
+        }
+      ],
+      "filesRemoved": []
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T22:29:23.491Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "drafting",
+      "to": "designing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T22:29:40.321Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "designing",
+      "to": "ready"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T22:29:40.875Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "ready",
+      "to": "implementing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T22:29:41.475Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "implementing",
+      "to": "verifying"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T22:29:42.062Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "verifying",
+      "to": "done"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T22:29:42.624Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "done",
+      "to": "archivable"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T22:29:43.244Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "archivable",
+      "to": "archiving"
+    }
+  ],
+  "archivedAt": "2026-11-26T22:29:43.316Z",
+  "archivedBy": {
+    "name": "exe.dev user",
+    "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+  }
+}
