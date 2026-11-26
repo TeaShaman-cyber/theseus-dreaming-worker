@@ -337,7 +337,11 @@ blocks. An exact already acknowledged tip is verified again without
 inference. Otherwise stage the exact plan, then process canonical
 selected work in order. Each possible new work requires two remaining
 pass units. Calls through the provided routes are counted and capped;
-known completed work uses zero units. Stop immediately on an uncertain
+known completed work uses zero units. If fewer than two pass units remain,
+the runner may ask the existing store to verify and acknowledge the exact
+fully completed plan, without invoking selected work or reserving anything.
+PENDING remains budget exhaustion; conflict and uncertainty remain explicit.
+An acknowledgement attempt does not imply a committed checkpoint. Stop immediately on an uncertain
 or incomplete work; no retry or takeover. When every work is terminal,
 the existing store validates and acknowledges the full batch. A partial
 run leaves the source checkpoint unchanged; the next explicit invocation
@@ -349,7 +353,8 @@ authorization mechanism.
 The fast tests exercise budgeted continuation, exact replay, invalid
 input/route, missing root, mismatched or unavailable staging and unresolved
 reservation. The existing PostgreSQL contract exercises two separate
-two-pass invocations and a zero-budget exact replay. Actual source
+two-pass invocations, a zero-budget exact replay and recovery after both
+completions but before acknowledgement. Actual source
 acquisition and real unattended authorization remain out of scope.
 
 ### Bounded native browse acquisition
@@ -378,3 +383,23 @@ generation are blocked before shard dispatch. No live SQL or network.
 Hosted PostgreSQL composition now acquires those recorded pages before
 its budgeted run and exact replay. Real machine identity and source
 delivery remain deferred; no live migration.
+
+### One bounded synthetic source cycle
+
+The portable `runSourceCycle` entrypoint combines trusted handoff validation,
+explicit execution policy, bounded acquisition and the existing durable runner.
+The caller supplies all input, limits, transport, routes and store. There is
+no implicit source discovery, bootstrap, schedule, retry or production client.
+
+- INPUT_REJECTED and ACQUISITION_BLOCKED stop before ledger access/inference.
+- NO_SELECTED_WORK and REMOVAL_PENDING preserve the validated candidate digest,
+  observed unknown currentness and selected/removed counts. Neither advances
+  the source checkpoint or establishes source completeness. Changed-but-empty
+  membership and removals require a separate disposition policy.
+- Successful admission delegates to the existing runner and returns its exact
+  disposition and receipt. An unexpected execution exception is unknown, not
+  evidence of zero calls.
+
+The hosted PostgreSQL contract uses this entrypoint for acquisition failure,
+budget exhaustion, restart, exact replay and completion-only recovery. It
+reads recorded synthetic pages; it does not prove live source transport.

@@ -1,0 +1,15 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirement: Bounded synthetic source batch run$'
+    after:
+      type: section
+      matches: '^Scenario: Invalid or uncertain execution$'
+  content: |
+    #### Scenario: Zero-pass completion-only acknowledgement
+
+    - **GIVEN** an exact staged plan whose selected work completed durably before the source acknowledgement
+    - **WHEN** execution resumes with fewer than two remaining attempted passes
+    - **THEN** the existing verified acknowledgement may confirm the complete batch without reserving work or invoking inference
+    - **AND** missing completion leaves the checkpoint unchanged and uncertainty is not budget exhaustion

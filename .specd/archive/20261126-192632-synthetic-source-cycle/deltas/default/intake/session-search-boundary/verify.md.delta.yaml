@@ -1,0 +1,23 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Bounded synthetic source acquisition$'
+  content: |
+    ### Requirement: Bounded synthetic source cycle
+
+    #### Scenario: Acquisition through durable completion
+
+    - **GIVEN** a trusted synthetic handoff, bounded transport and existing source store
+    - **WHEN** the cycle is invoked with a limited pass budget, continued and replayed
+    - **THEN** complete admission precedes execution, only remaining work invokes inference, and the acknowledged receipt is independently readable
+
+    #### Scenario: Explicit stopped cycle
+
+    - **GIVEN** a rejected handoff or policy, incomplete acquisition, empty selection or unresolved removal
+    - **WHEN** the cycle is invoked
+    - **THEN** it returns an explicit stop without store access or inference and without advancing the source checkpoint
+    - **AND** a validated empty selection or removal retains the candidate identity and unknown currentness

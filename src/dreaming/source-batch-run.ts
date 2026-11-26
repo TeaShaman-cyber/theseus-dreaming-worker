@@ -18,21 +18,26 @@ type RunResult = {
   receipt: Stored | null;
 };
 
-/** Explicit synthetic composition, not an acquisition or authorization boundary.
- * The caller supplies trusted current source observations and permitted routes.
- * The store owns reservation, completion and acknowledgement verification.
- */
-export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], store: SourceStore,
-  maxPasses: number): Promise<RunResult> {
+export function prepareSourceRunPolicy(routes: Pilot2Route[], maxPasses: number) {
   const budget = z.number().int().min(0).max(200).parse(maxPasses);
-  const input = structuredClone(raw);
-  const plan = prepareSourceBatchPlan(input);
   const snapshot = routes.map(route => Object.freeze({ ...route }));
   if (snapshot.length !== 2 || snapshot.some(r => !r.id?.trim() || !r.provider?.trim()
     || !r.model?.trim() || !r.modelFamily?.trim() || typeof r.infer !== 'function')
     || snapshot[0].modelFamily.trim().toLowerCase() === snapshot[1].modelFamily.trim().toLowerCase()) {
     throw Error('SOURCE_RUN_ROUTE_PLAN');
   }
+  return { budget, routes: snapshot };
+}
+
+/** Explicit synthetic composition, not an acquisition or authorization boundary.
+ * The caller supplies trusted current source observations and permitted routes.
+ * The store owns reservation, completion and acknowledgement verification.
+ */
+export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], store: SourceStore,
+  maxPasses: number): Promise<RunResult> {
+  const { budget, routes: snapshot } = prepareSourceRunPolicy(routes, maxPasses);
+  const input = structuredClone(raw);
+  const plan = prepareSourceBatchPlan(input);
   let attemptedPasses = 0;
   const work: WorkSummary[] = [];
   const result = (status: RunStatus, receipt: Stored | null = null): RunResult =>
@@ -43,6 +48,14 @@ export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], sto
       || receipt.currentPlanFingerprint !== plan.planFingerprint) return false;
     const { receiptFingerprint, ...payload } = receipt;
     return sourceReceiptFingerprint(payload) === receiptFingerprint;
+  }
+  async function acknowledgeComplete(pending: 'BUDGET_EXHAUSTED' | 'WORK_UNRESOLVED') {
+    const ack = await store.acknowledge(input);
+    if (ack.status === 'CONFLICT') return result('CONFLICT');
+    if (ack.status === 'PENDING') return result(pending);
+    if ((ack.status !== 'ACKNOWLEDGED' && ack.status !== 'ALREADY_ACKNOWLEDGED')
+      || !exactReceipt(ack.receipt)) return result('STORAGE_UNKNOWN');
+    return result(ack.status, ack.receipt);
   }
   const boundedRoutes = snapshot.map(route => ({
     ...route,
@@ -66,7 +79,7 @@ export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], sto
     if (!staged.plan || staged.plan.planFingerprint !== plan.planFingerprint
       || sourceReceiptFingerprint(staged.plan) !== sourceReceiptFingerprint(plan)) return result('STORAGE_UNKNOWN');
     for (const entry of plan.work) {
-      if (budget - attemptedPasses < 2) return result('BUDGET_EXHAUSTED');
+      if (budget - attemptedPasses < 2) return await acknowledgeComplete('BUDGET_EXHAUSTED');
       const before = attemptedPasses;
       const next = await store.runSelected(input, entry.witness.session.session_id, boundedRoutes);
       const used = attemptedPasses - before;
@@ -78,12 +91,7 @@ export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], sto
       if (!next.completion || next.completion.checkpoint.workFingerprint !== entry.workFingerprint
         || (next.decision === 'COMMITTED' ? used !== 2 : used !== 0)) return result('STORAGE_UNKNOWN');
     }
-    const ack = await store.acknowledge(input);
-    if (ack.status === 'CONFLICT') return result('CONFLICT');
-    if (ack.status === 'PENDING') return result('WORK_UNRESOLVED');
-    if ((ack.status !== 'ACKNOWLEDGED' && ack.status !== 'ALREADY_ACKNOWLEDGED')
-      || !exactReceipt(ack.receipt)) return result('STORAGE_UNKNOWN');
-    return result(ack.status, ack.receipt);
+    return await acknowledgeComplete('WORK_UNRESOLVED');
   } catch {
     return result('STORAGE_UNKNOWN');
   }

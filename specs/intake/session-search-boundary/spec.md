@@ -88,6 +88,10 @@ The synthetic acquisition adapter MUST validate the exact selected set and sourc
 
 The adapter MUST use injected explicitly supplied transport; no default network credential, real history access or implicit fallback is permitted. Complete acquired pages MUST pass the existing verified batch admission. The adapter MUST NOT reserve work, invoke inference or advance checkpoints.
 
+### Requirement: Bounded synthetic source cycle
+
+One explicit synthetic cycle MUST validate the trusted handoff and execution policy, use bounded acquisition before durable execution, and return the existing verified execution disposition. Rejected or failed acquisition MUST NOT enter the store or invoke inference. A validated empty selection or unresolved removal MUST return an explicit non-advancing disposition with zero inference, preserving unknown currentness and binding the disposition to the observed candidate identity. An empty selection MUST NOT be described as source-complete or as proof of no new source material. No implicit bootstrap, retries, real source transport, scheduling or new authorization is provided.
+
 ### Requirement: Checkpoint advances only after bounded success
 
 The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.

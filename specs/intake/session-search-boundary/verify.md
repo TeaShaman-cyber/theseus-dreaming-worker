@@ -98,6 +98,13 @@
 - **WHEN** a batch run is requested
 - **THEN** execution stops without acknowledging partial progress
 
+#### Scenario: Zero-pass completion-only acknowledgement
+
+- **GIVEN** an exact staged plan whose selected work completed durably before the source acknowledgement
+- **WHEN** execution resumes with fewer than two remaining attempted passes
+- **THEN** the existing verified acknowledgement may confirm the complete batch without reserving work or invoking inference
+- **AND** missing completion leaves the checkpoint unchanged and uncertainty is not budget exhaustion
+
 ### Requirement: Bounded synthetic source acquisition
 
 #### Scenario: Exact pinned read
@@ -111,6 +118,21 @@
 - **GIVEN** invalid metadata, stale response, repeated cursor, unavailable transport, timeout or exhausted bounds
 - **WHEN** acquisition is attempted
 - **THEN** no batch ready for analysis is returned
+
+### Requirement: Bounded synthetic source cycle
+
+#### Scenario: Acquisition through durable completion
+
+- **GIVEN** a trusted synthetic handoff, bounded transport and existing source store
+- **WHEN** the cycle is invoked with a limited pass budget, continued and replayed
+- **THEN** complete admission precedes execution, only remaining work invokes inference, and the acknowledged receipt is independently readable
+
+#### Scenario: Explicit stopped cycle
+
+- **GIVEN** a rejected handoff or policy, incomplete acquisition, empty selection or unresolved removal
+- **WHEN** the cycle is invoked
+- **THEN** it returns an explicit stop without store access or inference and without advancing the source checkpoint
+- **AND** a validated empty selection or removal retains the candidate identity and unknown currentness
 
 ### Requirement: Checkpoint advances only after bounded success
 

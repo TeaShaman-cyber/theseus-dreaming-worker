@@ -39,6 +39,7 @@ class AgentContextSpecTests(unittest.TestCase):
             "default:src/dreaming/checkpoint-pilot2.ts": ["prepareCheckpointedPilot2", "runCheckpointedPilot2"],
             "default:src/dreaming/source-batch-acquire.ts": ["acquireSourceBatch"],
             "default:src/dreaming/source-batch-run.ts": ["runSourceBatch"],
+            "default:src/dreaming/source-cycle.ts": ["runSourceCycle"],
         })
 
     def test_spec_index_points_to_immediate_next_coding_task(self):

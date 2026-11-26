@@ -69,7 +69,7 @@ test('budgeted restart completes only remaining work and exact replay uses no in
   assert.equal(a.attemptedPasses,2);
   assert.equal(a.receipt,null);
   assert.equal((await store.readTip()).receiptFingerprint,x.previousCheckpoint);
-  assert.equal(counts().acks,0);
+  assert.equal(counts().acks,1); // Read/verify attempt, not checkpoint advancement.
   const b=await runSourceBatch(x,routes,store,2);
   assert.equal(b.status,'ACKNOWLEDGED');
   assert.deepEqual(b.work.map(w=>w.decision),['ALREADY_PROCESSED','COMMITTED']);
@@ -115,4 +115,34 @@ test('conflicting tip and mismatched staged plan are not authority to execute',a
   const wrong=prepareSourceBatchExecution({...x,analysisVersion:'different'}).plan;
   assert.equal((await runSourceBatch(x,routes,{...store,stage:async()=>({status:'STAGED',plan:wrong})},2)).status,'STORAGE_UNKNOWN');
   assert.equal(counts().reservations,0);
+});
+
+test('completed batch can recover a lost acknowledgement with zero pass budget', async () => {
+  const x = input(), { store, routes, counts } = setup(x);
+  const interrupted = await runSourceBatch(x, routes, {
+    ...store, acknowledge: async () => { throw Error('synthetic interruption before ack'); },
+  }, 4);
+  assert.equal(interrupted.status, 'STORAGE_UNKNOWN');
+  assert.equal(counts().calls, 4);
+  assert.equal((await store.readTip()).receiptFingerprint, x.previousCheckpoint);
+  const recovered = await runSourceBatch(x, routes, store, 0);
+  assert.equal(recovered.status, 'ACKNOWLEDGED');
+  assert.equal(recovered.attemptedPasses, 0);
+  assert.equal(recovered.receipt.work.length, 2);
+  assert.equal(counts().calls, 4);
+  assert.equal(counts().reservations, 2);
+});
+
+test('zero pass budget distinguishes unknown acknowledgement from incomplete work', async () => {
+  const x = input(), { store, routes, counts } = setup(x);
+  const a = await runSourceBatch(x, routes, store, 0);
+  assert.equal(a.status, 'BUDGET_EXHAUSTED');
+  assert.equal(a.receipt, null);
+  const b = await runSourceBatch(x, routes, {
+    ...store, acknowledge: async () => ({ status: 'STORAGE_UNKNOWN', receipt: null }),
+  }, 0);
+  assert.equal(b.status, 'STORAGE_UNKNOWN');
+  assert.equal(counts().calls, 0);
+  assert.equal(counts().reservations, 0);
+  assert.equal((await store.readTip()).receiptFingerprint, x.previousCheckpoint);
 });
