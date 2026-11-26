@@ -219,8 +219,7 @@ completion fingerprints, original packet identity and current witness.
 The digest uses sorted keys in a versioned JS-local encoding. No message
 bodies are stored in the receipt. No write or inference is performed.
 Existing PostgreSQL QA reads actual durable completions through this
-function. Pending batch custody, durable source store/chain enforcement
-and no-work/removal disposition remain open; the predecessor key itself
+function. At this portable-candidate stage, pending batch custody and durable source store/chain enforcement are not performed by this function; the subsequent adapter sections describe their implementation. No-work/removal disposition remains open; the predecessor key itself
 must be verified by that store before any acknowledgement. No real intake
 or source permissions are enabled.
 
@@ -246,8 +245,7 @@ the synthetic acknowledgement error, and checks exact independent readback.
 The hosted heavy-postgres workflow is the acceptance witness.
 Persisted receipt readback checks envelope, chain and digest; it assumes
 trusted ledger writers, not cryptographic authentication of source.
-No runtime migration of Neon, deployment, pending-batch custody,
-empty/removal disposition, or real source access is included.
+This adapter stage did not itself add pending-batch custody; see the following sections for its later implementation. No runtime migration of Neon, deployment, empty/removal disposition or real source access is included.
 
 ### Pending source plan custody (issue #65)
 
@@ -263,15 +261,11 @@ idempotent. Distinct rederived witnesses can coexist without replacing
 the original. Lookup is bounded and throws rather than treating a
 missing parent, corrupt readback or excessive results as no plans.
 
-Synthetic-only; no production migration. Staging is not yet enforced
-before reservation, and completion-to-original-plan linkage remains
-open (different witnesses can share a packet ID). Neither staging nor
-lookup authorizes stale source reads or advances the checkpoint.
+Synthetic-only; no production migration. Staging and lookup alone do not enforce admission or original-plan linkage; the following sections describe those now-implemented boundaries. Neither staging nor lookup authorizes stale source reads or advances the checkpoint.
 Actual source custody, real metadata retention and recovery budgets
 require separate acceptance. The fast tests cover stable work identity
 across distinct source witnesses; hosted PostgreSQL checks restart and
-unchanged checkpoint with unprocessed work. The additional PostgreSQL
-generation-change scenario has not been executed.
+unchanged checkpoint with unprocessed work. The later cross-generation recovery regression below has passed the hosted PostgreSQL 18 gate in PR77.
 
 ### Staged source work admission
 
@@ -288,8 +282,7 @@ never relabelled when a reservation is encountered again.
 
 The generic synthetic pilot remains independently usable. This is not a
 global enforcement boundary for arbitrary SQL writers or a grant to
-read real history. Source receipt linkage to the original plan is still
-open; source checkpoint acknowledgement is separate. No live migration
+read real history. Source checkpoint acknowledgement is separate; its original-plan linkage is implemented in the following section. No live migration
 or model calls. Hosted PostgreSQL tests cover missing plan, staged
 execution and restart with the original association and no extra calls.
 
@@ -311,8 +304,7 @@ claim of this stronger binding. All new acknowledgements use v2.
 The complete receipt digest and independent readback remain required.
 The PostgreSQL regression covers different staged witnesses, unbound
 completion rejection, exact readback and commit acknowledgement loss.
-It uses synthetic source links; a full cross-generation recovery and
-real source custody policy remain separate acceptance questions.
+It uses synthetic source links; the subsequent cross-generation regression extends this coverage. Real source custody policy remains a separate acceptance question.
 
 ### Cross-generation recovery regression
 
