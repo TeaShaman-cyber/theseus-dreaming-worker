@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const path = name => fileURLToPath(new URL(name, import.meta.url));
-const files = ['extraction', 'bothub-nemotron', 'nim-nemotron', 'nim-ultra'];
+const files = ['extraction', 'bothub-nemotron', 'nim-nemotron', 'nim-ultra', 'nim-ultra-none'];
 const fixture = JSON.parse(readFileSync(path('new-cases-gold.json'), 'utf8'));
 const dir = mkdtempSync(join(tmpdir(), 'dw-extraction-readback-'));
 let negatives = 0;

@@ -174,3 +174,34 @@ or transport authenticity.
 Run `node research/decision-slicing/test-readback.mjs` to check all four
 observation logs and 14 negative mutations (missing case receipts, mismatched
 attempt IDs, a replaced negative final and a changed failure reason).
+
+## Ultra none and hosted billing investigation, 2026-11-27
+
+Current official FAQ fetched directly from
+https://build.nvidia.com/api/runtime/content/help-center-faq.yaml?x=2:
+all catalog models are free for prototyping, rate limits rather than per-token
+billing, up to 40 RPM for most models, personal limit in dashboard. NVIDIA staff
+https://forums.developer.nvidia.com/t/request-more-4-000-credits-option-on-build-nvidia-com/344567
+confirmed transition from credits to rate limits in September 2025, no fixed
+trial duration, research/development/testing only. Public catalog
+https://build.nvidia.com/ lists Ultra among free endpoints. Governed proxy
+GET /v1/usage, /v1/credits, /v1/account and /v1/me all returned HTTP404.
+No documented account usage/balance endpoint found in this bounded audit.
+Documented free research entitlement is not independently reconciled account
+billing. Paid production services remain out of scope.
+
+Executed commit 9f258c50b1128f13ec92ebaa22b20967c3aec52e, same Ultra model,
+same frozen fixtures/prompt/oracle, cap3072 and deadline60s, only inference
+parameter change reasoning_effort=none versus medium. Both HTTP200/stop,
+zero reasoning tokens, absent cost, no rate-limit headers or Retry-After;
+x-request-id present and usage includes token counts/details, not money.
+Both raw final outputs fail the same structural unused-premise check.
+Maple 394 input/128 output, 2794ms: only AC, unused B/D/E.
+Linden 405 input/111 output, 3358ms: only ABD, unused E, missing C.
+No accepted verdict. Do not repair these historical artifacts.
+Compared with medium 2/2 exact and 18.902-48.510s, none 0/2 exact and
+2.794-3.358s. Single sample per condition, two repeated cases, not statistical
+proof of general accuracy or a latency SLA. For this task keep medium as
+candidate; no new model policy or production activation. Account-level
+quota and billing remain unverified, although free trial terms are explicit.
+Five observation logs and 17 negative receipt mutations verified offline.
