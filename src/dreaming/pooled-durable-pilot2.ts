@@ -101,7 +101,12 @@ export async function runPooledDurablePilot2(raw: DurablePilot2Input, policy: Po
       admission:attempts.some(a=>a.route.provider===r.provider&&a.route.model===r.model)?'NOT_AUTHORIZED' as const:r.admission}));
     const all=[...externalCooldowns,...(state?.failures.flatMap(f=>f.result.cooldown?[f.result.cooldown]:[])??[])];
     const cooldowns=new Map<string,ModelPoolInput['cooldowns'][number]>();
+    // Both sources remain validated and intact; project only keys applicable
+    // to this invocation. At most 64 route and 64 provider keys can matter.
+    const routeIds=new Set(routes.map(r=>r.id));
+    const providers=new Set(routes.map(r=>r.provider));
     for(const c of all){
+      if(!(c.scope==='route'?routeIds:providers).has(c.key))continue;
       const key=JSON.stringify([c.scope,c.key]);
       if(!cooldowns.has(key)||cooldowns.get(key)!.notBeforeMs<c.notBeforeMs)cooldowns.set(key,c);
     }

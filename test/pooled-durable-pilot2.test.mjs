@@ -114,3 +114,17 @@ test('no-data, inadequate budget and no eligible pair have zero callbacks',async
   assert.equal((await store.journal.read(request)).status,'ABSENT');
   assert.deepEqual(calls,[]);
 });
+test('full external cooldown set plus journal failure preserves all relevant restrictions',async()=>{
+  const calls=[],store=fake();
+  const cooldowns=Array.from({length:255},(_,i)=>({scope:'provider',key:'unrelated-'+i,notBeforeMs:9000}));
+  cooldowns.push({scope:'route',key:'c',notBeforeMs:6000});
+  const routes=[route('a',calls),route('b',calls,'429'),route('c',calls),route('d',calls,'success',{provider:'provider-b'})];
+  const p=policy(routes,{cooldowns});
+  const first=await store.run(p);
+  assert.equal(first.decision,'DEFERRED');
+  assert.equal(first.wakeAtMs,5100);
+  assert.deepEqual(calls,['a','b']);
+  const resumed=await store.run({...p,clock:()=>5100,rotation:first.nextRotation});
+  assert.equal(resumed.decision,'COMMITTED');
+  assert.deepEqual(calls,['a','b','d']);
+});
