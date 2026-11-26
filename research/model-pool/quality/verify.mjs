@@ -5,6 +5,13 @@ import { createHash } from 'node:crypto';
 import { parseProposalSet } from '../../../src/dreaming/proposal-schema.ts';
 import { runPilot0 } from '../../../src/dreaming/dry-run.ts';
 import { pilot1RequestFingerprint } from '../../../src/dreaming/pilot1-runner.ts';
+// A missing/malformed value is unknown, never evidence of zero spend.
+const isReportedZero=value=>value===0||value==='0';
+for(const value of [null,undefined,false,true,'',' ',[],[0],{},'unknown',1,'1']){
+ assert.equal(isReportedZero(value),false);
+}
+assert.equal(isReportedZero(0),true);
+assert.equal(isReportedZero('0'),true);
 const bytes=readFileSync(new URL('./cases.json',import.meta.url));
 const {cases}=JSON.parse(bytes);
 const o=JSON.parse(readFileSync(new URL('./observations.json',import.meta.url)));
@@ -23,7 +30,7 @@ for (const route of ['solar','ernie','tencent']){
  for (const r of rows.slice(1,-1)){
   const c=cases.find(c=>c.id===r.id);
   assert.equal(r.kind,'case');assert.equal(r.transport.status,200);
-  assert.equal(Number(r.transport.cost),0);
+  assert.ok(isReportedZero(r.transport.cost),'explicit reported zero cost required');
   assert.equal(r.transport.model,rows[0].model);
   attempted++;
   const evidence=runPilot0(c.request.packet).receipt.inputFingerprint;
