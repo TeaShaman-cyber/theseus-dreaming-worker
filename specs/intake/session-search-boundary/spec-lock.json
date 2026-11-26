@@ -32,6 +32,18 @@
         "prepareCheckpointedPilot2",
         "runCheckpointedPilot2"
       ]
+    },
+    {
+      "file": "default:src/dreaming/source-batch-acquire.ts",
+      "symbols": [
+        "acquireSourceBatch"
+      ]
+    },
+    {
+      "file": "default:src/dreaming/source-batch-run.ts",
+      "symbols": [
+        "runSourceBatch"
+      ]
     }
   ]
 }

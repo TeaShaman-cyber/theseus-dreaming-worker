@@ -56,13 +56,16 @@ type Options = z.input<typeof options>;
 const fail = (reason: string): never => { throw Error('VERIFIED_SESSION_' + reason); };
 const identity = (value: unknown) => sha256Fingerprint(JSON.stringify(value));
 
-/** Verify already acquired pages under trusted synthetic custody. No read,
- * inference, permission or checkpoint write. Transport must bound acquisition
- * independently; these limits bound admission, not the HTTP response body.
- */
-export function prepareVerifiedSessionWork(raw: Options & {
-  candidate: unknown; expected: ExpectedSourceHandoff; index: unknown; pages: unknown[];
-}) {
+type IndexInput = Options & {
+  candidate: unknown; expected: ExpectedSourceHandoff; index: unknown;
+};
+
+export function parseVerifiedSessionPage(raw: unknown) {
+  return pageSchema.parse(raw);
+}
+
+/** Pure index preflight for both acquisition and final page admission. */
+export function verifySelectedSessionIndex(raw: IndexInput) {
   const { sessionId, task, analysisVersion, bounds } = options.parse({
     sessionId: raw.sessionId, task: raw.task, analysisVersion: raw.analysisVersion, bounds: raw.bounds,
   });
@@ -89,13 +92,22 @@ export function prepareVerifiedSessionWork(raw: Options & {
     const refs = m.sources.map(s => JSON.stringify([s.artifact_sha256, s.member_name, s.page_position]));
     if (new Set(refs).size !== refs.length || m.sources.some(s => !members.has(s.artifact_sha256))) fail('SOURCE_MEMBERSHIP');
   }
+  return { candidate, item, index, selected, sessionId, task, analysisVersion, bounds };
+}
+
+/** Verify already acquired pages under trusted synthetic custody. No read,
+ * inference, permission or checkpoint write. Transport must bound acquisition
+ * independently; these limits bound admission, not the HTTP response body.
+ */
+export function prepareVerifiedSessionWork(raw: IndexInput & { pages: unknown[] }) {
+  const { candidate, item, index, selected, sessionId, task, analysisVersion, bounds } = verifySelectedSessionIndex(raw);
   if (!Array.isArray(raw.pages) || raw.pages.length < 1 || raw.pages.length > bounds.maxPages) fail('PAGE_BUDGET');
   const evidence: DurablePilot2Input['request']['packet']['evidence'] = [];
   const cursors = new Set<string>();
   let messageIndex = 0, offset = 0, totalChars = 0, textLength: number | null = null;
   let parts: string[] = [];
   for (const [p, rawPage] of raw.pages.entries()) {
-    const page = pageSchema.parse(rawPage);
+    const page = parseVerifiedSessionPage(rawPage);
     const final = p === raw.pages.length - 1;
     if (page.provider !== index.provider || page.shard_id !== index.shard_id
       || page.generation_id !== index.generation_id || page.session_id !== sessionId

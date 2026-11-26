@@ -37,6 +37,8 @@ class AgentContextSpecTests(unittest.TestCase):
             "default:src/dreaming/verified-session-work.ts": ["prepareVerifiedSessionWork"],
             "default:src/dreaming/source-batch-receipt.ts": ["prepareSourceBatchExecution", "prepareSourceBatchReceipt"],
             "default:src/dreaming/checkpoint-pilot2.ts": ["prepareCheckpointedPilot2", "runCheckpointedPilot2"],
+            "default:src/dreaming/source-batch-acquire.ts": ["acquireSourceBatch"],
+            "default:src/dreaming/source-batch-run.ts": ["runSourceBatch"],
         })
 
     def test_spec_index_points_to_immediate_next_coding_task(self):

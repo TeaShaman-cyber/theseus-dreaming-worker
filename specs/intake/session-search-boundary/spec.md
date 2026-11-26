@@ -76,6 +76,18 @@ For synthetic recovery the receipt builder MUST derive every work identity from 
 
 The receipt MUST bind the expected predecessor, full source handoff, analysis intent, selected work and completion fingerprints, and exact current source witness. Original inference packet identity MUST remain distinct from a later equivalent source witness. The candidate MUST contain no evidence text and MUST NOT invoke inference, write storage or authorize access. A candidate is not durable acknowledgement.
 
+### Requirement: Bounded synthetic source batch run
+
+A synthetic batch run MUST derive the complete verified plan and require explicit bounded pass budget and valid independent routes before any work reservation. It MUST use the existing staged source execution and verified acknowledgement primitives. No implicit root initialization or automatic retry/takeover is permitted.
+
+The run MUST stop on uncertain or incomplete work and MUST NOT acknowledge a partial batch. Before a possible new two-pass work it MUST have at least two remaining attempted-pass budget units. Already completed work consumes no inference budget. Exact already acknowledged replay MUST perform no inference. Returned summaries MUST distinguish verified acknowledgement, budget exhaustion, conflict and uncertainty without retaining evidence bodies or treating unknown currentness as absence.
+
+### Requirement: Bounded synthetic source acquisition
+
+The synthetic acquisition adapter MUST validate the exact selected set and source indexes before requesting pages. It MUST pin each read to the selected session, shard and generation, and only follow a nonrepeated cursor bound to that exact read position. It MUST bound request count, response bytes per page and in aggregate, character and message admission, and each request deadline. Failed, incomplete or inconsistent acquisition MUST NOT return a batch ready for analysis.
+
+The adapter MUST use injected explicitly supplied transport; no default network credential, real history access or implicit fallback is permitted. Complete acquired pages MUST pass the existing verified batch admission. The adapter MUST NOT reserve work, invoke inference or advance checkpoints.
+
 ### Requirement: Checkpoint advances only after bounded success
 
 The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.

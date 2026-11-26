@@ -82,6 +82,36 @@
 - **WHEN** the builder attempts preparation
 - **THEN** it returns no acknowledgement candidate
 
+### Requirement: Bounded synthetic source batch run
+
+#### Scenario: Budgeted continuation and replay
+
+- **GIVEN** an explicit predecessor and complete verified synthetic plan requiring more than one work
+- **WHEN** the run exhausts its pass budget and is invoked again
+- **THEN** the first invocation does not advance the checkpoint and the next reuses completed work
+- **AND** full verified acknowledgement is returned only after all work completes
+- **AND** exact replay performs zero inference
+
+#### Scenario: Invalid or uncertain execution
+
+- **GIVEN** invalid input, invalid routes, unconfirmed staging or incomplete work
+- **WHEN** a batch run is requested
+- **THEN** execution stops without acknowledging partial progress
+
+### Requirement: Bounded synthetic source acquisition
+
+#### Scenario: Exact pinned read
+
+- **GIVEN** a valid synthetic handoff and exact source indexes
+- **WHEN** the injected transport returns bounded pinned pages
+- **THEN** the complete verified batch is returned without inference or persistence
+
+#### Scenario: Failed or excessive acquisition
+
+- **GIVEN** invalid metadata, stale response, repeated cursor, unavailable transport, timeout or exhausted bounds
+- **WHEN** acquisition is attempted
+- **THEN** no batch ready for analysis is returned
+
 ### Requirement: Checkpoint advances only after bounded success
 
 #### Scenario: Evidence is read but provider analysis fails

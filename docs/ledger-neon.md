@@ -325,3 +325,56 @@ and acknowledgement binds the expanded membership with original plan
 pointers for both generations. No duplicate model calls, real provider
 traffic, local PostgreSQL or live source migration. This verifies the
 consumer recovery boundary, not live cross-generation source transport.
+
+### Bounded synthetic batch invocation
+
+The portable runSourceBatch function composes existing source store
+primitives with an explicit attempted-pass budget (0..200), complete
+verified batch input and two independent caller-supplied routes. It
+snapshots inputs and validates the plan and routes before storage access.
+No implicit bootstrap occurs: an absent or incompatible source tip
+blocks. An exact already acknowledged tip is verified again without
+inference. Otherwise stage the exact plan, then process canonical
+selected work in order. Each possible new work requires two remaining
+pass units. Calls through the provided routes are counted and capped;
+known completed work uses zero units. Stop immediately on an uncertain
+or incomplete work; no retry or takeover. When every work is terminal,
+the existing store validates and acknowledges the full batch. A partial
+run leaves the source checkpoint unchanged; the next explicit invocation
+can reuse completed work. The returned summary includes only identities,
+decisions, attempted-pass counts and a verified source receipt, not
+transcript bodies. It is not a scheduler or a provider token/spend
+authorization mechanism.
+
+The fast tests exercise budgeted continuation, exact replay, invalid
+input/route, missing root, mismatched or unavailable staging and unresolved
+reservation. The existing PostgreSQL contract exercises two separate
+two-pass invocations and a zero-budget exact replay. Actual source
+acquisition and real unattended authorization remain out of scope.
+
+### Bounded native browse acquisition
+
+The portable acquireSourceBatch function accepts independently supplied
+synthetic handoff/index observations and an explicitly injected transport
+with the existing native session-browse request shape. It validates the
+whole selected index set before requesting any page, pins every request to
+the exact session/shard/generation, checks native cursor binding and
+position, bounds page requests, streamed UTF-8 response bytes (per-page
+and aggregate), character/message admission and per-request deadline.
+Timeout covers both headers and body; injected transport must honor abort
+for upstream cancellation. No retry or fallback. Complete pages must pass
+the existing verified batch admission before a BatchInput is returned.
+This does not retrieve or authorize source metadata, assert source
+freshness, configure a network client or retain transcript bodies.
+
+Six acquisition tests cover exact recorded pages, invalid index, stale
+response/cursor, byte/request limits, truncation and stalled response.
+The reproducible in-process probe
+`node qa/source-native-browse-probe.mjs /path/to/ss-native-browse-http`
+uses exact SS candidate 94279cd75cc00ca356d237e9451f647e92cb7b15 with its
+locked dependencies: actual router/shard handlers, recorded synthetic SQL
+pages. Twelve requests reconstruct the same plan, wrong token and stale
+generation are blocked before shard dispatch. No live SQL or network.
+Hosted PostgreSQL composition now acquires those recorded pages before
+its budgeted run and exact replay. Real machine identity and source
+delivery remain deferred; no live migration.
