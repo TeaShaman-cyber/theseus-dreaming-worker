@@ -1,0 +1,2 @@
+- op: no-op
+  description: Add actual bundled workflow smoke to the existing build verification.

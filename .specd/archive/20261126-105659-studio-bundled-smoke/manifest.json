@@ -1,0 +1,224 @@
+{
+  "name": "studio-bundled-smoke",
+  "createdAt": "2026-11-26T10:56:59.871Z",
+  "description": "Bundle the synthetic fixture and verify the built workflow API",
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "specIds": [
+    "default:worker/core-contract"
+  ],
+  "artifacts": [
+    {
+      "type": "proposal",
+      "optional": false,
+      "requires": [],
+      "state": "complete",
+      "files": [
+        {
+          "key": "proposal",
+          "filename": "proposal.md",
+          "state": "complete",
+          "validatedHash": "sha256:6e3901b6fa54b3658219dd25c346fff0fe6239be91dfe1f3a6fa7d67bf349d36"
+        }
+      ]
+    },
+    {
+      "type": "specs",
+      "optional": false,
+      "requires": [
+        "proposal"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:worker/core-contract",
+          "filename": "deltas/default/worker/core-contract/spec.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:ad558dee0ac13bf48a5ba7011c39d875a58d0a57a60f1162933e14f515eba885"
+        }
+      ]
+    },
+    {
+      "type": "verify",
+      "optional": false,
+      "requires": [
+        "specs"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:worker/core-contract",
+          "filename": "deltas/default/worker/core-contract/verify.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:d7afd1c83026a5c5c1f68885a389aadd22a959bab5c4cf377df139d604b99646"
+        }
+      ]
+    },
+    {
+      "type": "design",
+      "optional": false,
+      "requires": [
+        "proposal",
+        "specs",
+        "verify"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "design",
+          "filename": "design.md",
+          "state": "complete",
+          "validatedHash": "sha256:8e1f14726e6b86526ae90f223da474fdc9adefc40f083f881cf5af9d01f77050"
+        }
+      ]
+    },
+    {
+      "type": "tasks",
+      "optional": false,
+      "requires": [
+        "specs",
+        "design"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "tasks",
+          "filename": "tasks.md",
+          "state": "complete",
+          "validatedHash": "sha256:84db0cb9645568c15c0ed119fb4e70cde8fbcef2c79acbd4edc7b6afb9dc63dc"
+        }
+      ]
+    }
+  ],
+  "history": [
+    {
+      "type": "created",
+      "at": "2026-11-26T10:56:59.871Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "specIds": [
+        "default:worker/core-contract"
+      ],
+      "schemaName": "schema-std",
+      "schemaVersion": 1
+    },
+    {
+      "type": "artifacts-synced",
+      "at": "2026-11-26T10:56:59.894Z",
+      "by": {
+        "name": "specd",
+        "email": "system@getspecd.dev"
+      },
+      "typesAdded": [
+        "proposal",
+        "specs",
+        "verify",
+        "design",
+        "tasks"
+      ],
+      "typesRemoved": [],
+      "filesAdded": [
+        {
+          "type": "proposal",
+          "key": "proposal"
+        },
+        {
+          "type": "specs",
+          "key": "default:worker/core-contract"
+        },
+        {
+          "type": "verify",
+          "key": "default:worker/core-contract"
+        },
+        {
+          "type": "design",
+          "key": "design"
+        },
+        {
+          "type": "tasks",
+          "key": "tasks"
+        }
+      ],
+      "filesRemoved": []
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T10:57:00.220Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "drafting",
+      "to": "designing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T10:57:03.241Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "designing",
+      "to": "ready"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T10:57:03.697Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "ready",
+      "to": "implementing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T10:58:28.793Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "implementing",
+      "to": "verifying"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T10:58:29.124Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "verifying",
+      "to": "done"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T10:58:29.469Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "done",
+      "to": "archivable"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-26T10:58:29.938Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "archivable",
+      "to": "archiving"
+    }
+  ],
+  "archivedAt": "2026-11-26T10:58:30.016Z",
+  "archivedBy": {
+    "name": "exe.dev user",
+    "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+  }
+}

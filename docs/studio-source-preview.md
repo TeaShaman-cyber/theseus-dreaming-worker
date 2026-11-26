@@ -32,9 +32,9 @@ The registered graph and per-step schemas are visible through
 checks registration, graph order, successful synthetic execution and scope
 rejection. Keep this projection and its regression test aligned when
 changing the selected-work or receipt interfaces; do not introduce parallel
-worker business logic for visualization. The development service must run
-from the repository root (the fixture is read from its fixed checked-in
-path). This graph is not registered in the Cloudflare worker entrypoint.
+worker business logic for visualization. The fixture is bundled as a static JSON module; the build gate boots the
+built server from its output directory and verifies an actual HTTP run
+and readback, so a working-directory change cannot hide a broken preview. This graph is not registered in the Cloudflare worker entrypoint.
 
 No change to the Pilot 1 stored agent, model configuration, external
 observability policy or production deployment is required.

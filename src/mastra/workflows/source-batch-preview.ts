@@ -1,7 +1,6 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { z } from 'zod';
-import { readFileSync } from 'node:fs';
-import type fixtureShape from '../../../test/fixtures/source-reader.json';
+import fixture from '../../../test/fixtures/source-reader.json' with { type: 'json' };
 import { decodeSourceHandoff, type ExpectedSourceHandoff } from '../../dreaming/source-handoff.ts';
 import {
   prepareSourceBatchExecution, prepareSourceBatchReceipt, type BatchInput,
@@ -12,20 +11,16 @@ import {
 import { sha256Fingerprint } from '../../dreaming/proposal-schema.ts';
 import type { Pilot2Route } from '../../dreaming/pilot2-runner.ts';
 
-const fixedInput = (): BatchInput => {
-  // The development service runs from the repository root; never accept a caller-supplied path.
-  const fixture = JSON.parse(readFileSync('test/fixtures/source-reader.json', 'utf8')) as typeof fixtureShape;
-  return {
-    candidate: fixture.candidate,
-    expected: fixture.expected as ExpectedSourceHandoff,
-    entries: fixture.entries.map(e => ({ sessionId: e.session_id, index: e.index, pages: e.pages })),
-    bounds: { maxPages: 20, maxChars: 1000, maxMessages: 50 },
-    maxSessions: 2,
-    task: 'Synthetic Studio source-batch preview.',
-    analysisVersion: 'studio-preview-v1',
-    previousCheckpoint: sha256Fingerprint('synthetic-studio-root'),
-  };
-};
+const fixedInput = (): BatchInput => structuredClone({
+  candidate: fixture.candidate,
+  expected: fixture.expected as ExpectedSourceHandoff,
+  entries: fixture.entries.map(e => ({ sessionId: e.session_id, index: e.index, pages: e.pages })),
+  bounds: { maxPages: 20, maxChars: 1000, maxMessages: 50 },
+  maxSessions: 2,
+  task: 'Synthetic Studio source-batch preview.',
+  analysisVersion: 'studio-preview-v1',
+  previousCheckpoint: sha256Fingerprint('synthetic-studio-root'),
+});
 
 const input = z.object({ fixture: z.literal('source-reader') }).strict();
 const verified = z.object({ scope: z.literal('synthetic:chatgpt'), selected: z.number().int().min(1) }).strict();
