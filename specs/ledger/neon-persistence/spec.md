@@ -47,4 +47,9 @@ Session Search MUST NOT receive the Dreaming Worker runtime database credential.
 
 ## Current implementation status
 
-This specification and `infra/postgres/dw_ledger_v1.sql` are design/IaC drafts only. No DDL, grant, Hyperdrive, credential, Worker deployment or Session Search production mutation is authorized or performed by this increment.
+The versioned ledger DDL and storage adapter have passed disposable hosted PostgreSQL tests and a separate Neon schema-only preview (#77). This does not establish application to the long-lived Neon database, operational worker integration, go-live or new access authority. No live migration is authorized by this specification.
+
+## Spec Dependencies
+
+- `default:ledger/append-only-proposals`
+- `default:worker/core-contract`

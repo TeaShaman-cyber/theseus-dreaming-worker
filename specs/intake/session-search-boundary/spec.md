@@ -20,7 +20,7 @@ Current architecture evidence establishes:
 - a changed shard generation is not equivalent to one new conversation or message;
 - no host-independent, least-privilege unattended accepted-source delta reader has yet been verified for this worker.
 
-Therefore real unattended intake remains `DEFERRED / UNKNOWN`.
+Therefore real unattended intake remains `DEFERRED / UNKNOWN`. The synthetic consumer boundary now verifies source handoffs, bounded selected-session pages and exact batch receipts; #77 verified reuse across a changed generation in hosted PostgreSQL 18. These checks are not evidence of an unattended source reader or private-data authority.
 
 ## Requirements
 

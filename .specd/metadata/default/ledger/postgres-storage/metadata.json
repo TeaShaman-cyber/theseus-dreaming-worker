@@ -1,6 +1,11 @@
 {
   "title": "PostgreSQL Ledger Storage Adapter",
   "description": "Persist validated append-only proposal-ledger events through the existing Cloudflare Hyperdrive/PostgreSQL boundary while preserving the in-memory ledger contract.\n\nThe current Cloudflare/Neon resource set is a development/test environment. Cloudflare CLI `production` mode names a technical deploy mode only and is not evidence of a real production deployment.",
+  "dependsOn": [
+    "default:ledger/append-only-proposals",
+    "default:ledger/neon-persistence",
+    "default:intake/session-search-boundary"
+  ],
   "context": [
     "Persist validated append-only proposal-ledger events through the existing Cloudflare Hyperdrive/PostgreSQL boundary while preserving the in-memory ledger contract.\n\nThe current Cloudflare/Neon resource set is a development/test environment. Cloudflare CLI `production` mode names a technical deploy mode only and is not evidence of a real production deployment."
   ],
@@ -296,7 +301,7 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:aba337b0aa7b2c06647c3a0fe04c3062516508c5fafba33c01e507d0622df15a",
+    "spec.md": "sha256:d503a6fb5fecc8c59659f7dc77f6ed477556830be5e51f52fb9d5655636a0823",
     "verify.md": "sha256:e1170aa71104678ee178dd6ff78f21284aa018f47f8dce7e898c776f36765f19"
   },
   "generatedBy": "core"

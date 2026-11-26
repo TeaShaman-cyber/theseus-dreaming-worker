@@ -51,7 +51,7 @@ Model prose is never authoritative for provider identity or execution metadata. 
 
 No private Session Search intake, retrieval, scheduler, durable ledger, model router, majority vote, canonical promotion, publication, Cloudflare go-live, or production authority.
 
-## Spec dependencies
+## Spec Dependencies
 
 - `default:pilot2/critique-contract`
 - `default:pilot2/independent-perspectives`
@@ -66,4 +66,3 @@ The first publication-safe synthetic acceptance sequence produced three distinct
 3. bounded Qwen/Groq critique -> valid `DERIVED_ONLY` artifact with `AGREEMENT` and `UNRESOLVED` relations.
 
 The successful receipt records exactly one external model call, zero tools, zero memory, and zero canonical writes. Full publication-safe artifacts are committed under `artifacts/acceptance/`.
-

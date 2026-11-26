@@ -1,0 +1,321 @@
+{
+  "title": "Pilot 2 — Independent Model Perspectives",
+  "description": "Pilot 2 is the next bounded implementation step after Pilot 1.\n\nIt asks two genuinely independent model families to analyze the same synthetic or publication-safe evidence packet without seeing each other's first-pass output, validates both outputs deterministically, and preserves agreement and disagreement without treating consensus as truth.\n\nPilot 2 does not introduce private Session Search intake or canonical-memory writes.",
+  "dependsOn": [
+    "default:worker/core-contract",
+    "default:pilot1/bounded-inference"
+  ],
+  "context": [
+    "Pilot 2 is the next bounded implementation step after Pilot 1.\n\nIt asks two genuinely independent model families to analyze the same synthetic or publication-safe evidence packet without seeing each other's first-pass output, validates both outputs deterministically, and preserves agreement and disagreement without treating consensus as truth.\n\nPilot 2 does not introduce private Session Search intake or canonical-memory writes."
+  ],
+  "rules": [
+    {
+      "requirement": "The two first passes are genuinely independent",
+      "rules": [
+        "The two configured routes MUST declare different model-family identities.\n\nTwo provider endpoints declaring the same base model family MUST NOT satisfy this requirement.\n\nThe first bounded orchestrator proves only `CONFIGURED_DISTINCT`: it rejects equal configured family identities before inference and preserves observed provider/model metadata from each pass. Stronger transport-level family verification belongs to the provider adapter. If route identity is invalid or configured independence cannot be established, Pilot 2 MUST return `FAIL_CLOSED` rather than claiming two independent perspectives."
+      ]
+    },
+    {
+      "requirement": "First-pass isolation is blind",
+      "rules": [
+        "Pass A MUST NOT receive Pass B output before completing.\n\nPass B MUST NOT receive Pass A output before completing.\n\nAny optional critique/conclave phase MAY start only after both first-pass artifacts are frozen."
+      ]
+    },
+    {
+      "requirement": "Both passes see the same primary evidence",
+      "rules": [
+        "Both first passes MUST receive the same evidence packet, evidence fingerprint, task, coverage/currentness state, and safe scope.\n\nPer-provider prompt wrappers MAY differ only where required by the provider adapter; they MUST NOT alter the semantic evidence set."
+      ]
+    },
+    {
+      "requirement": "Each pass uses the Pilot 1 proposal contract",
+      "rules": [
+        "Each successful pass MUST produce a valid `theseus.dreaming-worker.proposals.v1` proposal set.\n\nEach pass MUST independently pass schema and exact-provenance validation.\n\nA malformed or provenance-invalid pass is a typed failure, not a valid perspective."
+      ]
+    },
+    {
+      "requirement": "Terminal state distinguishes absence from analysis failure",
+      "rules": [
+        "`NO_DATA` is reserved for the case where Pilot 0 accepted no new evidence and therefore no model work was attempted.\n\nAfter evidence has been accepted:\n\n- `COMPLETE` means two valid configured-distinct first-pass perspectives;\n- `PARTIAL` means exactly one valid perspective and one typed pass failure;\n- `FAIL_CLOSED` means no valid perspective remains, configured independence cannot be established, or the route plan is invalid.\n\nProvider/model failure after accepted evidence MUST NOT be collapsed into `NO_DATA`."
+      ]
+    },
+    {
+      "requirement": "Pass failure and receipt uncertainty stay explicit",
+      "rules": [
+        "Provider-adapter and proposal-validation failures MUST be normalized into typed pass failures rather than erased behind transport success. The bounded implementation distinguishes at least:\n\n- `TIMEOUT_UNKNOWN_PROVIDER_STATE`;\n- `OUTPUT_BUDGET_EXHAUSTED`;\n- `EMPTY_FINAL_CONTENT`;\n- `JSON_VALIDATE_FAILED`;\n- `INVALID_JSON`;\n- `INVALID_SCHEMA`;\n- `PROVENANCE_REJECTED`;\n- `POLICY_VIOLATION`;\n- `INFERENCE_FAILED`.\n\nThe Pilot 2 receipt MUST NOT equate invoking an inference callback with a confirmed external model call after failure. Successful Pilot 1 receipts contribute to `confirmedExternalModelCalls`; failed invoked passes contribute to `unresolvedExternalCallAttempts`.\n\nConfigured route identity and observed provider/model metadata MUST remain separately inspectable."
+      ]
+    },
+    {
+      "requirement": "Partial provider failure remains visible",
+      "rules": [
+        "If one first pass succeeds and the other fails, the run MUST return a partial result containing:\n\n- the valid successful pass;\n- the failed route identity;\n- the typed failure;\n- a receipt showing that two-perspective completion was not achieved.\n\nThe worker MUST NOT silently retry with an unapproved substitute model and MUST NOT present the one successful pass as a two-model conclusion."
+      ]
+    },
+    {
+      "requirement": "Comparison preserves dissent",
+      "rules": [
+        "Comparison MUST be based on already-frozen validated first-pass records.\n\nThe first bounded implementation MUST compare exact structured proposal fingerprints deterministically and preserve pass-specific proposals. It MUST leave semantic relation explicitly unresolved rather than pretending to detect contradiction from free-form claims.\n\nThe comparison layer MUST NOT collapse disagreement into a consensus score or majority-vote truth."
+      ]
+    },
+    {
+      "requirement": "Critique is optional and later",
+      "rules": [
+        "Pilot 2 MAY support a later critique/conclave pass, but the first implementation MUST NOT require it.\n\nIf critique is added, it MUST receive references to frozen first-pass artifacts and MUST remain a derived proposal, not an acceptance authority."
+      ]
+    },
+    {
+      "requirement": "Pilot 2 remains synthetic/publication-safe",
+      "rules": [
+        "Pilot 2 MUST NOT widen data egress beyond the scopes already accepted for Pilot 1.\n\nPrivate or unclassified Session Search evidence remains outside Pilot 2 until a separate source-reader and egress authorization is verified."
+      ]
+    },
+    {
+      "requirement": "No-data still short-circuits before inference",
+      "rules": [
+        "If Pilot 0 returns `NO_DATA`, Pilot 2 MUST make zero external model calls."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "requirement": "The two first passes are genuinely independent",
+      "name": "Distinct model families are accepted",
+      "given": [
+        "two approved routes with different model-family identities"
+      ],
+      "when": [
+        "Pilot 2 validates the plan"
+      ],
+      "then": [
+        "the independent two-pass run may proceed"
+      ]
+    },
+    {
+      "requirement": "The two first passes are genuinely independent",
+      "name": "Same model family through two routes is rejected",
+      "given": [
+        "two routes that resolve to the same model family"
+      ],
+      "when": [
+        "Pilot 2 validates independence"
+      ],
+      "then": [
+        "outcome is FAIL_CLOSED",
+        "AND neither provider pass is invoked"
+      ]
+    },
+    {
+      "requirement": "First-pass isolation is blind",
+      "name": "Passes run before comparison",
+      "given": [
+        "one evidence packet and two approved independent routes"
+      ],
+      "when": [
+        "Pass A and Pass B execute"
+      ],
+      "then": [
+        "neither first-pass input contains the other pass's proposal output",
+        "AND comparison begins only after both first-pass records are frozen or one pass has terminated with a typed failure"
+      ]
+    },
+    {
+      "requirement": "Both passes see the same primary evidence",
+      "name": "Exact evidence parity",
+      "given": [
+        "one accepted evidence packet"
+      ],
+      "when": [
+        "both first passes are invoked"
+      ],
+      "then": [
+        "both invocations record the same evidence fingerprint",
+        "AND the same request/task fingerprint",
+        "AND the same coverage/currentness state"
+      ]
+    },
+    {
+      "requirement": "Each pass uses the Pilot 1 proposal contract",
+      "name": "Pass B invents a source reference",
+      "given": [
+        "Pass A returns valid proposals",
+        "AND Pass B returns a proposal with an invented source reference or wrong evidence hash"
+      ],
+      "when": [
+        "Pilot 2 validates the passes"
+      ],
+      "then": [
+        "Pass B becomes a typed invalid-output failure",
+        "AND its proposal is not admitted as a valid perspective"
+      ]
+    },
+    {
+      "requirement": "Terminal state distinguishes absence from analysis failure",
+      "name": "Both providers fail after evidence was accepted",
+      "given": [
+        "Pilot 0 accepted evidence",
+        "AND both configured-distinct first passes terminate with typed failures"
+      ],
+      "when": [
+        "Pilot 2 terminates"
+      ],
+      "then": [
+        "outcome is FAIL_CLOSED",
+        "AND outcome is not NO_DATA",
+        "AND both typed failures remain visible"
+      ]
+    },
+    {
+      "requirement": "Terminal state distinguishes absence from analysis failure",
+      "name": "Configured independence is not established",
+      "given": [
+        "Pilot 0 accepted evidence",
+        "AND both routes declare the same model family"
+      ],
+      "when": [
+        "Pilot 2 validates the route plan"
+      ],
+      "then": [
+        "outcome is FAIL_CLOSED",
+        "AND external model calls equal zero"
+      ]
+    },
+    {
+      "requirement": "Pass failure and receipt uncertainty stay explicit",
+      "name": "Provider times out after inference was invoked",
+      "given": [
+        "one pass succeeds",
+        "AND the other invoked pass terminates with a timeout whose provider-side completion state is unknown"
+      ],
+      "when": [
+        "Pilot 2 constructs the receipt"
+      ],
+      "then": [
+        "the failed pass is TIMEOUT_UNKNOWN_PROVIDER_STATE",
+        "AND the successful pass contributes to confirmedExternalModelCalls",
+        "AND the failed invoked pass contributes to unresolvedExternalCallAttempts"
+      ]
+    },
+    {
+      "requirement": "Pass failure and receipt uncertainty stay explicit",
+      "name": "Output budget is exhausted before final content",
+      "given": [
+        "a provider returns empty final content with finish reason length"
+      ],
+      "when": [
+        "Pilot 2 normalizes the pass"
+      ],
+      "then": [
+        "the pass failure is OUTPUT_BUDGET_EXHAUSTED"
+      ]
+    },
+    {
+      "requirement": "Pass failure and receipt uncertainty stay explicit",
+      "name": "Transport rejects structured JSON generation",
+      "given": [
+        "a provider adapter reports json_validate_failed"
+      ],
+      "when": [
+        "Pilot 2 normalizes the pass"
+      ],
+      "then": [
+        "the pass failure is JSON_VALIDATE_FAILED"
+      ]
+    },
+    {
+      "requirement": "Pass failure and receipt uncertainty stay explicit",
+      "name": "Returned provider metadata survives later validation failure",
+      "given": [
+        "a provider returns observed provider/model metadata and model output",
+        "AND the returned output later fails JSON, schema, provenance, or policy validation"
+      ],
+      "when": [
+        "Pilot 2 records the failed pass"
+      ],
+      "then": [
+        "configured route identity remains visible",
+        "AND observed provider/model metadata remains separately visible",
+        "AND the failed pass does not contribute to confirmedExternalModelCalls"
+      ]
+    },
+    {
+      "requirement": "Partial provider failure remains visible",
+      "name": "One provider times out",
+      "given": [
+        "Pass A succeeds",
+        "AND Pass B times out"
+      ],
+      "when": [
+        "Pilot 2 terminates"
+      ],
+      "then": [
+        "outcome is PARTIAL",
+        "AND Pass A remains available",
+        "AND Pass B timeout remains visible",
+        "AND no substitute provider is silently invoked"
+      ]
+    },
+    {
+      "requirement": "Comparison preserves dissent",
+      "name": "Models produce different hypotheses",
+      "given": [
+        "two valid first-pass proposal sets with one exact structured match and pass-specific proposals"
+      ],
+      "when": [
+        "deterministic comparison is constructed"
+      ],
+      "then": [
+        "both original proposal sets remain intact",
+        "AND the exact match is represented by a shared proposal fingerprint",
+        "AND pass-specific proposals remain separately fingerprinted",
+        "AND semantic relation is UNRESOLVED_WITHOUT_CRITIQUE",
+        "AND no consensus truth classification is emitted"
+      ]
+    },
+    {
+      "requirement": "Critique is optional and later",
+      "name": "First implementation has no critic",
+      "given": [
+        "two valid first-pass outputs"
+      ],
+      "when": [
+        "Pilot 2 completes without a critique model"
+      ],
+      "then": [
+        "the result is still valid",
+        "AND the comparison artifact remains descriptive rather than authoritative"
+      ]
+    },
+    {
+      "requirement": "Pilot 2 remains synthetic/publication-safe",
+      "name": "Private scope is requested",
+      "given": [
+        "a request outside SYNTHETIC_FIXTURE and PUBLICATION_SAFE"
+      ],
+      "when": [
+        "Pilot 2 validates the request"
+      ],
+      "then": [
+        "no provider call is made"
+      ]
+    },
+    {
+      "requirement": "No-data still short-circuits before inference",
+      "name": "Pilot 0 returns NO_DATA",
+      "given": [
+        "no accepted new evidence"
+      ],
+      "when": [
+        "Pilot 2 runs"
+      ],
+      "then": [
+        "external model calls equal zero",
+        "AND outcome is NO_DATA"
+      ]
+    }
+  ],
+  "contentHashes": {
+    "spec.md": "sha256:dd494019069743a7c49d67f28d694daa590086256d9cb46ff0c2ffd22f54c2f0",
+    "verify.md": "sha256:af365092c73890c0662fb641a959c48a3314087be97e06c4fcd05bc2db6a08b2"
+  },
+  "generatedBy": "core"
+}

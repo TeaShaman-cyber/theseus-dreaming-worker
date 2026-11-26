@@ -21,6 +21,8 @@ const required = [
   'src/dreaming/pilot2-runner.ts',
   'specs/intake/session-search-boundary/spec.md',
   'specs/intake/session-search-boundary/verify.md',
+  'specs/intake/session-search-boundary/spec-lock.json',
+  'specs/ledger/postgres-storage/spec-lock.json',
   'src/dreaming/AGENTS.md',
   'docs/qa.md',
   'docs/observability.md',

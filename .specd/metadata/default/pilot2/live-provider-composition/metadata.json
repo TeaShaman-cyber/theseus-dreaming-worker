@@ -1,0 +1,176 @@
+{
+  "title": "Pilot 2 — Live Provider Composition",
+  "description": "This layer composes exactly two explicit live provider routes into the existing pure Pilot 2 orchestrator without making Dreaming Worker depend on exe.dev, Cloudflare, or another execution host.\n\nIt does not redefine Pilot 2 analytical semantics. `runPilot2` remains the authority for independence checks, terminal outcomes, proposal validation, comparison, and receipt semantics.",
+  "dependsOn": [
+    "default:pilot2/independent-perspectives",
+    "default:worker/core-contract"
+  ],
+  "context": [
+    "This layer composes exactly two explicit live provider routes into the existing pure Pilot 2 orchestrator without making Dreaming Worker depend on exe.dev, Cloudflare, or another execution host.\n\nIt does not redefine Pilot 2 analytical semantics. `runPilot2` remains the authority for independence checks, terminal outcomes, proposal validation, comparison, and receipt semantics."
+  ],
+  "rules": [
+    {
+      "requirement": "Live composition preserves the pure Pilot 2 contract",
+      "rules": [
+        "The composition layer MUST construct the existing OpenAI-compatible inference adapters and delegate to `runPilot2`.\n\nIt MUST NOT reinterpret `COMPLETE`, `PARTIAL`, `FAIL_CLOSED`, or `NO_DATA`, and MUST NOT invent consensus, fallback substitution, or new analytical authority."
+      ]
+    },
+    {
+      "requirement": "Output work is explicitly bounded",
+      "rules": [
+        "Every live route MUST supply a positive integer `maxOutputTokens` value before any provider call is possible.\n\nThe provider adapter MUST transmit that value as the provider request's output-token bound.\n\nThe model-facing Proposal v1 contract MUST be generated from the same canonical Zod schema used for deterministic response validation. A handwritten duplicate schema MUST NOT become a second source of truth."
+      ]
+    },
+    {
+      "requirement": "Invalid live configuration fails before network work",
+      "rules": [
+        "Missing route identity, missing base URL, missing/invalid output-token bound, or an invalid route count MUST be rejected before provider work.\n\nConfigured same-family routes MUST reach the existing Pilot 2 independence check and terminate `FAIL_CLOSED` before provider work."
+      ]
+    },
+    {
+      "requirement": "Runtime/provider evidence stays separate",
+      "rules": [
+        "Configured route identity and observed provider/model metadata MUST remain separately observable.\n\nProvider-specific JSON framing and bearer authentication are transport options only. They MUST NOT change Pilot 2 analytical semantics or become architectural dependencies on the current execution host.\n\nTransport success MUST NOT be treated as proposal success. A returned artifact still has to pass Proposal v1 JSON, schema, provenance, and Pilot 1 policy validation.\n\nAdapter failures already represented by Pilot 2's typed contract MUST keep that meaning across the composition boundary. In particular, `EMPTY_FINAL_CONTENT` and `OUTPUT_BUDGET_EXHAUSTED` MUST NOT degrade to generic `INFERENCE_FAILED`."
+      ]
+    },
+    {
+      "requirement": "Scope does not widen",
+      "rules": [
+        "This layer MUST NOT add tools, memory, private Session Search intake, scheduler behavior, critique/conclave, canonical writes, durable ledger/checkpoints, or publication authority."
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "requirement": "Live composition preserves the pure Pilot 2 contract",
+      "name": "Two explicit configured-distinct routes are composed",
+      "given": [
+        "a valid synthetic/publication-safe request",
+        "AND two explicit live route descriptors"
+      ],
+      "when": [
+        "live composition runs"
+      ],
+      "then": [
+        "both adapters are passed to the existing Pilot 2 orchestrator",
+        "AND Pilot 2 remains the owner of terminal outcome and comparison semantics"
+      ]
+    },
+    {
+      "requirement": "Output work is explicitly bounded",
+      "name": "A route omits its output-token bound",
+      "given": [
+        "a live route without a positive integer maxOutputTokens"
+      ],
+      "when": [
+        "live composition validates its route descriptors"
+      ],
+      "then": [
+        "the request is rejected",
+        "AND no provider call occurs"
+      ]
+    },
+    {
+      "requirement": "Output work is explicitly bounded",
+      "name": "A route has a valid output-token bound",
+      "given": [
+        "maxOutputTokens is configured"
+      ],
+      "when": [
+        "the OpenAI-compatible adapter sends the request"
+      ],
+      "then": [
+        "the provider request carries the corresponding max_tokens value"
+      ]
+    },
+    {
+      "requirement": "Invalid live configuration fails before network work",
+      "name": "Same-family routes are configured",
+      "given": [
+        "two otherwise valid live routes with the same model-family identity"
+      ],
+      "when": [
+        "live composition delegates to Pilot 2"
+      ],
+      "then": [
+        "the outcome is FAIL_CLOSED",
+        "AND no provider call occurs"
+      ]
+    },
+    {
+      "requirement": "Runtime/provider evidence stays separate",
+      "name": "Transport responds but the proposal artifact is invalid",
+      "given": [
+        "a provider returns an HTTP-success response",
+        "AND the returned model content does not satisfy Proposal v1"
+      ],
+      "when": [
+        "Pilot 2 validates the pass"
+      ],
+      "then": [
+        "transport evidence may record the response",
+        "AND the analytical pass remains a typed failure"
+      ]
+    },
+    {
+      "requirement": "Scope does not widen",
+      "name": "Live composition executes",
+      "given": [
+        "the bounded live composition path"
+      ],
+      "when": [
+        "it runs"
+      ],
+      "then": [
+        "it adds no tools, memory, canonical writes, private Session Search intake, scheduler, critique, or publication authority"
+      ]
+    },
+    {
+      "requirement": "Scope does not widen",
+      "name": "Adapter returns no usable final content",
+      "given": [
+        "the live provider adapter reports EMPTY_FINAL_CONTENT or OUTPUT_BUDGET_EXHAUSTED"
+      ],
+      "when": [
+        "live composition hands the failed pass to Pilot 2"
+      ],
+      "then": [
+        "the corresponding Pilot 2 failure code is preserved",
+        "AND the pass does not degrade to generic INFERENCE_FAILED"
+      ]
+    },
+    {
+      "requirement": "Model-facing schema has one source of truth",
+      "name": "A live provider receives the Proposal v1 contract",
+      "given": [
+        "deterministic validation uses the canonical Zod proposalSetSchema"
+      ],
+      "when": [
+        "the provider adapter builds the system message"
+      ],
+      "then": [
+        "the model-facing JSON Schema is generated from that same validator",
+        "AND handwritten field-type duplication is not the authority"
+      ]
+    },
+    {
+      "requirement": "Transport options remain transport-only",
+      "name": "JSON-object mode or bearer authentication is configured",
+      "given": [
+        "an explicit route requests JSON-object mode or supplies a runtime bearer credential"
+      ],
+      "when": [
+        "live composition delegates to the generic provider adapter"
+      ],
+      "then": [
+        "those options are transmitted only at the transport boundary",
+        "AND Pilot 2 outcome, validation, comparison, and authority semantics remain unchanged"
+      ]
+    }
+  ],
+  "contentHashes": {
+    "spec.md": "sha256:f2cd835adad443728bf60622761407a75165f25f804b2206200b5d4fd9bed505",
+    "verify.md": "sha256:888702197ced509ddd7da862b3a1ecd0c1bfa648ff9870ca1e8d60b0ffb0935a"
+  },
+  "generatedBy": "core"
+}

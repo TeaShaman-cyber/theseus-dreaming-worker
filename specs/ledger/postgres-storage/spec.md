@@ -77,3 +77,9 @@ Neon schema-only preview remains a separate provider-specific compatibility chec
 ## Non-scope
 
 No automatic Dreaming Worker invocation, scheduler, Session Search read tool, external API route, real production deployment, or application of `dw_ledger` to the long-lived cloud development/test database is part of this increment.
+
+## Spec Dependencies
+
+- `default:ledger/append-only-proposals`
+- `default:ledger/neon-persistence`
+- `default:intake/session-search-boundary`
