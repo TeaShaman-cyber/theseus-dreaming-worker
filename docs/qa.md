@@ -17,6 +17,7 @@ It checks:
 | Check | Plain-language purpose |
 | --- | --- |
 | `node scripts/verify-repo.mjs` | The public repo has its required contracts and does not accidentally track obvious secrets, env files, databases, keys, build state, or Mastra local state. |
+| `python3 tools/specd/check-graph.py` | Native graph health: real source/spec indexing, code relations and known-symbol resolution in a disposable workspace; not semantic proof. |
 | `./tools/dev/specd-check` | Actual pinned upstream SpecD validates every canonical spec against the schema; nonzero exit blocks canonical QA. |
 | `npm run lint` | Biome catches mechanical JavaScript/TypeScript/JSON mistakes before review. |
 | `npm run test` | Unit and regression tests still describe the intended behavior. |
@@ -207,7 +208,7 @@ SpecD structural validation is **mandatory within the canonical QA gate** on eve
 
 The existence of `spec-lock.json` does not prove that implementation satisfies the human requirement. It proves only that the repository has a persisted implementation relation that SpecD can resolve. When the linked code changes, reviewers should read the applicable `spec.md` and `verify.md` before judging semantic correctness.
 
-This slice follows the verified brownfield adoption pattern from current Session Search main. No custom SpecD review bot or permanent SpecD graph CI is introduced here. Actual semantic change-lifecycle adoption remains tracked in #52. Local SpecD override configuration belongs in `specd.local.yaml` and is not canonical.
+This slice follows the verified brownfield adoption pattern from current Session Search main. No custom SpecD review bot is introduced. The canonical QA gate now checks native graph availability in a disposable workspace; it does not publish a graph or assert that all requirements are linked. The installer explicitly rebuilds the locked Ladybug and better-sqlite3 native modules, leaving unrelated lifecycle scripts disabled. For a local graph of the working tree, run `tools/specd/node_modules/.bin/specd --config specd.yaml graph index` followed by `graph stats` or `graph search` using the same CLI/config. The ignored graph database is derived state, not Git authority. Native graph COVERS counts are not proof of the separate spec-lock implementation links. Actual semantic change-lifecycle adoption remains tracked in #52. Local SpecD override configuration belongs in `specd.local.yaml` and is not canonical.
 
 The native reverse-trace contract remains in place for promises not yet represented as durable SpecD specs. As coverage grows, redundant hand-maintained mappings may be retired only after equivalent SpecD links and review behavior are verified.
 

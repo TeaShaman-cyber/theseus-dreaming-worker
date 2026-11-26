@@ -18,6 +18,9 @@ fi
 ./tools/dev/specd-check
 unset SPECD_DIFF_BASE
 
+printf '%s\n' '== upstream SpecD graph health =='
+python3 tools/specd/check-graph.py
+
 printf '%s\n' '== lint =='
 npm run lint
 

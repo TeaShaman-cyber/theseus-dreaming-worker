@@ -21,3 +21,6 @@ specd.local.yaml
 
 # SpecD runtime logs are not change artifacts.
 .specd/config/log/
+
+# SpecD derived local code graph; Git owns the specs and implementation.
+.specd/config/graph/
