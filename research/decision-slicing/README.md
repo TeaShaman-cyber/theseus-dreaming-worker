@@ -226,3 +226,27 @@ Current ALLOW is correct but 27/243 valuations disagree (24 false DENIED,
 No false ALLOW in these four outputs, not a safety guarantee.
 Both rule-only stages are smaller/faster on these samples, but end-to-end
 split cost is not measured until actual evidence binding. No production change.
+
+### Actual second-stage evidence binding
+
+Executed f5f5d3de3a7c28e63e436e92714d93b1daae2a88. Bind to exact raw rule
+artifacts from paired-observation.jsonl (pinned SHA-256). Both calls see only
+the selected atom texts and current source evidence E2-E6, without policy E1,
+support sets, target verdict or gold. The deterministic evaluator reuses the
+immutable observed rule; model cannot regenerate it. Both responses
+HTTP200/stop, cost absent; all premise states and citations match gold,
+including unknown B (Ash), unknown C (Birch), and refused D (Ash).
+Ash binding 257/774 input/output tokens, 9.570s; Birch 272/758, 11.756s.
+Complete split 2/2 exact versus joint 1/2 exact. Ash split 1918 tokens/24.494s
+vs joint 1642/29.781s; Birch split 1592/18.806s vs joint 994/12.735s.
+Total split 3510 tokens/43.300s vs joint 2636/42.516s. Sum of observed
+provider latency, excluding orchestration and waiting between experiments.
+Split uses two calls per task, about 33% more tokens here; no general latency
+or cost improvement claim. Reusing a verified stable policy may amortize
+the rule stage, but this has not been benchmarked.
+
+Both receipt logs replayed; nine deliberate receipt mutations rejected.
+Research-only, no model qualification, automated authority or production
+changes. Next focus: genuinely ambiguous source semantics, independent
+review of the rule-to-policy correspondence, and reuse of a verified policy
+across new evidence snapshots rather than always making two calls.
