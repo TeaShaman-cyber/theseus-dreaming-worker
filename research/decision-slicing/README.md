@@ -130,3 +130,31 @@ deterministically owned policy should not be re-derived by the model at all.
 No new runtime changes, paid authority, production route or inference fallback.
 OpenRouter catalog checked only, not invoked. No claim that different Nemotron
 endpoints provide independently qualified model families.
+
+## NIM Ultra follow-up, 2026-11-27
+
+Executed commit 83a73a8e85114025aa476a8ca1de65deb441e3fb. Exact same frozen
+cases, system prompt, candidate atoms, oracle and parser as Lightning.
+3072 output cap and 60 s per-call timeout; Ultra's documented hosted
+reasoning_effort=medium rather than Lightning's reasoning_budget=768.
+Reference https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b/apireference.md.
+Current developer research catalog exact ID present; prices absent, no
+paid fallback. Both responses HTTP200/stop, exact model ID, no Retry-After.
+Raw final output only; no reasoning trace retained.
+
+- Maple: 394 input, 2891 output including 2796 reasoning tokens, 48510 ms.
+  Full rule, all premise states/citations and ALLOW exactly correct.
+- Linden: 405 input, 1585 output including 1464 reasoning tokens, 18902 ms.
+  Full rule including mandatory authorization A, A=F and C=U, all citations
+  and DENIED exactly correct.
+
+Both observations replay through the strict parser and frozen oracle, exact
+process log equality and exit 0 verified. 2/2 exact, versus Lightning 1/2
+and Solar 0/2. Ultra costs are unreported (null), not verified zero billing.
+This is a two-case repeated-fixture comparison, with differing reasoning
+controls and providers; not a general ranking, independent validation of
+semantic translation or production qualification. Ultra is a promising
+research candidate, not an authority gate. Warm latency is substantially
+higher on these samples. Next experiment may compare Ultra's documented
+none/medium modes and separately extract policy from facts, with new held-out
+cases and explicit negative authority controls. No production changes.
