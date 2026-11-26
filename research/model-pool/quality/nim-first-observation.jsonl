@@ -1,0 +1,8 @@
+{"kind":"catalog","route":"glm","provider":"nvidia","model":"z-ai/glm-5.3-flash","pricing":null,"entitlement":"NVIDIA_DEVELOPER_RESEARCH","fixtureSha256":"f328422d67be4f318ee1398fc8f9da183d5ac97994a78721fa9d3f6616dcc84f","cap":1024,"timeoutMs":30000,"selected":["decision","authority","absence","dissent","signal","long"]}
+{"kind":"case","route":"glm","id":"decision","status":"FAILED","error":"Provider request timed out","transport":null,"providerEvidence":{"configuredProvider":"nvidia","configuredModel":"z-ai/glm-5.3-flash","configuredModelFamily":"glm","requestFingerprint":"sha256:3d9b363026be0bee2d50c54fa9ac9b2c000665033a5c59c8c21e8148a2d538ef","evidenceFingerprint":"sha256:e52694da7457b33b2c07c2bdf2b354f6002acd8398a25cfd3f7fd61c0f4eb5df","latencyMs":30003,"providerState":"UNKNOWN","usageState":"ABSENT","outcome":"FAILURE","usableArtifact":false,"failureCode":"TIMEOUT"}}
+{"kind":"case","route":"glm","id":"authority","status":"NOT_ATTEMPTED"}
+{"kind":"case","route":"glm","id":"absence","status":"NOT_ATTEMPTED"}
+{"kind":"case","route":"glm","id":"dissent","status":"NOT_ATTEMPTED"}
+{"kind":"case","route":"glm","id":"signal","status":"NOT_ATTEMPTED"}
+{"kind":"case","route":"glm","id":"long","status":"NOT_ATTEMPTED"}
+{"kind":"end","route":"glm","attempts":1,"stopped":true}
