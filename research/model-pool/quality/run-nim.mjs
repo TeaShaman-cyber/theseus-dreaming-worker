@@ -37,7 +37,9 @@ if (process.argv[2]==='--check') {
 const [routeId,output,capText='1024',priorPath]=process.argv.slice(2);
 const cap=Number(capText);
 assert.ok([1024,3072].includes(cap));
+const latencyProbe=priorPath==='--independent-probe';
 assert.equal(cap===3072,Boolean(priorPath));
+if(latencyProbe)assert.equal(routeId,'lightning');
 const routes={
   glm:{provider:'nvidia',model:'z-ai/glm-5.3-flash',family:'glm',baseURL:'https://nvidi-nim.int.exe.xyz/v1'},
   lightning:{provider:'nvidia',model:'nvidia/nemotron-3.5-lightning-30b-a3b',family:'nemotron',baseURL:'https://nvidi-nim.int.exe.xyz/v1'},
@@ -52,7 +54,9 @@ const m=catalog.data.find(x=>x.id===route.model);
 assert.equal(m?.id,route.model);
 if (m.pricing) assert.ok(Object.keys(m.pricing).length&&Object.values(m.pricing).every(v=>v===0||v==='0'));
 let selected=cases;
-if(priorPath){
+if(latencyProbe){
+ selected=cases.filter(c=>c.id==='authority');
+}else if(priorPath){
  const prior=readFileSync(priorPath,'utf8').trim().split('\n').map(JSON.parse);
  assert.equal(prior[0].route,routeId);
  assert.equal(prior[0].fixtureSha256,digest);
@@ -64,8 +68,8 @@ if(priorPath){
 }
 
 writeFileSync(output,'',{flag:'wx',mode:0o600});
-record('catalog',{provider:route.provider,model:route.model,pricing:m.pricing??null,entitlement:'NVIDIA_DEVELOPER_RESEARCH',fixtureSha256:digest,cap,timeoutMs:cap===1024?30000:60000,selected: selected.map(c=>c.id)});
-let attempts=0, transport=null, providerEvidence=null;
+record('catalog',{provider:route.provider,model:route.model,pricing:m.pricing??null,entitlement:'NVIDIA_DEVELOPER_RESEARCH',fixtureSha256:digest,cap,timeoutMs:cap===1024?30000:60000,condition:latencyProbe?'INDEPENDENT_LATENCY_AND_BUDGET_PROBE':'COMPARISON',selected: selected.map(c=>c.id)});
+let attempts=0, transport=null, providerEvidence=null, activeCase=null;
 const originalFetch=globalThis.fetch;
 globalThis.fetch=async(url,opts)=>{
   assert.equal(String(url),route.baseURL+'/chat/completions');
@@ -74,6 +78,7 @@ globalThis.fetch=async(url,opts)=>{
   assert.equal(body.max_tokens,cap);
   assert.ok(attempts<selected.length);
   attempts++;
+  record('attempt',{id:activeCase,attempt:attempts,model:route.model,cap});
   const res=await originalFetch(url,opts);
   const raw=await res.clone().json().catch(()=>({}));
   transport={status:res.status,provider:raw.provider??null,model:raw.model??null,cost:raw.usage?.cost??raw.cost??null,finish:raw.choices?.[0]?.finish_reason??null,retryAfter:res.headers.get('retry-after')};
@@ -84,7 +89,7 @@ const infer=createOpenAIChatInference({baseURL:route.baseURL,configuredProvider:
 let stopped=false;
 for (const c of selected) {
   if (stopped) {record('case',{id:c.id,status:'NOT_ATTEMPTED'});continue;}
-  transport=null;providerEvidence=null;
+  activeCase=c.id;transport=null;providerEvidence=null;
   const before=attempts;
   try {
     const result=await runPilot1(structuredClone(c.request),infer);
