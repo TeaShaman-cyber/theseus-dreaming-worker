@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, appendFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { proposalSetJsonSchema } from '../../../src/dreaming/proposal-schema.ts';
 import { runPilot1 } from '../../../src/dreaming/pilot1-runner.ts';
 import { createOpenAIChatInference } from '../../../src/dreaming/openai-provider-adapter.ts';
 
@@ -38,8 +39,11 @@ const [routeId,output,capText='1024',priorPath]=process.argv.slice(2);
 const cap=Number(capText);
 assert.ok([1024,3072].includes(cap));
 const latencyProbe=priorPath==='--independent-probe';
+const reasoningProbe=priorPath==='--reasoning-probe';
+const schemaProbe=priorPath==='--schema-probe';
+const reasoningBudget=reasoningProbe||schemaProbe?768:null;
 assert.equal(cap===3072,Boolean(priorPath));
-if(latencyProbe)assert.equal(routeId,'lightning');
+if(latencyProbe||reasoningBudget!==null)assert.equal(routeId,'lightning');
 const routes={
   glm:{provider:'nvidia',model:'z-ai/glm-5.3-flash',family:'glm',baseURL:'https://nvidi-nim.int.exe.xyz/v1'},
   lightning:{provider:'nvidia',model:'nvidia/nemotron-3.5-lightning-30b-a3b',family:'nemotron',baseURL:'https://nvidi-nim.int.exe.xyz/v1'},
@@ -54,7 +58,9 @@ const m=catalog.data.find(x=>x.id===route.model);
 assert.equal(m?.id,route.model);
 if (m.pricing) assert.ok(Object.keys(m.pricing).length&&Object.values(m.pricing).every(v=>v===0||v==='0'));
 let selected=cases;
-if(latencyProbe){
+if(reasoningProbe||schemaProbe){
+ selected=cases.filter(c=>c.id==='authority');
+}else if(latencyProbe){
  selected=cases.filter(c=>c.id==='authority');
 }else if(priorPath){
  const prior=readFileSync(priorPath,'utf8').trim().split('\n').map(JSON.parse);
@@ -68,7 +74,7 @@ if(latencyProbe){
 }
 
 writeFileSync(output,'',{flag:'wx',mode:0o600});
-record('catalog',{provider:route.provider,model:route.model,pricing:m.pricing??null,entitlement:'NVIDIA_DEVELOPER_RESEARCH',fixtureSha256:digest,cap,timeoutMs:cap===1024?30000:60000,condition:latencyProbe?'INDEPENDENT_LATENCY_AND_BUDGET_PROBE':'COMPARISON',selected: selected.map(c=>c.id)});
+record('catalog',{provider:route.provider,model:route.model,pricing:m.pricing??null,entitlement:'NVIDIA_DEVELOPER_RESEARCH',fixtureSha256:digest,cap,timeoutMs:cap===1024?30000:60000,reasoningBudget,condition:schemaProbe?'NATIVE_SCHEMA_PROBE':reasoningProbe?'REASONING_BUDGET_PROBE':latencyProbe?'INDEPENDENT_LATENCY_AND_BUDGET_PROBE':'COMPARISON',selected: selected.map(c=>c.id)});
 let attempts=0, transport=null, providerEvidence=null, activeCase=null;
 const originalFetch=globalThis.fetch;
 globalThis.fetch=async(url,opts)=>{
@@ -78,10 +84,11 @@ globalThis.fetch=async(url,opts)=>{
   assert.equal(body.max_tokens,cap);
   assert.ok(attempts<selected.length);
   attempts++;
-  record('attempt',{id:activeCase,attempt:attempts,model:route.model,cap});
-  const res=await originalFetch(url,opts);
+  record('attempt',{id:activeCase,attempt:attempts,model:route.model,cap,reasoningBudget,schemaProbe});
+  const res=await originalFetch(url,reasoningBudget===null?opts:{...opts,body:JSON.stringify({...body,reasoning_budget:reasoningBudget,...(schemaProbe?{response_format:{type:'json_schema',json_schema:{name:'dreaming_proposals',strict:true,schema:proposalSetJsonSchema}}}:{})})});
   const raw=await res.clone().json().catch(()=>({}));
   transport={status:res.status,provider:raw.provider??null,model:raw.model??null,cost:raw.usage?.cost??raw.cost??null,finish:raw.choices?.[0]?.finish_reason??null,retryAfter:res.headers.get('retry-after')};
+  if(schemaProbe&&typeof raw.choices?.[0]?.message?.content==='string') transport.finalContent=raw.choices[0].message.content.slice(0,48000);
   if (!res.ok) transport.error=String(raw.error?.message??raw.message??'').slice(0,300);
   return res;
 };
@@ -101,6 +108,9 @@ for (const c of selected) {
     if (!transport||transport.status!==200||providerEvidence?.providerState==='UNKNOWN'||providerEvidence?.failureCode==='TIMEOUT') stopped=true;
   }
   assert.equal(attempts,before+1);
+  if(reasoningBudget!==null && providerEvidence?.usage?.reasoningTokens>reasoningBudget+64){
+    record('stop',{reason:'REASONING_BUDGET_NOT_OBSERVED'});stopped=true;
+  }
   if (transport?.cost!=null && transport.cost!==0&&transport.cost!=='0') {
     record('stop',{reason:'NONZERO_OR_UNRECOGNIZED_COST'});stopped=true;
   }
