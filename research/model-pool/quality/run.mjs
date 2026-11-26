@@ -1,7 +1,7 @@
 // Offline fixture check, or explicitly selected, bounded free-route experiment.
 // No production configuration, no retry/fallback or private input.
 import assert from 'node:assert/strict';
-import { readFileSync, appendFileSync } from 'node:fs';
+import { readFileSync, appendFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { runPilot1 } from '../../../src/dreaming/pilot1-runner.ts';
 import { createOpenAIChatInference } from '../../../src/dreaming/openai-provider-adapter.ts';
@@ -47,7 +47,8 @@ const catalogResponse=await fetch(route.baseURL+'/models',{signal:AbortSignal.ti
 assert.ok(catalogResponse.ok);
 const catalog=await catalogResponse.json();
 const m=catalog.data.find(x=>x.id===route.model);
-assert.ok(m?.id.endsWith(':free')&&m.pricing&&Object.keys(m.pricing).length&&Object.values(m.pricing).every(v=>Number(v)===0));
+assert.ok(m?.id.endsWith(':free')&&m.pricing&&Object.keys(m.pricing).length&&Object.values(m.pricing).every(v=>v===0||v==='0'));
+writeFileSync(output,'',{flag:'wx',mode:0o600});
 record('catalog',{provider:route.provider,model:route.model,pricing:m.pricing,fixtureSha256:digest});
 let attempts=0, transport=null, providerEvidence=null;
 const originalFetch=globalThis.fetch;
