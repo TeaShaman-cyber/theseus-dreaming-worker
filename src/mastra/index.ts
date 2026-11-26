@@ -7,6 +7,7 @@ import { getEnv } from './env';
 import { exeGateway } from './gateways/exe-gateway';
 import { workspace } from './workspace';
 import { createObservability } from './observability-routing';
+import { developmentWorkflows } from './workflows/source-batch-preview';
 
 const storage = new LibSQLStore({
   id: 'mastra-storage',
@@ -36,6 +37,7 @@ export const mastra = new Mastra({
   agents: {
     builderAgent: createBuilderAgent({ model: builderModel }),
   },
+  workflows: developmentWorkflows,
   bundler: {
     sourcemap: true,
   },

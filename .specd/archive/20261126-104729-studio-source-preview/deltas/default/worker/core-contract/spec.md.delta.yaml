@@ -1,0 +1,2 @@
+- op: no-op
+  description: Existing worker runtime and authority boundaries are unchanged.
