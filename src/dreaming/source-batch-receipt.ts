@@ -25,10 +25,7 @@ function canonical(value: unknown): string {
 
 export const sourceReceiptFingerprint = (payload: unknown) => sha256Fingerprint(canonical(payload));
 
-/** Read-only synthetic receipt preparation. Trusted predecessor and catalog
- * observation are supplied by the caller; no durable source ack is made.
- */
-export async function prepareSourceBatchReceipt(raw: BatchInput, store: Pick<WorkStore, 'readCompletion'>) {
+function prepareBatch(raw: BatchInput) {
   const x = structuredClone(raw);
   const maxSessions = z.number().int().min(1).max(100).parse(x.maxSessions);
   const previousCheckpoint = z.string().regex(/^sha256:[0-9a-f]{64}$/).parse(x.previousCheckpoint);
@@ -53,6 +50,37 @@ export async function prepareSourceBatchReceipt(raw: BatchInput, store: Pick<Wor
     if (admitted.skipDecision) throw Error('SOURCE_BATCH_UNUSABLE');
     return { ...result, input: result.input, workFingerprint: admitted.workFingerprint };
   });
+  return { x, previousCheckpoint, handoff, prepared };
+}
+
+/** Metadata-only plan; no evidence body or execution authority is retained. */
+export function prepareSourceBatchExecution(raw: BatchInput) {
+  const { x, previousCheckpoint, handoff, prepared } = prepareBatch(raw);
+  const payload = {
+    schema: 'theseus.dreaming-worker.source-batch-plan.v1' as const,
+    previousCheckpoint, task: x.task, analysisVersion: x.analysisVersion, handoff,
+    work: prepared.map(entry => {
+      const request = entry.input.request;
+      const gate = runPilot0(request.packet);
+      return {
+        workFingerprint: entry.workFingerprint, packetId: request.packet.packetId,
+        requestFingerprint: pilot1RequestFingerprint(request.scope, request.task, gate.receipt.inputFingerprint),
+        evidenceFingerprint: gate.receipt.inputFingerprint, witness: entry.provenance,
+      };
+    }),
+    checkpointAdvanced: false as const,
+  };
+  const plan = { ...payload, planFingerprint: sourceReceiptFingerprint(payload) };
+  return { plan, prepared };
+}
+
+export function prepareSourceBatchPlan(raw: BatchInput) {
+  return prepareSourceBatchExecution(raw).plan;
+}
+
+/** Read-only synthetic receipt preparation; no durable source ack is made. */
+export async function prepareSourceBatchReceipt(raw: BatchInput, store: Pick<WorkStore, 'readCompletion'>) {
+  const { x, previousCheckpoint, handoff, prepared } = prepareBatch(raw);
   const work = [];
   for (const entry of prepared) {
     try {

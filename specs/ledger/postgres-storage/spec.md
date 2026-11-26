@@ -44,6 +44,22 @@ The synthetic source store MUST initialize a root only explicitly from a trusted
 
 Source checkpoints MUST be append-only with one root and at most one successor per predecessor and chain. A missing or conflicting predecessor, incomplete work, corrupt storage or unresolved removal MUST NOT advance the chain. An ambiguous write MUST be resolved by independent exact readback or remain UNKNOWN. Acknowledgement MUST NOT invoke inference, enable real history access or imply source completeness.
 
+### Requirement: Pending source plan custody
+
+The synthetic source store MUST support explicitly staging an immutable plan derived from the exact verified selected work under the existing predecessor and analysis intent. A plan MUST retain the complete handoff, original packet and request identities, work identities and source witnesses, but no evidence bodies. Staging MUST NOT advance the acknowledged source checkpoint or invoke inference.
+
+The plan MUST be bound to the existing source chain and predecessor, use the existing ledger transaction lock, and be independently read back. Exact repeats MUST be idempotent. Distinct rederived witnesses MAY coexist for the same predecessor while it remains the tip; an acknowledged predecessor MUST NOT admit new plans. Restart lookup MUST validate stored digest and binding and MUST distinguish unavailable/corrupt storage from no plans. A plan alone is not permission to execute or replay stale evidence.
+
+### Requirement: Staged source work admission
+
+Source-specific synthetic execution MUST derive the exact selected work from verified input and require the matching durable plan before reservation. Under the existing transaction lock it MUST verify the unadvanced predecessor and atomically bind a new work reservation to its exact original plan. Missing, corrupt or unavailable plan state MUST prevent inference. Existing reservations MUST NOT be taken over or relabelled; an unbound reservation cannot establish source custody.
+
+The existing durable runner MUST remain responsible for inference and completion; source-specific admission MUST NOT advance the source checkpoint, grant access or change generic pilot behavior.
+
+### Requirement: Source acknowledgement retains original plan
+
+A durable source acknowledgement MUST require the exact current staged plan and verify each completion against its immutable original reservation plan under the existing transaction lock. An unbound completion MUST NOT advance source progress. The durable receipt MUST bind both the current plan and each original plan pointer, and verify the original packet, request and evidence identities against the completion. A later witness MUST NOT relabel the original work origin.
+
 ### Requirement: Read behavior
 
 Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.

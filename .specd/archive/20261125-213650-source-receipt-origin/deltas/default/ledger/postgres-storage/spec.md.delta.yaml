@@ -1,0 +1,12 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Staged source work admission$'
+  content: |
+    ### Requirement: Source acknowledgement retains original plan
+
+    A durable source acknowledgement MUST require the exact current staged plan and verify each completion against its immutable original reservation plan under the existing transaction lock. An unbound completion MUST NOT advance source progress. The durable receipt MUST bind both the current plan and each original plan pointer, and verify the original packet, request and evidence identities against the completion. A later witness MUST NOT relabel the original work origin.

@@ -1,7 +1,9 @@
 import { Client } from 'pg';
 import { z } from 'zod';
 import { decodeSourceHandoff } from './source-handoff.ts';
-import { prepareSourceBatchReceipt, sourceReceiptFingerprint, type BatchInput } from './source-batch-receipt.ts';
+import { prepareSourceBatchExecution, prepareSourceBatchPlan, prepareSourceBatchReceipt, sourceReceiptFingerprint, type BatchInput } from './source-batch-receipt.ts';
+import { readVerifiedCompletion, runDurablePilot2 } from './durable-pilot2.ts';
+import type { Pilot2Route } from './pilot2-runner.ts';
 import { createPostgresWorkStore, type LedgerPgClient, type LedgerPgClientFactory } from './proposal-ledger-postgres.ts';
 
 type Intent = Pick<BatchInput, 'candidate' | 'expected' | 'task' | 'analysisVersion'>;
@@ -23,7 +25,50 @@ function context(raw: Intent) {
 
 type Root = ReturnType<typeof context>['root'];
 type Receipt = NonNullable<Awaited<ReturnType<typeof prepareSourceBatchReceipt>>['receipt']>;
-type Stored = Root | Receipt;
+type OriginPointer = {
+  workFingerprint: string;
+  previousCheckpoint: string;
+  planFingerprint: string;
+};
+type BoundReceipt = Omit<Receipt, 'schema'> & {
+  schema: 'theseus.dreaming-worker.source-batch-receipt.v2';
+  currentPlanFingerprint: string;
+  origins: OriginPointer[];
+};
+type Stored = Root | Receipt | BoundReceipt;
+type Plan = ReturnType<typeof prepareSourceBatchPlan>;
+type PlanRow = { plan_fingerprint: string; plan: unknown };
+type PlanResult =
+  | { status: 'STAGED' | 'ALREADY_STAGED'; plan: Plan }
+  | { status: 'CONFLICT' | 'STORAGE_UNKNOWN'; plan: null };
+
+function checkPlan(row: PlanRow, chain: string, parent: Stored): Plan {
+  const envelope = z.object({
+    schema: z.literal('theseus.dreaming-worker.source-batch-plan.v1'),
+    task: text, analysisVersion: text, planFingerprint: fingerprint,
+    previousCheckpoint: fingerprint, checkpointAdvanced: z.literal(false),
+    handoff: z.object({ provider: text, scope: text, previous_membership: z.unknown() }).passthrough(),
+    work: z.array(z.object({
+      workFingerprint: fingerprint, packetId: text, requestFingerprint: fingerprint,
+      evidenceFingerprint: fingerprint, witness: z.object({}).passthrough(),
+    }).strict()).min(1).max(100),
+  }).strict().parse(row.plan);
+  const { planFingerprint, ...payload } = envelope;
+  if (planFingerprint !== row.plan_fingerprint || sourceReceiptFingerprint(payload) !== planFingerprint
+    || payload.previousCheckpoint !== parent.receiptFingerprint
+    || sourceReceiptFingerprint(['source-chain-v1', payload.handoff.provider, payload.handoff.scope,
+      payload.task, payload.analysisVersion]) !== chain
+    || sourceReceiptFingerprint(payload.handoff.previous_membership) !== sourceReceiptFingerprint(parentMembership(parent))) {
+    throw Error('SOURCE_PLAN_READBACK');
+  }
+  // Like checkpoint readback, trusts the validated writer; hashes are not signatures.
+  return row.plan as Plan;
+}
+
+function parentMembership(parent: Stored) {
+  return parent.schema === 'theseus.dreaming-worker.source-root.v1'
+    ? parent.membership : parent.handoff.current_membership;
+}
 type Result =
   | { status: 'ACKNOWLEDGED' | 'ALREADY_ACKNOWLEDGED'; receipt: Stored }
   | { status: 'CONFLICT' | 'PENDING' | 'STORAGE_UNKNOWN'; receipt: null };
@@ -31,7 +76,7 @@ type Row = { checkpoint_fingerprint: string; previous_checkpoint: string | null;
 
 function checkRow(row: Row, chain: string): Stored {
   const envelope = z.object({
-    schema: z.enum(['theseus.dreaming-worker.source-root.v1', 'theseus.dreaming-worker.source-batch-receipt.v1']),
+    schema: z.enum(['theseus.dreaming-worker.source-root.v1', 'theseus.dreaming-worker.source-batch-receipt.v1', 'theseus.dreaming-worker.source-batch-receipt.v2']),
     task: text, analysisVersion: text, receiptFingerprint: fingerprint,
     previousCheckpoint: fingerprint.nullable(),
   }).passthrough().parse(row.receipt);
@@ -122,7 +167,146 @@ export function createPostgresSourceBatchStore(options: {
     } catch { return unknown(); }
   }
 
+  async function readPlan(client: LedgerPgClient, chain: string, parent: Stored, key: string) {
+    const { rows } = await client.query<PlanRow>(
+      'SELECT plan_fingerprint,plan FROM dw_ledger.source_plans WHERE chain_id=$1 AND previous_checkpoint=$2 AND plan_fingerprint=$3',
+      [chain,parent.receiptFingerprint,key],
+    );
+    if (rows.length > 1) throw Error('SOURCE_PLAN_DUPLICATE');
+    return rows.length ? checkPlan(rows[0], chain, parent) : null;
+  }
+
+  async function readOrigin(client: LedgerPgClient, chain: string, workFingerprint: string) {
+    const { rows } = await client.query<{
+      chain_id: string; previous_checkpoint: string; plan_fingerprint: string;
+    }>('SELECT chain_id,previous_checkpoint,plan_fingerprint FROM dw_ledger.source_work_origins WHERE work_fingerprint=$1', [workFingerprint]);
+    if (rows.length !== 1 || rows[0].chain_id !== chain) throw Error('SOURCE_EXECUTION_ORIGIN_REQUIRED');
+    const origin = rows[0];
+    const originalParent = await readParent(client, chain, origin.previous_checkpoint);
+    const original = originalParent && await readPlan(client, chain, originalParent, origin.plan_fingerprint);
+    const matches = original?.work.filter(w => w.workFingerprint === workFingerprint);
+    if (!matches || matches.length !== 1) throw Error('SOURCE_EXECUTION_ORIGIN_INVALID');
+    return {
+      pointer: { workFingerprint, previousCheckpoint: origin.previous_checkpoint, planFingerprint: origin.plan_fingerprint },
+      work: matches[0],
+    };
+  }
+
   return {
+    /** Explicit source-specific execution. Generic synthetic work is unchanged. */
+    async runSelected(raw: BatchInput, sessionId: string, routes: Pilot2Route[]) {
+      const input = structuredClone(raw);
+      const { chain } = context(input);
+      const { plan, prepared } = prepareSourceBatchExecution(input);
+      const selected = prepared.find(entry => entry.provenance.session.session_id === sessionId);
+      if (!selected) throw Error('SOURCE_EXECUTION_SELECTION');
+      const ordinary = createPostgresWorkStore(options);
+      return runDurablePilot2(selected.input, routes, {
+        ...ordinary,
+        async reserve(workFingerprint, ownerToken) {
+          if (workFingerprint !== selected.workFingerprint) throw Error('SOURCE_EXECUTION_WORK');
+          return withClient(async client => {
+            await client.query('BEGIN');
+            try {
+              await client.query("SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))");
+              const parent = await readParent(client, chain, plan.previousCheckpoint);
+              if (!parent || await readChild(client, chain, plan.previousCheckpoint)
+                || !await readPlan(client, chain, parent, plan.planFingerprint)) {
+                throw Error('SOURCE_EXECUTION_PLAN_REQUIRED');
+              }
+              const scoped = createPostgresWorkStore({
+                connectionString: options.connectionString,
+                clientFactory: () => ({
+                  connect: async () => undefined, end: async () => undefined,
+                  query: (sql, values) => client.query(sql, values),
+                }),
+              });
+              const acquired = await scoped.reserve(workFingerprint, ownerToken);
+              if (acquired) {
+                await client.query(
+                  'INSERT INTO dw_ledger.source_work_origins(work_fingerprint,chain_id,previous_checkpoint,plan_fingerprint) VALUES ($1,$2,$3,$4)',
+                  [workFingerprint,chain,plan.previousCheckpoint,plan.planFingerprint],
+                );
+              } else {
+                await readOrigin(client, chain, workFingerprint);
+              }
+              await client.query('COMMIT');
+              return acquired;
+            } catch (error) {
+              try { await client.query('ROLLBACK'); } catch { /* ambiguous outcome */ }
+              throw error;
+            }
+          });
+        },
+      });
+    },
+    /** Stage metadata before execution. No inference or progress advancement. */
+    async stage(raw: BatchInput): Promise<PlanResult> {
+      const input = structuredClone(raw);
+      const { chain, handoff } = context(input);
+      const plan = prepareSourceBatchPlan(input);
+      const previous = plan.previousCheckpoint;
+      let already = false;
+      let attempted = false;
+      const unknown = (): PlanResult => ({ status: 'STORAGE_UNKNOWN', plan: null });
+      try {
+        const outcome = await withClient(async client => {
+          await client.query('BEGIN');
+          try {
+            await client.query("SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))");
+            const parent = await readParent(client, chain, previous);
+            if (!parent || sourceReceiptFingerprint(parentMembership(parent)) !== sourceReceiptFingerprint(handoff.previous_membership)) {
+              await client.query('ROLLBACK'); return 'CONFLICT' as const;
+            }
+            const existing = await readPlan(client, chain, parent, plan.planFingerprint);
+            if (existing) already = true;
+            else {
+              if (await readChild(client, chain, previous)) {
+                await client.query('ROLLBACK'); return 'CONFLICT' as const;
+              }
+              attempted = true;
+              await client.query(
+                'INSERT INTO dw_ledger.source_plans(chain_id,previous_checkpoint,plan_fingerprint,plan) VALUES ($1,$2,$3,$4::jsonb)',
+                [chain,previous,plan.planFingerprint,JSON.stringify(plan)],
+              );
+            }
+            await client.query('COMMIT');
+            return null;
+          } catch (error) {
+            try { await client.query('ROLLBACK'); } catch { /* ambiguous outcome */ }
+            throw error;
+          }
+        });
+        if (outcome !== null) return { status: outcome, plan: null };
+      } catch {
+        if (!attempted && !already) return unknown();
+      }
+      try {
+        const stored = await withClient(async client => {
+          const parent = await readParent(client, chain, previous);
+          return parent ? readPlan(client, chain, parent, plan.planFingerprint) : null;
+        });
+        return stored ? { status: already ? 'ALREADY_STAGED' : 'STAGED', plan: stored } : unknown();
+      } catch { return unknown(); }
+    },
+    /** Lookup historical or pending witnesses, not a permission to resume them.
+     * Errors and missing parent throw; an empty array means observed no plans.
+     */
+    async readPlans(raw: Intent, previousRaw: string, limitRaw: number): Promise<Plan[]> {
+      const { chain } = context(raw);
+      const previous = fingerprint.parse(previousRaw);
+      const limit = z.number().int().min(1).max(100).parse(limitRaw);
+      return withClient(async client => {
+        const parent = await readParent(client, chain, previous);
+        if (!parent) throw Error('SOURCE_PLAN_PARENT_MISSING');
+        const { rows } = await client.query<PlanRow>(
+          'SELECT plan_fingerprint,plan FROM dw_ledger.source_plans WHERE chain_id=$1 AND previous_checkpoint=$2 ORDER BY plan_fingerprint LIMIT $3',
+          [chain,previous,limit+1],
+        );
+        if (rows.length > limit) throw Error('SOURCE_PLAN_LIMIT');
+        return rows.map(row => checkPlan(row,chain,parent));
+      });
+    },
     /** Explicit trusted bootstrap, never inferred from an empty query. */
     async initialize(raw: Intent): Promise<Result> {
       const { chain, root } = context(structuredClone(raw));
@@ -135,8 +319,7 @@ export function createPostgresSourceBatchStore(options: {
       return append(chain, previous, async client => {
         const parent = await readParent(client, chain, previous);
         if (!parent) return 'CONFLICT';
-        const membership = parent.schema === 'theseus.dreaming-worker.source-root.v1'
-          ? parent.membership : parent.handoff.current_membership;
+        const membership = parentMembership(parent);
         if (sourceReceiptFingerprint(membership) !== sourceReceiptFingerprint(handoff.previous_membership)) return 'CONFLICT';
         const reader = createPostgresWorkStore({
           connectionString: options.connectionString,
@@ -146,7 +329,30 @@ export function createPostgresSourceBatchStore(options: {
           }),
         });
         const result = await prepareSourceBatchReceipt(input, reader);
-        return result.receipt ?? (result.status === 'PENDING' ? 'PENDING' : 'STORAGE_UNKNOWN');
+        if (!result.receipt) return result.status === 'PENDING' ? 'PENDING' : 'STORAGE_UNKNOWN';
+        const current = prepareSourceBatchPlan(input);
+        if (!await readPlan(client, chain, parent, current.planFingerprint)) return 'STORAGE_UNKNOWN';
+        const origins: OriginPointer[] = [];
+        for (const item of result.receipt.work) {
+          const original = await readOrigin(client, chain, item.workFingerprint);
+          const completion = await readVerifiedCompletion(reader, item.workFingerprint);
+          if (!completion || completion.projectionFingerprint !== item.completionFingerprint
+            || completion.checkpoint.requestFingerprint !== original.work.requestFingerprint
+            || item.originalPacketId !== original.work.packetId
+            || completion.records.some(record => record.origin.packetId !== original.work.packetId
+              || record.origin.evidenceFingerprint !== original.work.evidenceFingerprint
+              || record.origin.requestFingerprint !== original.work.requestFingerprint)) {
+            return 'STORAGE_UNKNOWN';
+          }
+          origins.push(original.pointer);
+        }
+        const { receiptFingerprint: _candidateFingerprint, ...candidate } = result.receipt;
+        const payload = {
+          ...candidate,
+          schema: 'theseus.dreaming-worker.source-batch-receipt.v2' as const,
+          currentPlanFingerprint: current.planFingerprint, origins,
+        };
+        return { ...payload, receiptFingerprint: sourceReceiptFingerprint(payload) };
       });
     },
     /** Returns the observed chain tip; absence is not permission to bootstrap. */

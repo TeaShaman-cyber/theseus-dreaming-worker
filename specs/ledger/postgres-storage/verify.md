@@ -107,3 +107,42 @@
 - **WHEN** acknowledgement is attempted
 - **THEN** the chain does not advance incorrectly
 - **AND** ambiguous commit is resolved only by exact readback
+
+### Requirement: Pending source plan custody
+
+#### Scenario: Recovered pending witness
+
+- **GIVEN** an exact synthetic selected batch and existing source predecessor
+- **WHEN** staging succeeds and the executor restarts
+- **THEN** exact metadata and work/packet identities are independently recovered
+- **AND** source acknowledgement remains unchanged
+
+#### Scenario: New source witness or invalid predecessor
+
+- **GIVEN** a rederived source witness for the same content under an unadvanced predecessor
+- **WHEN** staging succeeds
+- **THEN** both witnesses remain distinct and the same work identity is retained
+- **GIVEN** an absent or advanced predecessor, or inconsistent stored plan
+- **WHEN** staging or readback is attempted
+- **THEN** no new plan is accepted or corrupt plan returned
+
+### Requirement: Staged source work admission
+
+#### Scenario: Missing or exact staged plan
+
+- **GIVEN** a verified synthetic selected work without a staged plan
+- **WHEN** source-specific execution is requested
+- **THEN** no reservation or inference occurs
+- **GIVEN** the exact staged plan and unadvanced predecessor
+- **WHEN** execution is requested
+- **THEN** one reservation is bound to the original plan before inference
+- **AND** replay does not repeat inference or change the original plan
+
+### Requirement: Source acknowledgement retains original plan
+
+#### Scenario: Distinct original and current plans
+
+- **GIVEN** a verified completion bound to its original staged plan and an equivalent later staged witness
+- **WHEN** the batch is acknowledged
+- **THEN** the receipt preserves both identities and exact readback
+- **AND** an unbound generic completion cannot advance the chain

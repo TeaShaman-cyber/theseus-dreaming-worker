@@ -248,3 +248,88 @@ Persisted receipt readback checks envelope, chain and digest; it assumes
 trusted ledger writers, not cryptographic authentication of source.
 No runtime migration of Neon, deployment, pending-batch custody,
 empty/removal disposition, or real source access is included.
+
+### Pending source plan custody (issue #65)
+
+The existing verified batch admission also prepares an immutable plan
+before model execution. It retains the full handoff and source witnesses,
+predecessor, task/version, work and packet/request/evidence fingerprints.
+It does not retain message bodies. The source_plans table belongs to
+the existing ledger and references its exact source checkpoint parent.
+Stage and lookup use the existing connection boundary; staging uses the
+ledger transaction lock and independent exact digest readback. New
+plans require an unadvanced compatible parent, while exact repeats are
+idempotent. Distinct rederived witnesses can coexist without replacing
+the original. Lookup is bounded and throws rather than treating a
+missing parent, corrupt readback or excessive results as no plans.
+
+Synthetic-only; no production migration. Staging is not yet enforced
+before reservation, and completion-to-original-plan linkage remains
+open (different witnesses can share a packet ID). Neither staging nor
+lookup authorizes stale source reads or advances the checkpoint.
+Actual source custody, real metadata retention and recovery budgets
+require separate acceptance. The fast tests cover stable work identity
+across distinct source witnesses; hosted PostgreSQL checks restart and
+unchanged checkpoint with unprocessed work. The additional PostgreSQL
+generation-change scenario has not been executed.
+
+### Staged source work admission
+
+The synthetic source-specific runSelected entry point now derives the exact
+plan and selected input, then verifies the existing unadvanced predecessor
+and durable plan under the ledger transaction lock before reserving work.
+It uses the ordinary durable runner and ordinary completion store. A new
+source_work_origins association is inserted atomically with a reservation;
+foreign keys bind the original staged plan and work reservation. No
+transaction remains open during inference. Missing plan or unavailable
+storage blocks execution. An existing reservation with no source origin
+is not accepted as source-specific custody. The original association is
+never relabelled when a reservation is encountered again.
+
+The generic synthetic pilot remains independently usable. This is not a
+global enforcement boundary for arbitrary SQL writers or a grant to
+read real history. Source receipt linkage to the original plan is still
+open; source checkpoint acknowledgement is separate. No live migration
+or model calls. Hosted PostgreSQL tests cover missing plan, staged
+execution and restart with the original association and no extra calls.
+
+### Original plan binding in source acknowledgement
+
+The durable acknowledgement now requires an exact current staged plan
+and the original source-work association for every independently verified
+completion. Within the existing ledger transaction lock it validates
+the original plan's packet, request and evidence fingerprints against
+the completion. Generic pilot completions without a source-work origin
+cannot advance this source chain. No schema change is needed.
+
+The portable receipt remains a v1 candidate. The stored v2 receipt
+adds the current plan fingerprint and ordered original plan pointers
+(work identity, original predecessor and original plan fingerprint).
+A later equivalent witness cannot replace the original plan. Existing
+v1 stored receipts remain readable as historical receipts without a
+claim of this stronger binding. All new acknowledgements use v2.
+The complete receipt digest and independent readback remain required.
+The PostgreSQL regression covers different staged witnesses, unbound
+completion rejection, exact readback and commit acknowledgement loss.
+It uses synthetic source links; a full cross-generation recovery and
+real source custody policy remain separate acceptance questions.
+
+### Cross-generation recovery regression
+
+`qa/postgres/generate-source-refresh-fixture.py` derives two observations
+from the actual pinned Session Search producer (3b7b536): accepted export,
+bundle verification, rederived membership and selected evidence index.
+The second observation ingests an unrelated synthetic conversation and
+rebuilds the source generation; two original selected sessions retain
+content identity while the selected set expands to four. Page bodies are
+simulated serving from independently verified bundle rows, not live
+reader receipts. The checked-in fixture is synthetic and reproducible
+in structure; timestamps in accepted ledger receipts can vary.
+
+The hosted PostgreSQL contract stages the old plan and completes one
+work, then restarts with the rederived new plan. Mixed old/new pages must
+be rejected; unchanged work is reused, the other three works complete,
+and acknowledgement binds the expanded membership with original plan
+pointers for both generations. No duplicate model calls, real provider
+traffic, local PostgreSQL or live source migration. This verifies the
+consumer recovery boundary, not live cross-generation source transport.

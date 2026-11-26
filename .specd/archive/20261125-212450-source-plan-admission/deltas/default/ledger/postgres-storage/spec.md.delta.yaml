@@ -1,0 +1,14 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Pending source plan custody$'
+  content: |
+    ### Requirement: Staged source work admission
+
+    Source-specific synthetic execution MUST derive the exact selected work from verified input and require the matching durable plan before reservation. Under the existing transaction lock it MUST verify the unadvanced predecessor and atomically bind a new work reservation to its exact original plan. Missing, corrupt or unavailable plan state MUST prevent inference. Existing reservations MUST NOT be taken over or relabelled; an unbound reservation cannot establish source custody.
+
+    The existing durable runner MUST remain responsible for inference and completion; source-specific admission MUST NOT advance the source checkpoint, grant access or change generic pilot behavior.

@@ -549,19 +549,55 @@ try {
   const pendingRoot = await sourceStore.initialize(pending);
   assert.equal(pendingRoot.status, 'ACKNOWLEDGED');
   assert.equal((await sourceStore.acknowledge({ ...pending, previousCheckpoint: pendingRoot.receipt.receiptFingerprint })).status, 'PENDING');
-  const wrongParent = { ...exact, previousCheckpoint: pendingRoot.receipt.receiptFingerprint };
+  // An independent storage contract for the still-unprocessed analysis intent.
+  const pendingInput = { ...pending, previousCheckpoint: pendingRoot.receipt.receiptFingerprint };
+  const selectedId = pendingInput.entries[0].sessionId;
+  const beforeAdmission = sourceCalls;
+  assert.equal((await sourceStore.runSelected(pendingInput, selectedId, sourceRoutes)).decision, 'STORAGE_UNKNOWN');
+  assert.equal(sourceCalls, beforeAdmission);
+  const stagedPending = await sourceStore.stage(pendingInput);
+  assert.equal(stagedPending.status, 'STAGED');
+  const afterRestart = createPostgresSourceBatchStore({ connectionString });
+  assert.deepEqual(await afterRestart.readPlans(pendingInput, pendingInput.previousCheckpoint, 1), [stagedPending.plan]);
+  assert.equal((await afterRestart.stage(pendingInput)).status, 'ALREADY_STAGED');
+  assert.deepEqual(await afterRestart.readTip(pendingInput), pendingRoot.receipt);
+  assert.equal((await afterRestart.acknowledge(pendingInput)).status, 'PENDING');
+  const result = await afterRestart.runSelected(pendingInput, selectedId, sourceRoutes);
+  assert.equal(result.decision, 'COMMITTED');
+  const { rows: origins } = await sourceReader.query(
+    'SELECT plan_fingerprint FROM dw_ledger.source_work_origins WHERE work_fingerprint=$1',
+    [result.workFingerprint],
+  );
+  assert.deepEqual(origins, [{ plan_fingerprint: stagedPending.plan.planFingerprint }]);
+  assert.equal((await afterRestart.runSelected(pendingInput, selectedId, sourceRoutes)).decision, 'ALREADY_PROCESSED');
+  assert.equal(sourceCalls, beforeAdmission + 2);
+  assert.deepEqual(await afterRestart.readTip(pendingInput), pendingRoot.receipt);
+  assert.equal((await afterRestart.acknowledge(pendingInput)).status, 'PENDING');
+  console.log('SOURCE_PLAN_ADMISSION_PG_PASS missing_plan=blocked original_plan=bound replay_extra_calls=0');
+  console.log('PENDING_PLAN_RESTART_PG_PASS');
+  assert.equal((await sourceStore.stage(exact)).status, 'STAGED');
+  assert.equal((await sourceStore.acknowledge(exact)).status, 'STORAGE_UNKNOWN');
+  assert.deepEqual(await sourceStore.readTip(exact), root.receipt);
+  const secondId = pendingInput.entries[1].sessionId;
+  assert.equal((await afterRestart.runSelected(pendingInput, secondId, sourceRoutes)).decision, 'COMMITTED');
+  const wrongParent = { ...pendingInput, previousCheckpoint: root.receipt.receiptFingerprint };
   assert.equal((await sourceStore.acknowledge(wrongParent)).status, 'CONFLICT');
-  const badMembership = structuredClone(exact);
+  const badMembership = structuredClone(pendingInput);
   badMembership.candidate.previous_membership = badMembership.candidate.current_membership;
   badMembership.expected.previousSnapshotSha256 = badMembership.candidate.previous_membership.snapshot_sha256;
   delete badMembership.candidate.candidate_sha256;
   badMembership.candidate.candidate_sha256 = sha256Fingerprint(canonicalReceipt(badMembership.candidate)).slice(7);
   assert.equal((await sourceStore.acknowledge(badMembership)).status, 'CONFLICT');
   // Alternate witness for the same work is not the same successor receipt.
-  const alternate = structuredClone(exact);
+  const alternate = structuredClone(pendingInput);
   alternate.entries[0].index.sessions[0].messages[0].sources.push({
     ...alternate.entries[0].index.sessions[0].messages[0].sources[0], member_name: 'synthetic-alternate-witness',
   });
+  const laterPlan = await afterRestart.stage(alternate);
+  assert.equal(laterPlan.status, 'STAGED');
+  assert.notEqual(laterPlan.plan.planFingerprint, stagedPending.plan.planFingerprint);
+  assert.deepEqual(laterPlan.plan.work.map(w => w.workFingerprint), stagedPending.plan.work.map(w => w.workFingerprint));
+  assert.equal((await afterRestart.runSelected(alternate, selectedId, sourceRoutes)).decision, 'ALREADY_PROCESSED');
   let commitCount = 0;
   let signalLock;
   const lockAcquired = new Promise(resolve => { signalLock = resolve; });
@@ -580,21 +616,27 @@ try {
       },
     };
   } });
-  const first = lostAckStore.acknowledge(exact);
+  const first = lostAckStore.acknowledge(alternate);
   await Promise.race([lockAcquired, first.then(() => { throw Error('lock was not acquired'); })]);
-  const race = await Promise.all([first, sourceStore.acknowledge(alternate)]);
+  const race = await Promise.all([first, sourceStore.acknowledge(pendingInput)]);
   assert.equal(commitCount, 1);
   assert.equal(race[0].status, 'ACKNOWLEDGED');
   assert.equal(race[1].status, 'CONFLICT');
   assert.equal(race.filter(r => r.status === 'ACKNOWLEDGED').length, 1);
   assert.equal(race.filter(r => r.status === 'CONFLICT').length, 1);
-  const winnerArgs = race[0].status === 'ACKNOWLEDGED' ? exact : alternate;
+  const winnerArgs = alternate;
   const winning = race.find(r => r.status === 'ACKNOWLEDGED');
-  assert.deepEqual(await sourceStore.readTip(args), winning.receipt);
+  assert.deepEqual(await sourceStore.readTip(pendingInput), winning.receipt);
+  assert.equal(winning.receipt.schema, 'theseus.dreaming-worker.source-batch-receipt.v2');
+  assert.equal(winning.receipt.currentPlanFingerprint, laterPlan.plan.planFingerprint);
+  assert.equal(winning.receipt.origins.length, 2);
+  assert.ok(winning.receipt.origins.every(o => o.planFingerprint === stagedPending.plan.planFingerprint));
+  assert.deepEqual(winning.receipt.origins.map(o => o.workFingerprint), winning.receipt.work.map(w => w.workFingerprint));
+  console.log('SOURCE_RECEIPT_ORIGIN_PG_PASS original=preserved current=distinct unbound=blocked');
   console.log('SOURCE_BATCH_COMMIT_ACK_LOSS_PASS successful_commit=1 exact_readback=true');
   assert.equal((await sourceStore.acknowledge(winnerArgs)).status, 'ALREADY_ACKNOWLEDGED');
   assert.equal((await sourceStore.acknowledge({ ...winnerArgs, previousCheckpoint: winning.receipt.receiptFingerprint })).status, 'CONFLICT');
-  assert.equal(sourceCalls, 4);
+  assert.equal(sourceCalls, 8);
   const count = await sourceReader.query('SELECT count(*)::int AS count FROM dw_ledger.source_checkpoints');
   assert.equal(count.rows[0].count, 3);
   await assert.rejects(() => sourceClient.query('UPDATE dw_ledger.source_checkpoints SET receipt=receipt'), { code: '42501' });
@@ -602,6 +644,53 @@ try {
   console.log('SOURCE_BATCH_STORE_PG_PASS root=explicit partial=blocked fork=blocked replay=verified lost_ack=readback append_only=verified');
   console.log('SOURCE_BATCH_RECEIPT_PG_PASS exact_selected=2 real_completion_readback=true writes=0 extra_inference=0');
   console.log('VERIFIED_SOURCE_BATCH_PG_PASS selected=2 pages=12 partial=blocked missing=blocked duplicate=blocked lineage=readback ack_loss=resolved replay_extra_calls=0 external_calls=0');
+  // Actual SS producer refresh, simulated bounded serving pages, real DW ledger.
+  const refresh = JSON.parse(readFileSync(new URL('../../test/fixtures/source-refresh.json', import.meta.url), 'utf8'));
+  const refreshIntent = { task, analysisVersion: 'cross-generation-v1',
+    maxSessions: 4, bounds: { maxPages: 20, maxChars: 1000, maxMessages: 50 } };
+  const oldArgs = { ...refresh.before, ...refreshIntent, previousCheckpoint: sourceRootKey };
+  const refreshRoot = await sourceStore.initialize(oldArgs);
+  assert.equal(refreshRoot.status, 'ACKNOWLEDGED');
+  oldArgs.previousCheckpoint = refreshRoot.receipt.receiptFingerprint;
+  const oldPlan = await sourceStore.stage(oldArgs);
+  assert.equal(oldPlan.status, 'STAGED');
+  const callsBeforeRefresh = sourceCalls;
+  const firstId = oldArgs.entries[0].sessionId;
+  const preRefreshWork = await sourceStore.runSelected(oldArgs, firstId, sourceRoutes);
+  assert.equal(preRefreshWork.decision, 'COMMITTED');
+  assert.equal((await sourceStore.acknowledge(oldArgs)).status, 'PENDING');
+
+  const newArgs = { ...refresh.after, ...refreshIntent, previousCheckpoint: oldArgs.previousCheckpoint };
+  const restartedAfterRefresh = createPostgresSourceBatchStore({ connectionString });
+  const mixed = structuredClone(newArgs);
+  mixed.entries.find(e => e.sessionId === firstId).pages = oldArgs.entries[0].pages;
+  await assert.rejects(() => restartedAfterRefresh.stage(mixed));
+  assert.equal(sourceCalls, callsBeforeRefresh + 2);
+  const newPlan = await restartedAfterRefresh.stage(newArgs);
+  assert.equal(newPlan.status, 'STAGED');
+  assert.notEqual(newPlan.plan.planFingerprint, oldPlan.plan.planFingerprint);
+  assert.equal(newPlan.plan.work.length, 4);
+  const stable = newPlan.plan.work.find(w => w.witness.session.session_id === firstId);
+  assert.equal(stable.workFingerprint, preRefreshWork.workFingerprint);
+  assert.notEqual(stable.packetId, oldPlan.plan.work.find(w => w.workFingerprint === preRefreshWork.workFingerprint).packetId);
+  assert.notEqual(stable.witness.generation_id, oldPlan.plan.work.find(w => w.workFingerprint === preRefreshWork.workFingerprint).witness.generation_id);
+  assert.equal((await restartedAfterRefresh.runSelected(newArgs, firstId, sourceRoutes)).decision, 'ALREADY_PROCESSED');
+  assert.equal(sourceCalls, callsBeforeRefresh + 2);
+  for (const entry of newArgs.entries.filter(e => e.sessionId !== firstId)) {
+    assert.equal((await restartedAfterRefresh.runSelected(newArgs, entry.sessionId, sourceRoutes)).decision, 'COMMITTED');
+  }
+  const recoveredReceipt = await restartedAfterRefresh.acknowledge(newArgs);
+  assert.equal(recoveredReceipt.status, 'ACKNOWLEDGED');
+  assert.deepEqual(recoveredReceipt.receipt.handoff.current_membership, refresh.after.candidate.current_membership);
+  assert.equal(recoveredReceipt.receipt.currentPlanFingerprint, newPlan.plan.planFingerprint);
+  assert.equal(recoveredReceipt.receipt.origins.length, 4);
+  for (const o of recoveredReceipt.receipt.origins) {
+    assert.equal(o.planFingerprint, o.workFingerprint === preRefreshWork.workFingerprint ? oldPlan.plan.planFingerprint : newPlan.plan.planFingerprint);
+  }
+  assert.deepEqual(await restartedAfterRefresh.readTip(newArgs), recoveredReceipt.receipt);
+  assert.equal((await restartedAfterRefresh.acknowledge(newArgs)).status, 'ALREADY_ACKNOWLEDGED');
+  assert.equal(sourceCalls, callsBeforeRefresh + 8);
+  console.log('SOURCE_REFRESH_RECOVERY_PG_PASS producer=actual serving=simulated old=2 new=4 reused=1 new_work=3 replay_extra_calls=0');
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
 } finally {
   await Promise.allSettled(sourceClients.map(client => client.end()));

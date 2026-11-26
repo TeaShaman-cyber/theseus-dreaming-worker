@@ -36,6 +36,24 @@
       ]
     },
     {
+      "requirement": "Pending source plan custody",
+      "rules": [
+        "The synthetic source store MUST support explicitly staging an immutable plan derived from the exact verified selected work under the existing predecessor and analysis intent. A plan MUST retain the complete handoff, original packet and request identities, work identities and source witnesses, but no evidence bodies. Staging MUST NOT advance the acknowledged source checkpoint or invoke inference.\n\nThe plan MUST be bound to the existing source chain and predecessor, use the existing ledger transaction lock, and be independently read back. Exact repeats MUST be idempotent. Distinct rederived witnesses MAY coexist for the same predecessor while it remains the tip; an acknowledged predecessor MUST NOT admit new plans. Restart lookup MUST validate stored digest and binding and MUST distinguish unavailable/corrupt storage from no plans. A plan alone is not permission to execute or replay stale evidence."
+      ]
+    },
+    {
+      "requirement": "Staged source work admission",
+      "rules": [
+        "Source-specific synthetic execution MUST derive the exact selected work from verified input and require the matching durable plan before reservation. Under the existing transaction lock it MUST verify the unadvanced predecessor and atomically bind a new work reservation to its exact original plan. Missing, corrupt or unavailable plan state MUST prevent inference. Existing reservations MUST NOT be taken over or relabelled; an unbound reservation cannot establish source custody.\n\nThe existing durable runner MUST remain responsible for inference and completion; source-specific admission MUST NOT advance the source checkpoint, grant access or change generic pilot behavior."
+      ]
+    },
+    {
+      "requirement": "Source acknowledgement retains original plan",
+      "rules": [
+        "A durable source acknowledgement MUST require the exact current staged plan and verify each completion against its immutable original reservation plan under the existing transaction lock. An unbound completion MUST NOT advance source progress. The durable receipt MUST bind both the current plan and each original plan pointer, and verify the original packet, request and evidence identities against the completion. A later witness MUST NOT relabel the original work origin."
+      ]
+    },
+    {
       "requirement": "Read behavior",
       "rules": [
         "Proposal and supersession rows share one global database event sequence. Reads combine both tables ordered by that sequence and revalidate each reconstructed event through the existing append-only ledger contract before returning it.\n\nPersisted rows therefore do not gain authority merely by being stored in PostgreSQL."
@@ -214,11 +232,72 @@
         "the chain does not advance incorrectly",
         "AND ambiguous commit is resolved only by exact readback"
       ]
+    },
+    {
+      "requirement": "Pending source plan custody",
+      "name": "Recovered pending witness",
+      "given": [
+        "an exact synthetic selected batch and existing source predecessor"
+      ],
+      "when": [
+        "staging succeeds and the executor restarts"
+      ],
+      "then": [
+        "exact metadata and work/packet identities are independently recovered",
+        "AND source acknowledgement remains unchanged"
+      ]
+    },
+    {
+      "requirement": "Pending source plan custody",
+      "name": "New source witness or invalid predecessor",
+      "given": [
+        "a rederived source witness for the same content under an unadvanced predecessor",
+        "an absent or advanced predecessor, or inconsistent stored plan"
+      ],
+      "when": [
+        "staging succeeds",
+        "staging or readback is attempted"
+      ],
+      "then": [
+        "both witnesses remain distinct and the same work identity is retained",
+        "no new plan is accepted or corrupt plan returned"
+      ]
+    },
+    {
+      "requirement": "Staged source work admission",
+      "name": "Missing or exact staged plan",
+      "given": [
+        "a verified synthetic selected work without a staged plan",
+        "the exact staged plan and unadvanced predecessor"
+      ],
+      "when": [
+        "source-specific execution is requested",
+        "execution is requested"
+      ],
+      "then": [
+        "no reservation or inference occurs",
+        "one reservation is bound to the original plan before inference",
+        "AND replay does not repeat inference or change the original plan"
+      ]
+    },
+    {
+      "requirement": "Source acknowledgement retains original plan",
+      "name": "Distinct original and current plans",
+      "given": [
+        "a verified completion bound to its original staged plan and an equivalent later staged witness"
+      ],
+      "when": [
+        "the batch is acknowledged"
+      ],
+      "then": [
+        "the receipt preserves both identities and exact readback",
+        "AND an unbound generic completion cannot advance the chain"
+      ]
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:be2c734c6cd8835710d3385e91ac818c5fb1c2d9f9d3df678a841b95c9b1339c",
-    "verify.md": "sha256:27fc47ec8409d6ce6b697e9ef8bce19be1d0ae1c42df1099d3be951e3f169309"
+    "spec.md": "sha256:aba337b0aa7b2c06647c3a0fe04c3062516508c5fafba33c01e507d0622df15a",
+    "verify.md": "sha256:e1170aa71104678ee178dd6ff78f21284aa018f47f8dce7e898c776f36765f19"
   },
   "generatedBy": "core"
 }
