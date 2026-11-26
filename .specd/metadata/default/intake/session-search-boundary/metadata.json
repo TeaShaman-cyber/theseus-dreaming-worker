@@ -51,6 +51,18 @@
       ]
     },
     {
+      "requirement": "Bounded synthetic source batch run",
+      "rules": [
+        "A synthetic batch run MUST derive the complete verified plan and require explicit bounded pass budget and valid independent routes before any work reservation. It MUST use the existing staged source execution and verified acknowledgement primitives. No implicit root initialization or automatic retry/takeover is permitted.\n\nThe run MUST stop on uncertain or incomplete work and MUST NOT acknowledge a partial batch. Before a possible new two-pass work it MUST have at least two remaining attempted-pass budget units. Already completed work consumes no inference budget. Exact already acknowledged replay MUST perform no inference. Returned summaries MUST distinguish verified acknowledgement, budget exhaustion, conflict and uncertainty without retaining evidence bodies or treating unknown currentness as absence."
+      ]
+    },
+    {
+      "requirement": "Bounded synthetic source acquisition",
+      "rules": [
+        "The synthetic acquisition adapter MUST validate the exact selected set and source indexes before requesting pages. It MUST pin each read to the selected session, shard and generation, and only follow a nonrepeated cursor bound to that exact read position. It MUST bound request count, response bytes per page and in aggregate, character and message admission, and each request deadline. Failed, incomplete or inconsistent acquisition MUST NOT return a batch ready for analysis.\n\nThe adapter MUST use injected explicitly supplied transport; no default network credential, real history access or implicit fallback is permitted. Complete acquired pages MUST pass the existing verified batch admission. The adapter MUST NOT reserve work, invoke inference or advance checkpoints."
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "rules": [
         "The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.\n\nA timestamp alone is insufficient as the durable checkpoint.\n\nThe checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope."
@@ -219,6 +231,60 @@
       ]
     },
     {
+      "requirement": "Bounded synthetic source batch run",
+      "name": "Budgeted continuation and replay",
+      "given": [
+        "an explicit predecessor and complete verified synthetic plan requiring more than one work"
+      ],
+      "when": [
+        "the run exhausts its pass budget and is invoked again"
+      ],
+      "then": [
+        "the first invocation does not advance the checkpoint and the next reuses completed work",
+        "AND full verified acknowledgement is returned only after all work completes",
+        "AND exact replay performs zero inference"
+      ]
+    },
+    {
+      "requirement": "Bounded synthetic source batch run",
+      "name": "Invalid or uncertain execution",
+      "given": [
+        "invalid input, invalid routes, unconfirmed staging or incomplete work"
+      ],
+      "when": [
+        "a batch run is requested"
+      ],
+      "then": [
+        "execution stops without acknowledging partial progress"
+      ]
+    },
+    {
+      "requirement": "Bounded synthetic source acquisition",
+      "name": "Exact pinned read",
+      "given": [
+        "a valid synthetic handoff and exact source indexes"
+      ],
+      "when": [
+        "the injected transport returns bounded pinned pages"
+      ],
+      "then": [
+        "the complete verified batch is returned without inference or persistence"
+      ]
+    },
+    {
+      "requirement": "Bounded synthetic source acquisition",
+      "name": "Failed or excessive acquisition",
+      "given": [
+        "invalid metadata, stale response, repeated cursor, unavailable transport, timeout or exhausted bounds"
+      ],
+      "when": [
+        "acquisition is attempted"
+      ],
+      "then": [
+        "no batch ready for analysis is returned"
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "name": "Evidence is read but provider analysis fails",
       "given": [
@@ -316,8 +382,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:5747d7a94a239adcb232bcbb28180cd4c6e24da6b3ae5a2234a6a1063708e697",
-    "verify.md": "sha256:01f29be8a20d9251b247821d0940e5e566226e335b5bc1536b96d23ee0d827a2"
+    "spec.md": "sha256:d545549a8136260fe1b2ca87ab0c43d1e2797e054a82b3962c928c9d6402f071",
+    "verify.md": "sha256:a3ea2949ddce69dc26723e0caaff1c88b73ba74dac7122e1e8c6cb4d18280942"
   },
   "generatedBy": "core"
 }
