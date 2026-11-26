@@ -30,6 +30,7 @@ const required = [
   'tools/specd/install',
   'tools/specd/check-changes.py',
   'tools/specd/check-diff.py',
+  'tools/specd/check-graph.py',
   'tools/specd/package.json',
   'tools/specd/package-lock.json',
   'tools/ci/build-check',
@@ -99,7 +100,7 @@ if (!qaWorkflow.includes('./tools/dev/check')) {
 }
 
 const devCheck = readFileSync('tools/dev/check', 'utf8');
-if (!devCheck.split('\n').includes('./tools/dev/specd-check') || !qaWorkflow.includes('run: ./tools/specd/install')) {
+if (!devCheck.split('\n').includes('./tools/dev/specd-check') || !qaWorkflow.includes('run: ./tools/specd/install') || !devCheck.split('\n').includes('python3 tools/specd/check-graph.py')) {
   throw new Error('REPO_VERIFY_FAIL missing unconditional SpecD QA wiring');
 }
 
