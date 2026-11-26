@@ -310,3 +310,14 @@ test('proposal fingerprint is exact SHA-256 with stable protocol prefix', () => 
   assert.equal(fingerprintProposal(proposal), expected);
   assert.match(fingerprintProposal(proposal), /^sha256:[0-9a-f]{64}$/);
 });
+
+test('rejects duplicate decoded model keys before schema/provenance checks', () => {
+  const raw = JSON.stringify({
+    schema: 'theseus.dreaming-worker.proposals.v1',
+    proposals: [{ type: 'FACT', claim: 'Fixture claim.', source_refs: refs }],
+  });
+  for (const key of ['claim', String.raw`cl\u0061im`]) {
+    const ambiguous = raw.replace('"claim":', '"' + key + '":"Discarded claim","claim":');
+    assert.throws(() => parseProposalSet(ambiguous, packet), /PILOT1_PROPOSAL_JSON_INVALID/);
+  }
+});
