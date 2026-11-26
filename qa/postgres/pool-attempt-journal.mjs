@@ -110,3 +110,42 @@ try{
   ])await assert.rejects(client.query(statement),{code:'42501'});
 }finally{await client.end();}
 console.log('POOL_ATTEMPT_JOURNAL_PG_PASS concurrent_winners=1 restart_validated=2 original_replayed=0 known_failures=1 unknown_blocked=true legacy_takeover=false completion=false');
+
+// Exercise the composed executor against independent real database clients.
+const {runPooledDurablePilot2}=await import('../../src/dreaming/pooled-durable-pilot2.ts');
+const {ProviderAdapterError}=await import('../../src/dreaming/openai-provider-adapter.ts');
+const composed=requestFor('pooled-executor-pg');
+const dispatched=[];
+const candidate=(id,fail=false)=>({...route(id),admission:'FREE_RESEARCH',qualifiedTasks:['analysis'],
+  catalog:'PRESENT',catalogValidUntilMs:100000,
+  async infer(){
+    dispatched.push(id);
+    if(fail)throw new ProviderAdapterError('RATE_LIMITED','synthetic 429',{status:429,retryAfterMs:5000,providerState:'RESPONDED'});
+    return {provider:route(id).provider,model:route(id).model,finishReason:'stop',
+      text:JSON.stringify({schema:'theseus.dreaming-worker.proposals.v1',proposals:[{
+        type:'FACT',claim:'Synthetic observation.',source_refs:[{source_ref:'fixture:pool',evidence_hash:'sha256:fixture'}],
+      }]})};
+  },
+});
+const policy={routes:[candidate('a'),candidate('b',true),candidate('c')],taskClass:'analysis',
+  maxAttempts:4,maxInvocations:2,rotation:0,cooldowns:[],clock:()=>100};
+const invoke=p=>runPooledDurablePilot2(composed,p,createPostgresPoolJournalStore(options),createPostgresWorkStore(options));
+const partial=await invoke(policy);
+assert.equal(partial.decision,'BUDGET_EXHAUSTED');
+assert.deepEqual(dispatched,['a','b']);
+assert.equal(await createPostgresWorkStore(options).readCompletion(preparePoolJournal(composed).workFingerprint),null);
+const held=(await createPostgresPoolJournalStore(options).read(composed)).state.validated[0];
+const done=await invoke({...policy,maxInvocations:1,rotation:partial.nextRotation});
+assert.equal(done.decision,'COMMITTED');
+assert.deepEqual(dispatched,['a','b','c']);
+assert.deepEqual(done.completion.records.map(r=>r.origin.route.id),['a','c']);
+const durable=await createPostgresPoolJournalStore(options).read(composed);
+assert.deepEqual(durable.state.validated[0],held);
+assert.equal(done.completion.checkpoint.resultFingerprint,durable.state.tip);
+assert.deepEqual(await createPostgresWorkStore(options).readCompletion(preparePoolJournal(composed).workFingerprint),done.completion);
+const replay=await invoke({...policy,routes:[],maxInvocations:0});
+assert.equal(replay.decision,'ALREADY_PROCESSED');
+assert.equal(replay.attemptedPasses,0);
+assert.deepEqual(replay.completion,done.completion);
+assert.deepEqual(dispatched,['a','b','c']);
+console.log('POOLED_EXECUTOR_PG_PASS attempts=3 valid=2 restart_calls=1 replay_calls=0 completion=verified');

@@ -3,7 +3,7 @@ import { prepareCheckpointedPilot2 } from './checkpoint-pilot2.ts';
 import type { DurablePilot2Input } from './durable-pilot2.ts';
 import { runPilot0 } from './dry-run.ts';
 import { pilot1RequestFingerprint } from './pilot1-runner.ts';
-import { parseProposalSet, proposalSetSchema, sha256Fingerprint } from './proposal-schema.ts';
+import { fingerprintProposal, parseProposalSet, proposalSetSchema, sha256Fingerprint } from './proposal-schema.ts';
 
 const fingerprint = z.string().regex(/^sha256:[0-9a-f]{64}$/);
 const name = z.string().min(1).max(256).refine(s => s === s.trim());
@@ -33,7 +33,10 @@ const failureSchema = z.object({
   kind: z.literal('KNOWN_FAILURE'), attemptId: z.uuid(),
   providerState: z.literal('RESPONDED'),
   code: z.enum(['RATE_LIMITED','HTTP_ERROR','MALFORMED_RESPONSE','STREAM_ERROR','OUTPUT_BUDGET_EXHAUSTED',
-    'EMPTY_FINAL_CONTENT','INVALID_JSON','INVALID_SCHEMA','PROVENANCE_REJECTED','POLICY_VIOLATION']),
+    'EMPTY_FINAL_CONTENT','INVALID_JSON','INVALID_SCHEMA','PROVENANCE_REJECTED','POLICY_VIOLATION','MODEL_IDENTITY_MISMATCH']),
+  observed: z.object({ provider: name, model: name, finishReason: z.string().nullable() }).strict().optional(),
+  httpStatus: z.number().int().min(100).max(599).optional(),
+  retryAfterMs: z.number().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
   cooldown: z.object({
     scope: z.enum(['route','provider']), key: name, notBeforeMs: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   }).strict().nullable(),
@@ -119,11 +122,12 @@ export function replayPoolJournal(context: Context, raw: unknown[]) {
     if (event.kind === 'VALIDATED') {
       const r = event.receipt;
       if (r.requestFingerprint !== context.requestFingerprint || r.evidenceFingerprint !== context.evidenceFingerprint
-        || r.packetId !== context.request.packet.packetId
+        || r.packetId !== context.request.packet.packetId || r.model !== pending.route.model
         || validated.some(v => v.result.receipt.provider === r.provider && v.result.receipt.model === r.model)) {
         throw Error('POOL_JOURNAL_VALIDATED_IDENTITY');
       }
-      parseProposalSet(JSON.stringify(event.proposalSet), context.request.packet);
+      const proposals = parseProposalSet(JSON.stringify(event.proposalSet), context.request.packet).proposals;
+      if (new Set(proposals.map(fingerprintProposal)).size !== proposals.length) throw Error('POOL_JOURNAL_DUPLICATE_PROPOSAL');
       validated.push({ start: pending, result: event });
     } else if (event.kind === 'KNOWN_FAILURE') {
       const c = event.cooldown;

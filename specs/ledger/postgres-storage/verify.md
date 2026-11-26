@@ -108,6 +108,23 @@
 - **THEN** at most one start is confirmed and unresolved state blocks further starts
 - **AND** no completion or source acknowledgement follows merely from a journal entry
 
+### Requirement: Explicit resumable pooled execution
+
+#### Scenario: Known failure and restart
+
+- **GIVEN** a validated first slot and an observed rate-limit failure for a second route
+- **WHEN** execution restarts with a remaining permitted route and invocation budget
+- **THEN** the frozen first slot is not invoked again
+- **AND** the exact two-slot projection commits through the existing completion recovery
+- **AND** completed replay performs zero inference
+
+#### Scenario: Unknown or unconfirmed start
+
+- **GIVEN** a pending or unknown attempt or ambiguous storage acknowledgement
+- **WHEN** pooled execution is invoked again
+- **THEN** it does not dispatch another inference
+- **AND** it does not advance source progress
+
 ### Requirement: Durable source batch acknowledgement
 
 #### Scenario: Explicit root and exact successor

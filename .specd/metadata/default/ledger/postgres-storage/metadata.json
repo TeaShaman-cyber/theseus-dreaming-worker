@@ -41,6 +41,12 @@
       ]
     },
     {
+      "requirement": "Explicit resumable pooled execution",
+      "rules": [
+        "An explicitly invoked pooled executor MUST compose the existing admitted bounded inference adapters, model pool selector and durable journal. It MUST validate no-data before inference and replay verified completion without inference. It MUST confirm a unique durable start and exact readback before dispatching one missing slot. The total durable starts and per-invocation callbacks MUST remain independently bounded; successful slots MUST NOT be rerun.\n\nKnown responded failures MAY allow replacement; unknown outcome or uncertain storage MUST stop. Rate-limit observations MUST honor a known Retry-After, conservatively scoped to the provider when no narrower scope is established. If no safe wait is known or credentials/billing are refused, that provider MUST be excluded for this work until a separately authorized recovery mechanism exists. A model identity mismatch, non-stop finish, invalid proposal or duplicate ledger record MUST NOT freeze a slot.\n\nThe completed pooled projection MUST use the existing validated work completion and atomic recovery boundary, bind its result fingerprint to the final immutable journal entry, and independently verify exact readback. Completed replay of a pooled work MUST agree with its journal. No-data, incomplete, blocked or deferred states MUST NOT manufacture completion. This API MUST NOT alter the existing source-plan admission, fixed-pair source batch or production deployment; caller-supplied route admission and cross-work cooldown evidence remain external."
+      ]
+    },
+    {
       "requirement": "Durable source batch acknowledgement",
       "rules": [
         "The synthetic source store MUST initialize a root only explicitly from a trusted predecessor membership. Acknowledgement MUST bind one existing predecessor and its exact membership, provider, scope, task and analysis version. It MUST derive the receipt using the existing verified batch builder and read completions within the existing transaction/lock boundary. No caller-provided work list or receipt may bypass this derivation.\n\nSource checkpoints MUST be append-only with one root and at most one successor per predecessor and chain. A missing or conflicting predecessor, incomplete work, corrupt storage or unresolved removal MUST NOT advance the chain. An ambiguous write MUST be resolved by independent exact readback or remain UNKNOWN. Acknowledgement MUST NOT invoke inference, enable real history access or imply source completeness."
@@ -245,6 +251,35 @@
       ]
     },
     {
+      "requirement": "Explicit resumable pooled execution",
+      "name": "Known failure and restart",
+      "given": [
+        "a validated first slot and an observed rate-limit failure for a second route"
+      ],
+      "when": [
+        "execution restarts with a remaining permitted route and invocation budget"
+      ],
+      "then": [
+        "the frozen first slot is not invoked again",
+        "AND the exact two-slot projection commits through the existing completion recovery",
+        "AND completed replay performs zero inference"
+      ]
+    },
+    {
+      "requirement": "Explicit resumable pooled execution",
+      "name": "Unknown or unconfirmed start",
+      "given": [
+        "a pending or unknown attempt or ambiguous storage acknowledgement"
+      ],
+      "when": [
+        "pooled execution is invoked again"
+      ],
+      "then": [
+        "it does not dispatch another inference",
+        "AND it does not advance source progress"
+      ]
+    },
+    {
       "requirement": "Durable source batch acknowledgement",
       "name": "Explicit root and exact successor",
       "given": [
@@ -335,8 +370,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:7cfafe7367b2ed9caefe30262fbbcd447c012174dcb4f01096e0fedd4e82bb02",
-    "verify.md": "sha256:b8f58d0a0cc405d3434812fc4d00ef71eb7b20178d7483476bb9235168f607a8"
+    "spec.md": "sha256:e566a5781b87cdbf0ae89dbcd7432d0a54a51843c19d472ad067d16dfcd19380",
+    "verify.md": "sha256:4a4b76cf070a27d64b0ff1fa8dfa0bcbfbe1b1b45981a068b930147ff2dfbe01"
   },
   "generatedBy": "core"
 }

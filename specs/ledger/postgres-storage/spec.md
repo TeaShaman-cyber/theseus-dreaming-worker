@@ -46,6 +46,14 @@ Starting an attempt MUST require the exact prior journal tip, a vacant perspecti
 
 An uncertain start acknowledgement MUST NOT grant dispatch. An outcome is accepted only after independent readback. The journal itself MUST NOT grant model entitlement, call providers, create completion or advance source progress. Durable final completion and source acknowledgement require their existing separate acceptance boundaries.
 
+### Requirement: Explicit resumable pooled execution
+
+An explicitly invoked pooled executor MUST compose the existing admitted bounded inference adapters, model pool selector and durable journal. It MUST validate no-data before inference and replay verified completion without inference. It MUST confirm a unique durable start and exact readback before dispatching one missing slot. The total durable starts and per-invocation callbacks MUST remain independently bounded; successful slots MUST NOT be rerun.
+
+Known responded failures MAY allow replacement; unknown outcome or uncertain storage MUST stop. Rate-limit observations MUST honor a known Retry-After, conservatively scoped to the provider when no narrower scope is established. If no safe wait is known or credentials/billing are refused, that provider MUST be excluded for this work until a separately authorized recovery mechanism exists. A model identity mismatch, non-stop finish, invalid proposal or duplicate ledger record MUST NOT freeze a slot.
+
+The completed pooled projection MUST use the existing validated work completion and atomic recovery boundary, bind its result fingerprint to the final immutable journal entry, and independently verify exact readback. Completed replay of a pooled work MUST agree with its journal. No-data, incomplete, blocked or deferred states MUST NOT manufacture completion. This API MUST NOT alter the existing source-plan admission, fixed-pair source batch or production deployment; caller-supplied route admission and cross-work cooldown evidence remain external.
+
 ### Requirement: Durable source batch acknowledgement
 
 The synthetic source store MUST initialize a root only explicitly from a trusted predecessor membership. Acknowledgement MUST bind one existing predecessor and its exact membership, provider, scope, task and analysis version. It MUST derive the receipt using the existing verified batch builder and read completions within the existing transaction/lock boundary. No caller-provided work list or receipt may bypass this derivation.
