@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {makeContext,compactVersion,strictParse} from './packet-handles.mjs';
+import {parseProposalSet} from '../../../src/dreaming/proposal-schema.ts';
+const load=name=>JSON.parse(readFileSync(new URL(name,import.meta.url)));
+const {cases}=load('./cases.json');
+const obs=load('./observations.json');
+const bytes=x=>Buffer.byteLength(JSON.stringify(x));
+let canonicalBytes=0,compactBytes=0,roundtrips=0;
+for(const row of obs.rows.filter(r=>r.status==='VALIDATED')){
+  const c=cases.find(c=>c.id===row.id);
+  const ctx=makeContext(c.request);
+  const canonical={schema:'theseus.dreaming-worker.proposals.v1',proposals:row.proposals};
+  const compact=ctx.compactForComparison(canonical);
+  assert.deepEqual(ctx.resolve(JSON.stringify(compact),'stop',ctx.fingerprint),parseProposalSet(JSON.stringify(canonical),c.request.packet));
+  canonicalBytes+=bytes(canonical);compactBytes+=bytes(compact);roundtrips++;
+}
+assert.equal(roundtrips,4);
+const ctx=makeContext(cases[0].request);
+const value={schema:compactVersion,proposals:[{type:'FACT',claim:'structural test only',source_refs:['E1']}]};
+const resolve=(x,finish='stop',fp=ctx.fingerprint)=>ctx.resolve(JSON.stringify(x),finish,fp);
+assert.equal(resolve(value).proposals[0].source_refs[0].evidence_hash,cases[0].request.packet.evidence[0].evidenceHash);
+let negatives=0;
+function reject(fn){assert.throws(fn);negatives++;}
+for(const raw of ['{"a":1,"a":2}',String.raw`{"a":1,"\u0061":2}`,'{"a":NaN}','{"a":Infinity}','{} {}','{"a":1,}','{"x":{"a":1,"a":2}}'])reject(()=>strictParse(raw));
+assert.deepEqual(strictParse('{"a":1}'),{a:1});
+reject(()=>resolve({...value,proposals:[{...value.proposals[0],source_refs:['E999']}]}));
+reject(()=>resolve({...value,proposals:[{...value.proposals[0],source_refs:['E1','E1']}]}));
+reject(()=>resolve({...value,proposals:[{...value.proposals[0],source_refs:[1]}]}));
+reject(()=>resolve({...value,extra:true}));
+reject(()=>resolve({...value,proposals:[{...value.proposals[0],extra:true}]}));
+reject(()=>resolve(value,'length'));
+reject(()=>resolve(value,'unknown'));
+reject(()=>resolve(value,'stop',makeContext(cases[1].request).fingerprint));
+reject(()=>{const r=structuredClone(cases[0].request);r.packet.evidence.push(r.packet.evidence[0]);makeContext(r);});
+reject(()=>{const r=structuredClone(cases[0].request);r.packet.evidence[0].text+=' changed';makeContext(r);});
+const mutable=structuredClone(cases[0].request),bound=makeContext(mutable);
+mutable.packet.evidence[0].sourceRef='changed';
+assert.equal(bound.resolve(JSON.stringify(value),'stop',bound.fingerprint).proposals[0].source_refs[0].source_ref,cases[0].request.packet.evidence[0].sourceRef);
+console.log('HANDLE_COMPARATOR_PASS',JSON.stringify({roundtrips,negatives,canonicalBytes,compactBytes}));
