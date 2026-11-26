@@ -146,3 +146,19 @@
 - **WHEN** Pilot 2 runs
 - **THEN** external model calls equal zero
 - **AND** outcome is `NO_DATA`
+
+### Requirement: Bounded model pool selection
+
+#### Scenario: Retirement and bounded replacement
+
+- **GIVEN** explicitly admitted task-qualified routes of distinct families and one frozen perspective
+- **WHEN** a route retires or a known failure excludes an attempted route
+- **THEN** only the missing slot is selected from other eligible families
+- **AND** unknown prior execution blocks any selection
+
+#### Scenario: Feasible wake and independent pair
+
+- **GIVEN** known provider and route cooldowns and expiring catalog observations
+- **WHEN** no ready independent pair exists
+- **THEN** deferral is only to the earliest time a full independent selection can be feasible
+- **AND** stale admission, exhausted budget or insufficient families cannot be converted into readiness
