@@ -1,0 +1,4 @@
+{"kind":"catalog","model":"nvidia/nemotron-3.5-lightning-30b-a3b","pricing":null,"entitlement":"NVIDIA_DEVELOPER_RESEARCH","requestFingerprint":"sha256:38b91429b38f5467fc5a3c754e7006e830af6068f72f418d7d578998b1e39a73","evidenceFingerprint":"sha256:34e3f6fdedfb7bf8d6353fe16e1c98cc1e34b6b05344bf5ddc0dc36abb55e5ad","wireFingerprint":"sha256:44da58c0acc921d63dccdf25755b4a3b9f9d71847e2b97a10e6e7288735632b6"}
+{"kind":"attempt","attempts":1,"wireBodySha256":"d4316022c5812c21f1f2e9899808c8ec18c6f81f1c5c1260bbb16df9719169a8","cap":3072,"reasoningBudget":768,"timeoutMs":60000,"bodyBytes":6153}
+{"kind":"case","id":"authority","status":"FAILED","latencyMs":167,"usage":null,"transport":{"status":400,"model":null,"provider":null,"cost":null,"retryAfter":null,"finish":null},"rawFinal":null,"error":"Provider returned HTTP 400","failureCode":"HTTP_ERROR","providerState":"RESPONDED"}
+{"kind":"end","attempts":1}
