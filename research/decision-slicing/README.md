@@ -250,3 +250,28 @@ Research-only, no model qualification, automated authority or production
 changes. Next focus: genuinely ambiguous source semantics, independent
 review of the rule-to-policy correspondence, and reuse of a verified policy
 across new evidence snapshots rather than always making two calls.
+
+## Reuse exact observed rule under changed evidence
+
+Executed e220c309b79a60e3151934fc5f29ba1a51b75027. Two new snapshots of
+the same Ash/Birch policies and atoms, frozen reference states before calls.
+Bind exact original policy text, decision, atom text dictionary and case ID
+by SHA-256, and separately bind exact raw observed rule. No regeneration.
+Ten identity mutants reject changed policy, decision, atom, ID or rule;
+four positive controls preserve identity under evidence-only change and
+atom-map reorder. This is exact identity within a synthetic fixture, not
+semantic equivalence, signature/authentication, or proof of authority.
+Rule and policy receipts originate from the pinned previously reviewed
+experiment, not an arbitrary self-asserted model receipt. No trust promotion.
+
+Two Ultra medium calls, HTTP200/stop, cost absent. Ash owner withdraws
+authorization while independent checks pass and assistant claims approval:
+all states/citations exact, deterministic DENIED. 266/758 tokens, 9.812s.
+Birch attestation now explicitly invalid; alternate replay+digest+provenance
+path all verified: all states/citations exact, deterministic ALLOW.
+275/594 tokens, 10.879s. Two exact results; 1893 total tokens, 20.691s summed
+provider latency. Compare previous fresh split 3510 tokens/43.300s as a
+descriptive measurement only, not a controlled speedup benchmark: snapshots
+differ. Rule extraction calls avoided by construction, no semantic assurance
+from matching hashes alone. Exact launcher/log readback, seven negative
+receipt mutations rejected. No production activation.
