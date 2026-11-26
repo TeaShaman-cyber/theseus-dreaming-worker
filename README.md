@@ -41,7 +41,7 @@ npm run check
 
 Model lists are discovered from each provider's read-only `/models` endpoint. Provider credentials remain in exe.dev integration state; this repository stores no provider API keys.
 
-The Builder's own model is selected by `BUILDER_MODEL`; the current development default is `exe/nvidia/moonshotai/kimi-k3.1-pro`. Changing this is routing, not a change to the worker's goal contract.
+The Builder's own model must be explicitly selected through `BUILDER_MODEL` (a provider-qualified model ID). If unset or blank, the model-backed Builder is disabled; Studio, Editor, stored agents and workflows remain available. No provider/model is selected by default. Changing this is routing, not a change to the worker's goal contract.
 
 ## Safety boundary
 

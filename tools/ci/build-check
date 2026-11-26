@@ -30,5 +30,7 @@ cd "$TMP"
 PATH="$TMP/.qa-bin:$PATH" "$ROOT/node_modules/.bin/mastra" build
 
 node tools/ci/studio-smoke.mjs .mastra/output
+node tools/ci/studio-smoke.mjs .mastra/output "   "
+node tools/ci/studio-smoke.mjs .mastra/output "exe/nvidia/explicit-test-model"
 
 printf '%s\n' 'BUILD_CHECK_PASS'
