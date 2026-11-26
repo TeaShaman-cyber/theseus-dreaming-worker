@@ -1,5 +1,6 @@
 import { Client } from 'pg';
-import { validateWorkCompletion, type WorkCompletion, type WorkStore } from './durable-pilot2.ts';
+import { validateWorkCompletion, type DurablePilot2Input, type WorkCompletion, type WorkStore } from './durable-pilot2.ts';
+import { makePoolJournalEntry, poolJournalAdmission, preparePoolJournal, replayPoolJournal, type PoolJournalEvent } from './pool-attempt-journal.ts';
 
 import {
   appendLedgerEvent,
@@ -305,6 +306,107 @@ export function createPostgresWorkStore(options: PostgresProposalLedgerOptions):
           observed: first.observed, records, projectionFingerprint: first.projection_fingerprint,
         });
       });
+    },
+  };
+}
+
+type PoolJournalContext = ReturnType<typeof preparePoolJournal>;
+type PoolJournalRead =
+  | { status: 'ABSENT' | 'LEGACY_UNRESOLVED' | 'COMPLETION_EXISTS' }
+  | { status: 'JOURNAL'; ownerToken: string; completionExists: boolean; state: ReturnType<typeof replayPoolJournal> };
+
+/** Append-only partial custody. No model invocation, takeover or completion. */
+export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOptions) {
+  const clientFactory = options.clientFactory ?? defaultClientFactory;
+  async function withClient<T>(action: (client: LedgerPgClient) => Promise<T>): Promise<T> {
+    const client = clientFactory(options.connectionString);
+    try {
+      await client.connect();
+      return await action(client);
+    } finally {
+      await client.end();
+    }
+  }
+  async function transaction<T>(action: (client: LedgerPgClient) => Promise<T>): Promise<T> {
+    return withClient(async client => {
+      await client.query('BEGIN');
+      try {
+        await client.query("SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))");
+        const result = await action(client);
+        await client.query('COMMIT');
+        return result;
+      } catch (error) {
+        try { await client.query('ROLLBACK'); } catch { /* preserve ambiguity */ }
+        throw error;
+      }
+    });
+  }
+  async function readWithClient(client: LedgerPgClient, context: PoolJournalContext): Promise<PoolJournalRead> {
+    const { rows } = await client.query<{
+      owner_token: string; ordinal: number | null; entry: unknown | null; completion_exists: boolean;
+    }>(`SELECT r.owner_token, j.ordinal, j.entry,
+      EXISTS(SELECT 1 FROM dw_ledger.work_completions c WHERE c.work_fingerprint=r.work_fingerprint) AS completion_exists
+      FROM dw_ledger.work_reservations r
+      LEFT JOIN dw_ledger.work_pool_journal j
+        ON j.work_fingerprint=r.work_fingerprint AND j.owner_token=r.owner_token
+      WHERE r.work_fingerprint=$1 ORDER BY j.ordinal`, [context.workFingerprint]);
+    if (!rows.length) return { status: 'ABSENT' };
+    const first = rows[0];
+    if (first.ordinal === null) {
+      if (rows.length !== 1 || first.entry !== null) throw Error('POOL_JOURNAL_ROW_INVALID');
+      return { status: first.completion_exists ? 'COMPLETION_EXISTS' : 'LEGACY_UNRESOLVED' };
+    }
+    if (rows.some((r,i) => r.ordinal !== i || r.entry === null || r.owner_token !== first.owner_token
+      || r.completion_exists !== first.completion_exists)) throw Error('POOL_JOURNAL_ROW_INVALID');
+    return { status: 'JOURNAL', ownerToken: first.owner_token, completionExists: first.completion_exists,
+      state: replayPoolJournal(context, rows.map(r => r.entry)) };
+  }
+  const readContext = (context: PoolJournalContext) => withClient(client => readWithClient(client, context));
+  return {
+    async read(raw: DurablePilot2Input) { return readContext(preparePoolJournal(raw)); },
+    async admit(raw: DurablePilot2Input, maxAttempts: number, ownerToken: string) {
+      const context = preparePoolJournal(raw);
+      const first = makePoolJournalEntry(null, poolJournalAdmission(context, maxAttempts));
+      await transaction(async client => {
+        const existing = await readWithClient(client, context);
+        if (existing.status === 'JOURNAL') {
+          if (existing.state.entries[0].entryFingerprint !== first.entryFingerprint) throw Error('POOL_JOURNAL_ADMISSION_CONFLICT');
+          return;
+        }
+        if (existing.status !== 'ABSENT') return;
+        const { rows } = await client.query<{owner_token: string}>(
+          'INSERT INTO dw_ledger.work_reservations (work_fingerprint, owner_token) VALUES ($1,$2) ON CONFLICT (work_fingerprint) DO NOTHING RETURNING owner_token',
+          [context.workFingerprint, ownerToken],
+        );
+        if (rows.length !== 1 || rows[0].owner_token !== ownerToken) throw Error('POOL_JOURNAL_RESERVATION_CONFLICT');
+        await client.query('INSERT INTO dw_ledger.work_pool_journal(work_fingerprint,owner_token,ordinal,entry) VALUES ($1,$2,0,$3::jsonb)',
+          [context.workFingerprint,ownerToken,JSON.stringify(first)]);
+      });
+      const result = await readContext(context);
+      if (result.status === 'ABSENT' || (result.status === 'JOURNAL'
+        && result.state.entries[0].entryFingerprint !== first.entryFingerprint)) throw Error('POOL_JOURNAL_ADMISSION_READBACK');
+      return result;
+    },
+    async append(raw: DurablePilot2Input, expectedTip: string, event: PoolJournalEvent) {
+      const context = preparePoolJournal(raw);
+      const entry = await transaction(async client => {
+        const current = await readWithClient(client, context);
+        if (current.status !== 'JOURNAL' || current.completionExists || current.state.tip !== expectedTip) {
+          throw Error('POOL_JOURNAL_TIP_CONFLICT');
+        }
+        const next = makePoolJournalEntry(current.state.entries[current.state.entries.length - 1],event);
+        replayPoolJournal(context,[...current.state.entries,next]);
+        await client.query('INSERT INTO dw_ledger.work_pool_journal(work_fingerprint,owner_token,ordinal,entry) VALUES ($1,$2,$3,$4::jsonb)',
+          [context.workFingerprint,current.ownerToken,next.ordinal,JSON.stringify(next)]);
+        return next;
+      });
+      // A lost COMMIT acknowledgement never grants dispatch, even if a later
+      // read shows START. Only a confirmed transaction plus exact readback does.
+      const stored = await readContext(context);
+      if (stored.status !== 'JOURNAL' || stored.completionExists || stored.state.tip !== entry.entryFingerprint) {
+        throw Error('POOL_JOURNAL_APPEND_READBACK');
+      }
+      return stored.state;
     },
   };
 }

@@ -38,6 +38,14 @@ When a validated complete candidate cannot be confirmed as committed, the truste
 
 Only an observed absent completion MAY permit one transaction using the original reservation correlation and unchanged candidate. Independently verify the result by readback even after an error. Recovery MUST NOT acquire another reservation, invoke inference, change the candidate or take over an unresolved reservation. The envelope is trusted caller custody, not a new authorization mechanism. Lost or incomplete analysis is outside this recovery boundary.
 
+### Requirement: Bounded durable attempt journal
+
+A separately admitted pooled work journal MUST bind an existing unique reservation to exact work, request and evidence fingerprints and an explicit finite lifetime attempt budget. It MUST NOT adopt a legacy unresolved reservation. The journal MUST be append-only, with independently validated exact ordered event identities.
+
+Starting an attempt MUST require the exact prior journal tip, a vacant perspective slot and no pending or unknown outcome. The storage transaction MUST prevent concurrent dispatch admission. A validated terminal outcome MUST preserve the actual route and observed provider/model and exact provenance; a known failed attempt MAY permit a different route for the same missing slot. A frozen validated perspective MUST NOT be overwritten or repeated. The second validated family MUST differ from the first. Every attempted route and typed terminal outcome remains visible. Pending or unknown state MUST NOT be automatically retried.
+
+An uncertain start acknowledgement MUST NOT grant dispatch. An outcome is accepted only after independent readback. The journal itself MUST NOT grant model entitlement, call providers, create completion or advance source progress. Durable final completion and source acknowledgement require their existing separate acceptance boundaries.
+
 ### Requirement: Durable source batch acknowledgement
 
 The synthetic source store MUST initialize a root only explicitly from a trusted predecessor membership. Acknowledgement MUST bind one existing predecessor and its exact membership, provider, scope, task and analysis version. It MUST derive the receipt using the existing verified batch builder and read completions within the existing transaction/lock boundary. No caller-provided work list or receipt may bypass this derivation.
