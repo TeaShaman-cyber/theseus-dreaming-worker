@@ -158,3 +158,19 @@ research candidate, not an authority gate. Warm latency is substantially
 higher on these samples. Next experiment may compare Ultra's documented
 none/medium modes and separately extract policy from facts, with new held-out
 cases and explicit negative authority controls. No production changes.
+
+### Receipt readback hardening
+
+Exact-head review identified two gaps: the earlier verifier skipped failed
+final artifacts and did not require a matching case receipt for every
+attempt. Both runners now use the same offline verifier. It checks ordered
+attempt/case pairing, explicit NOT_ATTEMPTED receipts and terminal counts;
+replays accepted finals; requires the recorded structural rejection on the
+negative Linden final; and checks the recorded 429 refusal has no final
+artifact. Unrecognized failure classes fail closed until a replay check
+exists. This validates recorded evidence consistency, not upstream billing
+or transport authenticity.
+
+Run `node research/decision-slicing/test-readback.mjs` to check all four
+observation logs and 14 negative mutations (missing case receipts, mismatched
+attempt IDs, a replaced negative final and a changed failure reason).

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
+import { verifyExtraction } from './verify-extraction.mjs';
 import { executeOpenAIChatTransport } from '../../src/dreaming/openai-provider-adapter.ts';
 import { parseStrictModelJson } from '../../src/dreaming/strict-model-json.ts';
 const bytes=readFileSync(new URL('./new-cases.json',import.meta.url));
@@ -42,12 +43,7 @@ if(process.argv[2]==='--check'){
 }
 if(process.argv[2]==='--verify'){
   const rows=readFileSync(process.argv[3],'utf8').trim().split('\n').map(JSON.parse);
-  assert.equal(rows[0].fixtureSha,sha(bytes));assert.equal(rows[0].goldSha,sha(goldBytes));
-  for(const r of rows.filter(r=>r.kind==='case'&&r.status==='VALIDATED')){
-    const c=cases.find(c=>c.id===r.id);
-    assert.deepEqual(evaluate(parseStrictModelJson(r.rawFinal),c),r.evaluation);
-  }
-  assert.equal(rows.filter(r=>r.kind==='attempt').length,rows.at(-1).attempts);
+  verifyExtraction(rows, cases, sha(bytes), sha(goldBytes), evaluate);
   console.log('EXTRACTION_READBACK_PASS');process.exit(0);
 }
 const [output,route]=process.argv.slice(2);
