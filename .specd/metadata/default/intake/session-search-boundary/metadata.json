@@ -259,6 +259,20 @@
       ]
     },
     {
+      "requirement": "Bounded synthetic source batch run",
+      "name": "Zero-pass completion-only acknowledgement",
+      "given": [
+        "an exact staged plan whose selected work completed durably before the source acknowledgement"
+      ],
+      "when": [
+        "execution resumes with fewer than two remaining attempted passes"
+      ],
+      "then": [
+        "the existing verified acknowledgement may confirm the complete batch without reserving work or invoking inference",
+        "AND missing completion leaves the checkpoint unchanged and uncertainty is not budget exhaustion"
+      ]
+    },
+    {
       "requirement": "Bounded synthetic source acquisition",
       "name": "Exact pinned read",
       "given": [
@@ -383,7 +397,7 @@
   ],
   "contentHashes": {
     "spec.md": "sha256:d545549a8136260fe1b2ca87ab0c43d1e2797e054a82b3962c928c9d6402f071",
-    "verify.md": "sha256:a3ea2949ddce69dc26723e0caaff1c88b73ba74dac7122e1e8c6cb4d18280942"
+    "verify.md": "sha256:568734827aad9c61f93dfb52fc7996c869d0ae8abe2144e552799641c1f2ca67"
   },
   "generatedBy": "core"
 }

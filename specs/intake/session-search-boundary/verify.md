@@ -98,6 +98,13 @@
 - **WHEN** a batch run is requested
 - **THEN** execution stops without acknowledging partial progress
 
+#### Scenario: Zero-pass completion-only acknowledgement
+
+- **GIVEN** an exact staged plan whose selected work completed durably before the source acknowledgement
+- **WHEN** execution resumes with fewer than two remaining attempted passes
+- **THEN** the existing verified acknowledgement may confirm the complete batch without reserving work or invoking inference
+- **AND** missing completion leaves the checkpoint unchanged and uncertainty is not budget exhaustion
+
 ### Requirement: Bounded synthetic source acquisition
 
 #### Scenario: Exact pinned read

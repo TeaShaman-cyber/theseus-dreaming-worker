@@ -44,6 +44,14 @@ export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], sto
     const { receiptFingerprint, ...payload } = receipt;
     return sourceReceiptFingerprint(payload) === receiptFingerprint;
   }
+  async function acknowledgeComplete(pending: 'BUDGET_EXHAUSTED' | 'WORK_UNRESOLVED') {
+    const ack = await store.acknowledge(input);
+    if (ack.status === 'CONFLICT') return result('CONFLICT');
+    if (ack.status === 'PENDING') return result(pending);
+    if ((ack.status !== 'ACKNOWLEDGED' && ack.status !== 'ALREADY_ACKNOWLEDGED')
+      || !exactReceipt(ack.receipt)) return result('STORAGE_UNKNOWN');
+    return result(ack.status, ack.receipt);
+  }
   const boundedRoutes = snapshot.map(route => ({
     ...route,
     infer: async (...args: Parameters<Pilot2Route['infer']>) => {
@@ -66,7 +74,7 @@ export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], sto
     if (!staged.plan || staged.plan.planFingerprint !== plan.planFingerprint
       || sourceReceiptFingerprint(staged.plan) !== sourceReceiptFingerprint(plan)) return result('STORAGE_UNKNOWN');
     for (const entry of plan.work) {
-      if (budget - attemptedPasses < 2) return result('BUDGET_EXHAUSTED');
+      if (budget - attemptedPasses < 2) return await acknowledgeComplete('BUDGET_EXHAUSTED');
       const before = attemptedPasses;
       const next = await store.runSelected(input, entry.witness.session.session_id, boundedRoutes);
       const used = attemptedPasses - before;
@@ -78,12 +86,7 @@ export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], sto
       if (!next.completion || next.completion.checkpoint.workFingerprint !== entry.workFingerprint
         || (next.decision === 'COMMITTED' ? used !== 2 : used !== 0)) return result('STORAGE_UNKNOWN');
     }
-    const ack = await store.acknowledge(input);
-    if (ack.status === 'CONFLICT') return result('CONFLICT');
-    if (ack.status === 'PENDING') return result('WORK_UNRESOLVED');
-    if ((ack.status !== 'ACKNOWLEDGED' && ack.status !== 'ALREADY_ACKNOWLEDGED')
-      || !exactReceipt(ack.receipt)) return result('STORAGE_UNKNOWN');
-    return result(ack.status, ack.receipt);
+    return await acknowledgeComplete('WORK_UNRESOLVED');
   } catch {
     return result('STORAGE_UNKNOWN');
   }

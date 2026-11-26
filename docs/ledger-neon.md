@@ -337,7 +337,11 @@ blocks. An exact already acknowledged tip is verified again without
 inference. Otherwise stage the exact plan, then process canonical
 selected work in order. Each possible new work requires two remaining
 pass units. Calls through the provided routes are counted and capped;
-known completed work uses zero units. Stop immediately on an uncertain
+known completed work uses zero units. If fewer than two pass units remain,
+the runner may ask the existing store to verify and acknowledge the exact
+fully completed plan, without invoking selected work or reserving anything.
+PENDING remains budget exhaustion; conflict and uncertainty remain explicit.
+An acknowledgement attempt does not imply a committed checkpoint. Stop immediately on an uncertain
 or incomplete work; no retry or takeover. When every work is terminal,
 the existing store validates and acknowledges the full batch. A partial
 run leaves the source checkpoint unchanged; the next explicit invocation
@@ -349,7 +353,8 @@ authorization mechanism.
 The fast tests exercise budgeted continuation, exact replay, invalid
 input/route, missing root, mismatched or unavailable staging and unresolved
 reservation. The existing PostgreSQL contract exercises two separate
-two-pass invocations and a zero-budget exact replay. Actual source
+two-pass invocations, a zero-budget exact replay and recovery after both
+completions but before acknowledgement. Actual source
 acquisition and real unattended authorization remain out of scope.
 
 ### Bounded native browse acquisition

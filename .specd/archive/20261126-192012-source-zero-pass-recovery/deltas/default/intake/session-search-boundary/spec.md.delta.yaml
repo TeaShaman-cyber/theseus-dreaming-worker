@@ -1,0 +1,2 @@
+- op: no-op
+  description: Existing bounded run, zero-cost replay and exact durable acknowledgement requirements remain unchanged.

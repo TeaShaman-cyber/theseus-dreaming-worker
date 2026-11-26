@@ -729,6 +729,26 @@ try {
   assert.deepEqual(batchRunReplay.receipt, batchRunSecond.receipt);
   assert.equal(sourceCalls, batchRunCalls + 4);
   console.log('SOURCE_BOUNDED_RUN_PG_PASS acquired_pages=12 budget=2 restart=verified exact_replay=0 partial_checkpoint=unchanged');
+  // Simulate a stopped caller after both completions, before source acknowledgement.
+  const zeroPassInput = { ...batchRunInput, analysisVersion: 'zero-pass-recovery-v1' };
+  const zeroRoot = await sourceStore.initialize(zeroPassInput);
+  assert.equal(zeroRoot.status, 'ACKNOWLEDGED');
+  zeroPassInput.previousCheckpoint = zeroRoot.receipt.receiptFingerprint;
+  const zeroCalls = sourceCalls;
+  const interrupted = await runSourceBatch(zeroPassInput, sourceRoutes, {
+    ...sourceStore, acknowledge: async () => { throw Error('synthetic stop before acknowledgement'); },
+  }, 4);
+  assert.equal(interrupted.status, 'STORAGE_UNKNOWN');
+  assert.equal(sourceCalls, zeroCalls + 4);
+  assert.deepEqual(await sourceStore.readTip(zeroPassInput), zeroRoot.receipt);
+  const zeroRestart = createPostgresSourceBatchStore({ connectionString });
+  const zeroRecovered = await runSourceBatch(zeroPassInput, sourceRoutes, zeroRestart, 0);
+  assert.equal(zeroRecovered.status, 'ACKNOWLEDGED');
+  assert.equal(zeroRecovered.attemptedPasses, 0);
+  assert.equal(zeroRecovered.receipt.work.length, 2);
+  assert.deepEqual(await zeroRestart.readTip(zeroPassInput), zeroRecovered.receipt);
+  assert.equal(sourceCalls, zeroCalls + 4);
+  console.log('SOURCE_ZERO_PASS_RECOVERY_PG_PASS completed=2 additional_calls=0');
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
 } finally {
   await Promise.allSettled(sourceClients.map(client => client.end()));
