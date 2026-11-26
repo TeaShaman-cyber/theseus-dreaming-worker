@@ -1,0 +1,43 @@
+{
+  "schema": "decision-slicing-candidate-atoms-v1",
+  "cases": [
+    {
+      "id": "maple",
+      "decision": "Accept this Maple archive as verified.",
+      "atoms": {
+        "A": "The exact archive manifest is independently verified.",
+        "B": "Independent remote readback of this archive is successful.",
+        "C": "Independent offline checksum verification of this archive is successful.",
+        "D": "The assistant reports that the export succeeded.",
+        "E": "The dashboard is reachable."
+      },
+      "sources": {
+        "E1": "Archive owner's acceptance rule: require an independently verified exact manifest, together with either successful independent remote readback or successful independent offline checksum verification. An assistant's self-report and dashboard availability are not substitutes.",
+        "E2": "Independent inspector: the exact Maple archive manifest was verified.",
+        "E3": "Remote readback timed out before any result; remote readback status is unknown.",
+        "E4": "Offline inspector: verified the exact Maple archive checksum against the independently acquired expected digest.",
+        "E5": "Assistant: I exported Maple successfully.",
+        "E6": "Dashboard health check: reachable."
+      }
+    },
+    {
+      "id": "linden",
+      "decision": "Schedule a paid research run for Linden.",
+      "atoms": {
+        "A": "The owner explicitly authorized this paid research run.",
+        "B": "The run is within the approved topic scope.",
+        "C": "Available budget for this run is independently confirmed.",
+        "D": "Sufficient prepaid credits for this run are independently confirmed.",
+        "E": "The assistant reports that spending is approved."
+      },
+      "sources": {
+        "E1": "Owner's scheduling rule: require explicit paid-run authorization and topic-scope approval, plus at least one independently confirmed funding source: available budget or sufficient prepaid credits. An unverified assistant report cannot establish authorization.",
+        "E2": "Owner: free research only; I do not authorize this paid run.",
+        "E3": "Owner: this run's research topic is within the approved topic scope.",
+        "E4": "Budget account could not be inspected; availability for this run is unknown.",
+        "E5": "Independent credit receipt: sufficient prepaid credits for this exact run.",
+        "E6": "Assistant: spending is approved."
+      }
+    }
+  ]
+}
