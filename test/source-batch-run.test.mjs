@@ -219,3 +219,94 @@ test('pooled batch invalid policy/stage and overspend fail closed',async()=>{
   assert.equal(capped.status,'STORAGE_UNKNOWN');assert.equal(capped.attemptedPasses,2);
   assert.equal(s.calls.length,2);assert.equal(s.acks(),0);
 });
+
+test('fixed route policy rejects missing or blank identity fields and wrong route count before storage', async () => {
+  const x=input(), {store,routes,counts}=setup(x);
+  for (const candidate of [[], [routes[0]], [...routes,routes[0]], ...['id','provider','model','modelFamily'].flatMap(key=>[undefined,'','  '].map(value=>[{...routes[0],[key]:value},routes[1]])), [{...routes[0],infer:null},routes[1]], [{...routes[0],modelFamily:' B '},routes[1]]]) {
+    await assert.rejects(()=>runSourceBatch(x,candidate,store,4));
+  }
+  for (const budget of [201,1.5,NaN]) await assert.rejects(()=>runSourceBatch(x,routes,store,budget));
+  assert.deepEqual(counts(),{calls:0,stages:0,acks:0,reservations:0});
+});
+
+test('pooled batch rejects corrupt persisted receipts and distinguishes conflicts from uncertainty',async()=>{
+  const x=input(),s=pooledStub(x,[{decision:'COMMITTED'},{decision:'ALREADY_PROCESSED'}]);
+  const success=await runPooledSourceBatch(x,s.policy,s.store);
+  assert.equal(success.status,'ACKNOWLEDGED');
+  const good=success.receipt;
+  for (const patch of [{schema:'wrong'},{previousCheckpoint:'wrong'},{currentPlanFingerprint:'wrong'},{receiptFingerprint:'wrong'}]) {
+    const {receiptFingerprint: _fp,...payload}=good;
+    const invalidPayload={...payload,...patch};
+    const bad={...invalidPayload,receiptFingerprint:patch.receiptFingerprint??sourceReceiptFingerprint(invalidPayload)};
+    const r=await runPooledSourceBatch(x,s.policy,{...s.store,readTip:async()=>bad});
+    assert.equal(r.status,'CONFLICT'); assert.equal(r.receipt,null); assert.equal(r.attemptedPasses,0);
+  }
+  for (const ack of [{status:'ACKNOWLEDGED',receipt:good},{status:'ALREADY_ACKNOWLEDGED',receipt:null},{status:'ALREADY_ACKNOWLEDGED',receipt:{...good,receiptFingerprint:'wrong'}}]) {
+    const r=await runPooledSourceBatch(x,s.policy,{...s.store,acknowledge:async()=>ack});
+    assert.equal(r.status,'STORAGE_UNKNOWN'); assert.equal(r.receipt,null);
+  }
+  assert.equal(s.visits.length,2);
+});
+
+test('pooled batch validates each store outcome before advancing the next work',async()=>{
+  const x=input();
+  for (const step of [{decision:'COMMITTED',completion:null},{decision:'COMMITTED',completion:{checkpoint:{workFingerprint:'wrong'}}},
+    {decision:'DEFERRED',wakeAtMs:-1},{decision:'DEFERRED',wakeAtMs:1.5},{decision:'COMMITTED',wakeAtMs:100},
+    {decision:'COMMITTED',nextRotation:0.5},{decision:'COMMITTED',nextRotation:Number.MAX_SAFE_INTEGER+1},
+    {decision:'BUDGET_EXHAUSTED',completion:{checkpoint:{workFingerprint:'wrong'}}},{decision:'STORAGE_UNKNOWN'}]) {
+    const s=pooledStub(x,[step]);
+    const r=await runPooledSourceBatch(x,s.policy,s.store);
+    assert.equal(r.status,'STORAGE_UNKNOWN',JSON.stringify(step));
+    assert.equal(s.visits.length,1);assert.equal(s.acks(),0);assert.equal(r.receipt,null);
+  }
+});
+
+test('pooled batch preserves earliest valid wake and deferred precedence',async()=>{
+  for(const [steps,expected] of [
+    [[{decision:'DEFERRED',wakeAtMs:900},{decision:'DEFERRED',wakeAtMs:0}],0],
+    [[{decision:'BUDGET_EXHAUSTED'},{decision:'DEFERRED',wakeAtMs:5100}],5100],
+    [[{decision:'INSUFFICIENT_ELIGIBILITY'},{decision:'DEFERRED',wakeAtMs:5100}],5100]]){
+    const x=input(),s=pooledStub(x,steps);
+    const r=await runPooledSourceBatch(x,s.policy,s.store);
+    assert.equal(r.status,'DEFERRED');assert.equal(r.wakeAtMs,expected);assert.equal(s.acks(),0);
+    assert.deepEqual(r.work.map(w=>w.wakeAtMs),steps.map(w=>w.wakeAtMs??null));
+  }
+});
+
+test('pooled batch rejects invalid stage custody and never dispatches work on a conflict',async()=>{
+  const x=input(),s=pooledStub(x,[]),plan=prepareSourceBatchExecution(x).plan;
+  const invalid=[{status:'CONFLICT',plan},{status:'STORAGE_UNKNOWN',plan},{status:'STAGED',plan:null},
+    {status:'STAGED',plan:{...plan,planFingerprint:'wrong'}},{status:'STAGED',plan:{...plan,previousCheckpoint:'wrong'}}];
+  for(const stage of invalid){
+    const r=await runPooledSourceBatch(x,s.policy,{...s.store,stage:async()=>stage});
+    assert.equal(r.status,stage.status==='CONFLICT'?'CONFLICT':'STORAGE_UNKNOWN');
+    assert.equal(r.receipt,null);assert.equal(r.attemptedPasses,0);
+  }
+  assert.equal((await runPooledSourceBatch(x,s.policy,{...s.store,readTip:async()=>null})).status,'CONFLICT');
+  assert.equal(s.visits.length,0);assert.equal(s.acks(),0);
+});
+
+test('fixed batch distinguishes invalid acknowledgement, conflict, and unknown work without advancing',async()=>{
+  const x=input(),{store,routes,counts}=setup(x),plan=prepareSourceBatchExecution(x).plan;
+  const badStage=await runSourceBatch(x,routes,{...store,stage:async()=>({status:'STAGED',plan:{...plan,previousCheckpoint:'wrong'}})},4);
+  assert.equal(badStage.status,'STORAGE_UNKNOWN');
+  assert.equal((await runSourceBatch(x,routes,{...store,stage:async()=>({status:'CONFLICT',plan})},4)).status,'CONFLICT');
+  for(const ack of [{status:'CONFLICT',receipt:null},{status:'ACKNOWLEDGED',receipt:null},{status:'ALREADY_ACKNOWLEDGED',receipt:null}]){
+    const r=await runSourceBatch(x,routes,{...store,acknowledge:async()=>ack},0);
+    assert.equal(r.status,ack.status==='CONFLICT'?'CONFLICT':'STORAGE_UNKNOWN');assert.equal(r.receipt,null);
+  }
+  for(const outcome of [{decision:'STORAGE_UNKNOWN'},{decision:'COMMITTED',completion:null},{decision:'ALREADY_PROCESSED',completion:{checkpoint:{workFingerprint:'wrong'}}},{decision:'COMMITTED',attemptedPasses:1},{decision:'COMMITTED',workFingerprint:'wrong'}]){
+    const r=await runSourceBatch(x,routes,{...store,async runSelected(){return {workFingerprint:plan.work[0].workFingerprint,attemptedPasses:0,...outcome};}},4);
+    assert.equal(r.status,'STORAGE_UNKNOWN');assert.equal(r.receipt,null);
+  }
+  assert.equal(counts().calls,0);assert.equal(counts().reservations,0);
+});
+
+test('pooled acknowledgement only accepts an exact confirmed receipt',async()=>{
+  const x=input();
+  for(const ack of [{status:'CONFLICT',receipt:null},{status:'PENDING',receipt:null},{status:'ACKNOWLEDGED',receipt:null},{status:'ALREADY_ACKNOWLEDGED',receipt:null}]){
+    const s=pooledStub(x,[{decision:'COMMITTED'},{decision:'ALREADY_PROCESSED'}]);
+    const r=await runPooledSourceBatch(x,s.policy,{...s.store,acknowledge:async()=>ack});
+    assert.equal(r.status,ack.status==='CONFLICT'?'CONFLICT':'STORAGE_UNKNOWN');assert.equal(r.receipt,null);
+  }
+});
