@@ -1,0 +1,18 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Explicit pooled synthetic source cycle$'
+  content: |
+    ### Requirement: Read-only synthetic cycle inspection
+
+    #### Scenario: Observe without dispatch
+
+    - **GIVEN** an exact synthetic batch witness and existing durable work
+    - **WHEN** the diagnostic reads the tip, plan, journal and completion
+    - **THEN** missing, unresolved, completed and failed or inconsistent observations remain distinguishable
+    - **AND** the report omits source and proposal bodies and owner tokens, and confers no resume authority
+    - **AND** no writes or inference follow

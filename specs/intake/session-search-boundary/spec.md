@@ -100,6 +100,10 @@ One explicit synthetic cycle MUST validate the trusted handoff and execution pol
 
 The explicit pooled cycle MUST validate and snapshot its execution policy before bounded synthetic source acquisition. Invalid input, unresolved removal, no selected work or acquisition failure MUST NOT initiate ledger execution or inference. The cycle MUST delegate the exact acquired batch to the bounded pooled runner and preserve its observed invocation count and typed pending or unknown outcome. Exact completed replay MUST require zero inference. Existing fixed-pair composition remains available; neither path authorizes real source access or deployment.
 
+### Requirement: Read-only synthetic cycle inspection
+
+An explicit diagnostic MAY observe an existing synthetic batch using its exact supplied witness, verified source tip, staged plan and per-work journal and completion readers. It MUST reject non-synthetic scope before storage access, distinguish missing state, unresolved attempts and failed or inconsistent readback, and omit evidence bodies, proposal bodies and owner tokens. Independent reads MUST NOT be represented as an atomic snapshot, source completeness, authorization to resume, or proof of source custody merely from matching work identity. The diagnostic MUST NOT initialize, stage, reserve, acknowledge, invoke inference or retry work.
+
 ### Requirement: Checkpoint advances only after bounded success
 
 The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.
