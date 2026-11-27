@@ -151,6 +151,7 @@ function pathExists(
   edges: Map<string, Set<string>>,
   start: string,
   target: string,
+  ranks?: ReadonlyMap<string, number>,
 ): boolean {
   const pending = [start];
   const visited = new Set<string>();
@@ -158,6 +159,7 @@ function pathExists(
     const current = pending.pop();
     if (!current || visited.has(current)) continue;
     if (current === target) return true;
+    if (ranks && ranks.get(current)! > ranks.get(target)!) continue;
     // Stryker disable next-line CallExpression: visited bookkeeping preserves linear traversal on valid acyclic ledgers; removing it is functionally equivalent but violates the bounded-DAG performance invariant covered by the regression test.
     visited.add(current);
     const next = edges.get(current);
@@ -179,7 +181,7 @@ function createLedgerIndex() {
       else edges.set(event.supersededRecordId, new Set([event.replacementRecordId]));
     }
   }
-  function validate(event: ProposalLedgerEvent) {
+  function validateBasics(event: ProposalLedgerEvent) {
     assertEventIdentity(event);
     if (ids.has(eventId(event))) throw new Error(`LEDGER_DUPLICATE_EVENT: ${eventId(event)}`);
     if (event.eventType === 'SUPERSEDE') {
@@ -187,22 +189,67 @@ function createLedgerIndex() {
       if (!records.has(event.supersededRecordId) || !records.has(event.replacementRecordId)) {
         throw new Error('LEDGER_SUPERSESSION_REF_MISSING');
       }
-      if (pathExists(edges, event.replacementRecordId, event.supersededRecordId)) throw new Error('LEDGER_SUPERSESSION_CYCLE');
     }
   }
-  return { index, validate };
+  function validate(event: ProposalLedgerEvent, ranks?: ReadonlyMap<string, number>): boolean {
+    validateBasics(event);
+    if (event.eventType === 'PROPOSAL') return true;
+    if (ranks && ranks.get(event.supersededRecordId)! < ranks.get(event.replacementRecordId)!) return true;
+    if (pathExists(edges, event.replacementRecordId, event.supersededRecordId, ranks)) {
+      throw new Error('LEDGER_SUPERSESSION_CYCLE');
+    }
+    // A legal backward edge can invalidate the ordering. Fall back to exact
+    // DFS for this replay instance rather than using stale ranks.
+    return false;
+  }
+  function topologicalRanks(): Map<string, number> {
+    const indegrees = new Map<string, number>(Array.from(records, id => [id, 0]));
+    for (const targets of edges.values()) {
+      for (const target of targets) indegrees.set(target, indegrees.get(target)! + 1);
+    }
+    const ready = [...records].filter(id => indegrees.get(id) === 0);
+    const ranks = new Map<string, number>();
+    // Array iteration sees appended elements; no quadratic shift().
+    for (const id of ready) {
+      ranks.set(id, ranks.size);
+      for (const target of edges.get(id) ?? []) {
+        const remaining = indegrees.get(target)! - 1;
+        indegrees.set(target, remaining);
+        if (remaining === 0) ready.push(target);
+      }
+    }
+    if (ranks.size !== records.size) throw new Error('LEDGER_SUPERSESSION_CYCLE');
+    return ranks;
+  }
+  return { index, validate, validateBasics, topologicalRanks };
 }
 
 /** Ordered, transaction-local validation; no externally supplied trusted prefix.
  * All inputs and returned snapshots are isolated from the private index. */
-export function createLedgerReplay() {
+export function createLedgerReplay(history: Iterable<ProposalLedgerEvent> = []) {
   const state = createLedgerIndex();
   const events: ProposalLedgerEvent[] = [];
+  try {
+    for (const input of history) {
+      const event = proposalLedgerEventSchema.parse(structuredClone(input));
+      state.validateBasics(event);
+      state.index(event);
+      events.push(event);
+    }
+  } catch (error) {
+    // Cycles in an append-only graph persist. If a later malformed row
+    // interrupts replay, preserve the earlier cycle error, if present.
+    state.topologicalRanks();
+    throw error;
+  }
+  // The final DAG is acyclic iff every edge prefix is acyclic.
+  let ranks: Map<string, number> | undefined = state.topologicalRanks();
   return {
     append(input: ProposalLedgerEvent) {
       const event = proposalLedgerEventSchema.parse(structuredClone(input));
-      state.validate(event);
+      if (!state.validate(event, ranks)) ranks = undefined;
       state.index(event);
+      if (event.eventType === 'PROPOSAL') ranks?.set(event.recordId, ranks.size);
       events.push(event);
     },
     snapshot(): ProposalLedgerEvent[] { return events.map(event => structuredClone(event)); },
@@ -227,9 +274,7 @@ export function appendLedgerEvent(
 }
 
 export function materializeLedger(ledgerInput: readonly ProposalLedgerEvent[]) {
-  const replay = createLedgerReplay();
-  for (const event of ledgerInput) replay.append(event);
-  const validated = replay.snapshot();
+  const validated = createLedgerReplay(ledgerInput).snapshot();
 
   const supersededBy = new Map<string, string[]>();
   for (const event of validated) {

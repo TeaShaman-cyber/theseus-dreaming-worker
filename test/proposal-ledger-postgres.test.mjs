@@ -550,3 +550,20 @@ test('stored history is revalidated once rather than once per prefix',async()=>{
   finally{globalThis.structuredClone=clone;}
   assert.ok(copies<=4*records.length,`read copies ${copies} objects for ${records.length} records`);
 });
+
+test('database replay preserves earlier cycle error before a later malformed row',async()=>{
+  const {a,b,supersede}=events();
+  const cycle=createSupersessionEvent({supersededRecordId:b.recordId,replacementRecordId:a.recordId,reason:'reverse'});
+  const invalid={...rowFor(a,5),record_id:null};
+  for(const [rows,message] of [
+    [[rowFor(a,1),rowFor(b,2),rowFor(supersede,3),rowFor(cycle,4),invalid],'LEDGER_SUPERSESSION_CYCLE'],
+    [[rowFor(a,1),rowFor(b,2),rowFor(supersede,3),invalid,rowFor(cycle,5)],'LEDGER_STORAGE_ROW_INVALID: record_id'],
+  ]){
+    const client=fakeClient({rows});
+    const ledger=createPostgresProposalLedger({connectionString:'postgresql://fixture.invalid/db',clientFactory:()=>client});
+    await assert.rejects(ledger.appendEvent(a),{message});
+    assert.equal(client.calls.some(c=>c.text.includes('INSERT INTO')),false);
+    assert.ok(client.calls.some(c=>c.text==='ROLLBACK'));
+    assert.equal(client.ended,true);
+  }
+});

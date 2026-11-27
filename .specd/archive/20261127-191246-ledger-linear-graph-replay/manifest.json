@@ -1,0 +1,246 @@
+{
+  "name": "ledger-linear-graph-replay",
+  "createdAt": "2026-11-27T19:12:46.028Z",
+  "description": "Linear historical DAG validation and safe rank reuse (#108)",
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "specIds": [
+    "default:ledger/append-only-proposals",
+    "default:ledger/postgres-storage"
+  ],
+  "artifacts": [
+    {
+      "type": "proposal",
+      "optional": false,
+      "requires": [],
+      "state": "complete",
+      "files": [
+        {
+          "key": "proposal",
+          "filename": "proposal.md",
+          "state": "complete",
+          "validatedHash": "sha256:bab3caf99e05a38560822767e51a4a26faa3d00b28139bc368c8acd34a256ded"
+        }
+      ]
+    },
+    {
+      "type": "specs",
+      "optional": false,
+      "requires": [
+        "proposal"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:ledger/append-only-proposals",
+          "filename": "deltas/default/ledger/append-only-proposals/spec.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:ce58950ccd572d854a23b35213d68fc68c566822de3359db44c9b2c881deadfc"
+        },
+        {
+          "key": "default:ledger/postgres-storage",
+          "filename": "deltas/default/ledger/postgres-storage/spec.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:ce58950ccd572d854a23b35213d68fc68c566822de3359db44c9b2c881deadfc"
+        }
+      ]
+    },
+    {
+      "type": "verify",
+      "optional": false,
+      "requires": [
+        "specs"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:ledger/append-only-proposals",
+          "filename": "deltas/default/ledger/append-only-proposals/verify.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:ce58950ccd572d854a23b35213d68fc68c566822de3359db44c9b2c881deadfc"
+        },
+        {
+          "key": "default:ledger/postgres-storage",
+          "filename": "deltas/default/ledger/postgres-storage/verify.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:ce58950ccd572d854a23b35213d68fc68c566822de3359db44c9b2c881deadfc"
+        }
+      ]
+    },
+    {
+      "type": "design",
+      "optional": false,
+      "requires": [
+        "proposal",
+        "specs",
+        "verify"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "design",
+          "filename": "design.md",
+          "state": "complete",
+          "validatedHash": "sha256:a55b26a07460be2757054508e08964fd24f5dc3aed0e48b7903e85a040a24a7c"
+        }
+      ]
+    },
+    {
+      "type": "tasks",
+      "optional": false,
+      "requires": [
+        "specs",
+        "design"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "tasks",
+          "filename": "tasks.md",
+          "state": "complete",
+          "validatedHash": "sha256:22945781305388d94f8e846026f7ef4691dfe02cb520d1ca5820b50d38c72fee"
+        }
+      ]
+    }
+  ],
+  "history": [
+    {
+      "type": "created",
+      "at": "2026-11-27T19:12:46.028Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "specIds": [
+        "default:ledger/append-only-proposals",
+        "default:ledger/postgres-storage"
+      ],
+      "schemaName": "schema-std",
+      "schemaVersion": 1
+    },
+    {
+      "type": "artifacts-synced",
+      "at": "2026-11-27T19:12:46.056Z",
+      "by": {
+        "name": "specd",
+        "email": "system@getspecd.dev"
+      },
+      "typesAdded": [
+        "proposal",
+        "specs",
+        "verify",
+        "design",
+        "tasks"
+      ],
+      "typesRemoved": [],
+      "filesAdded": [
+        {
+          "type": "proposal",
+          "key": "proposal"
+        },
+        {
+          "type": "specs",
+          "key": "default:ledger/append-only-proposals"
+        },
+        {
+          "type": "specs",
+          "key": "default:ledger/postgres-storage"
+        },
+        {
+          "type": "verify",
+          "key": "default:ledger/append-only-proposals"
+        },
+        {
+          "type": "verify",
+          "key": "default:ledger/postgres-storage"
+        },
+        {
+          "type": "design",
+          "key": "design"
+        },
+        {
+          "type": "tasks",
+          "key": "tasks"
+        }
+      ],
+      "filesRemoved": []
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T19:12:46.509Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "drafting",
+      "to": "designing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T19:12:50.142Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "designing",
+      "to": "ready"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T19:12:50.523Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "ready",
+      "to": "implementing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T19:12:50.936Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "implementing",
+      "to": "verifying"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T19:12:51.361Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "verifying",
+      "to": "done"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T19:12:51.887Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "done",
+      "to": "archivable"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T19:12:52.377Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "archivable",
+      "to": "archiving"
+    }
+  ],
+  "archivedAt": "2026-11-27T19:12:52.496Z",
+  "archivedBy": {
+    "name": "exe.dev user",
+    "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+  }
+}
