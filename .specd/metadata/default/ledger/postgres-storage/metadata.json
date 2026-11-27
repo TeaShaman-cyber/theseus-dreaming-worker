@@ -71,6 +71,12 @@
       ]
     },
     {
+      "requirement": "Same-plan pooled source admission",
+      "rules": [
+        "Explicit synthetic pooled selected work MUST derive its exact input from the verified staged plan. New reservation, initial journal entry and immutable source origin MUST commit atomically under the existing ledger lock. Existing work MUST have the same exact original plan and work identity; unbound or differently bound work MUST NOT be adopted. Journal mutations MUST require the exact staged plan and unadvanced predecessor. Readback MUST verify original plan custody; exact completed replay MUST use zero inference. The pooled executor MUST NOT advance source progress. Existing acknowledgement MUST verify all selected completions and original origins. Cross-plan partial recovery and cross-work cooldown persistence remain outside this increment."
+      ]
+    },
+    {
       "requirement": "Source acknowledgement retains original plan",
       "rules": [
         "A durable source acknowledgement MUST require the exact current staged plan and verify each completion against its immutable original reservation plan under the existing transaction lock. An unbound completion MUST NOT advance source progress. The durable receipt MUST bind both the current plan and each original plan pointer, and verify the original packet, request and evidence identities against the completion. A later witness MUST NOT relabel the original work origin."
@@ -402,6 +408,35 @@
       ]
     },
     {
+      "requirement": "Same-plan pooled source admission",
+      "name": "Missing or changed source custody",
+      "given": [
+        "missing staged plan, unbound reservation or a different original plan"
+      ],
+      "when": [
+        "pooled selected work is requested"
+      ],
+      "then": [
+        "no model call or new origin follows",
+        "AND an existing journal is not adopted"
+      ]
+    },
+    {
+      "requirement": "Same-plan pooled source admission",
+      "name": "Partial source work and restart",
+      "given": [
+        "an exact staged synthetic plan and one validated perspective followed by known failure"
+      ],
+      "when": [
+        "the same plan is resumed"
+      ],
+      "then": [
+        "only the missing slot is executed",
+        "AND the original plan remains immutable and the source checkpoint does not advance until every selected work completes",
+        "AND exact completed replay uses zero inference"
+      ]
+    },
+    {
       "requirement": "Source acknowledgement retains original plan",
       "name": "Distinct original and current plans",
       "given": [
@@ -417,8 +452,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:ed89315b08e97f66dcf09b6c21c8ccaa25b90f2519ecdd32a975b6ea5dbd152a",
-    "verify.md": "sha256:d2b0180acef6dbf227d1ee0ca5864f4b1f6f5f89c531a6934f414d5a36037646"
+    "spec.md": "sha256:9c32b2eaa781f0c5a65b7b59a80ffdc49136b1d54e061dc7b55e95010a474308",
+    "verify.md": "sha256:fefca5458940f38896a5a50d07d2c4a9bed63b0c035c02bbcf0fc106b5b85125"
   },
   "generatedBy": "core"
 }

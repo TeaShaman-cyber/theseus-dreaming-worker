@@ -359,8 +359,18 @@ async function readPoolWithClient(client: LedgerPgClient, context: PoolJournalCo
     state: replayPoolJournal(context, rows.map(r => r.entry)) };
 }
 
+/** Trusted application composition seam. Source-specific validation and
+ * origin insertion use the journal's own transaction, not another client.
+ * The callbacks do not confer external permission or define an ACL.
+ */
+export type PoolJournalSourceBinding = {
+  verify(client: LedgerPgClient, context: PoolJournalContext, current: PoolJournalRead,
+    operation: 'read' | 'admit' | 'append'): Promise<void>;
+  bind(client: LedgerPgClient, context: PoolJournalContext): Promise<void>;
+};
+
 /** Append-only partial custody. No model invocation, takeover or completion. */
-export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOptions) {
+export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOptions, source?: PoolJournalSourceBinding) {
   const clientFactory = options.clientFactory ?? defaultClientFactory;
   async function withClient<T>(action: (client: LedgerPgClient) => Promise<T>): Promise<T> {
     const client = clientFactory(options.connectionString);
@@ -385,14 +395,19 @@ export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOp
       }
     });
   }
-  const readContext = (context: PoolJournalContext) => withClient(client => readPoolWithClient(client, context));
+  async function readBound(client: LedgerPgClient, context: PoolJournalContext, operation: 'read' | 'admit' | 'append') {
+    const current = await readPoolWithClient(client, context);
+    await source?.verify(client, context, current, operation);
+    return current;
+  }
+  const readContext = (context: PoolJournalContext) => withClient(client => readBound(client, context, 'read'));
   return {
     async read(raw: DurablePilot2Input) { return readContext(preparePoolJournal(raw)); },
     async admit(raw: DurablePilot2Input, maxAttempts: number, ownerToken: string) {
       const context = preparePoolJournal(raw);
       const first = makePoolJournalEntry(null, poolJournalAdmission(context, maxAttempts));
       await transaction(async client => {
-        const existing = await readPoolWithClient(client, context);
+        const existing = await readBound(client, context, 'admit');
         if (existing.status === 'JOURNAL') {
           if (existing.state.entries[0].entryFingerprint !== first.entryFingerprint) throw Error('POOL_JOURNAL_ADMISSION_CONFLICT');
           return;
@@ -405,6 +420,7 @@ export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOp
         if (rows.length !== 1 || rows[0].owner_token !== ownerToken) throw Error('POOL_JOURNAL_RESERVATION_CONFLICT');
         await client.query('INSERT INTO dw_ledger.work_pool_journal(work_fingerprint,owner_token,ordinal,entry) VALUES ($1,$2,0,$3::jsonb)',
           [context.workFingerprint,ownerToken,JSON.stringify(first)]);
+        await source?.bind(client, context);
       });
       const result = await readContext(context);
       if (result.status === 'ABSENT' || (result.status === 'JOURNAL'
@@ -414,7 +430,7 @@ export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOp
     async append(raw: DurablePilot2Input, expectedTip: string, event: PoolJournalEvent) {
       const context = preparePoolJournal(raw);
       const entry = await transaction(async client => {
-        const current = await readPoolWithClient(client, context);
+        const current = await readBound(client, context, 'append');
         if (current.status !== 'JOURNAL' || current.completionExists || current.state.tip !== expectedTip) {
           throw Error('POOL_JOURNAL_TIP_CONFLICT');
         }

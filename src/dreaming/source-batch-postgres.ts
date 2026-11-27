@@ -4,7 +4,8 @@ import { decodeSourceHandoff } from './source-handoff.ts';
 import { prepareSourceBatchExecution, prepareSourceBatchPlan, prepareSourceBatchReceipt, sourceReceiptFingerprint, type BatchInput } from './source-batch-receipt.ts';
 import { readVerifiedCompletion, runDurablePilot2 } from './durable-pilot2.ts';
 import type { Pilot2Route } from './pilot2-runner.ts';
-import { createPostgresWorkStore, type LedgerPgClient, type LedgerPgClientFactory } from './proposal-ledger-postgres.ts';
+import { runPooledDurablePilot2 } from './pooled-durable-pilot2.ts';
+import { createPostgresPoolJournalStore, createPostgresPooledCompletionStore, createPostgresWorkStore, type LedgerPgClient, type LedgerPgClientFactory } from './proposal-ledger-postgres.ts';
 
 type Intent = Pick<BatchInput, 'candidate' | 'expected' | 'task' | 'analysisVersion'>;
 const fingerprint = z.string().regex(/^sha256:[0-9a-f]{64}$/);
@@ -239,6 +240,47 @@ export function createPostgresSourceBatchStore(options: {
           });
         },
       });
+    },
+    /** Same-plan synthetic pooled execution. New custody and its journal are
+     * committed together. An alternative witness is not a partial takeover.
+     */
+    async runSelectedPooled(raw: BatchInput, sessionId: string, policy: Parameters<typeof runPooledDurablePilot2>[1]) {
+      const input = structuredClone(raw);
+      const { chain } = context(input);
+      const { plan, prepared } = prepareSourceBatchExecution(input);
+      const selected = prepared.find(entry => entry.provenance.session.session_id === sessionId);
+      if (!selected) throw Error('SOURCE_EXECUTION_SELECTION');
+      const expected = plan.work.find(work => work.workFingerprint === selected.workFingerprint);
+      if (!expected) throw Error('SOURCE_EXECUTION_WORK');
+      const journal = createPostgresPoolJournalStore(options, {
+        async verify(client, ctx, current, operation) {
+          if (ctx.workFingerprint !== expected.workFingerprint
+            || ctx.requestFingerprint !== expected.requestFingerprint
+            || ctx.evidenceFingerprint !== expected.evidenceFingerprint
+            || ctx.request.packet.packetId !== expected.packetId) throw Error('SOURCE_EXECUTION_WORK');
+          const parent = await readParent(client, chain, plan.previousCheckpoint);
+          if (!parent || !await readPlan(client, chain, parent, plan.planFingerprint)
+            || (operation !== 'read' && await readChild(client, chain, plan.previousCheckpoint))) {
+            throw Error('SOURCE_EXECUTION_PLAN_REQUIRED');
+          }
+          if (current.status !== 'ABSENT') {
+            const original = await readOrigin(client, chain, ctx.workFingerprint);
+            if (original.pointer.previousCheckpoint !== plan.previousCheckpoint
+              || original.pointer.planFingerprint !== plan.planFingerprint
+              || sourceReceiptFingerprint(original.work) !== sourceReceiptFingerprint(expected)) {
+              throw Error('SOURCE_POOL_ORIGIN_MISMATCH');
+            }
+          }
+        },
+        async bind(client, ctx) {
+          await client.query(
+            'INSERT INTO dw_ledger.source_work_origins(work_fingerprint,chain_id,previous_checkpoint,plan_fingerprint) VALUES ($1,$2,$3,$4)',
+            [ctx.workFingerprint,chain,plan.previousCheckpoint,plan.planFingerprint],
+          );
+        },
+      });
+      return runPooledDurablePilot2(selected.input, policy, journal,
+        createPostgresPooledCompletionStore(options, selected.input));
     },
     /** Stage metadata before execution. No inference or progress advancement. */
     async stage(raw: BatchInput): Promise<PlanResult> {

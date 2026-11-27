@@ -76,6 +76,10 @@ Source-specific synthetic execution MUST derive the exact selected work from ver
 
 The existing durable runner MUST remain responsible for inference and completion; source-specific admission MUST NOT advance the source checkpoint, grant access or change generic pilot behavior.
 
+### Requirement: Same-plan pooled source admission
+
+Explicit synthetic pooled selected work MUST derive its exact input from the verified staged plan. New reservation, initial journal entry and immutable source origin MUST commit atomically under the existing ledger lock. Existing work MUST have the same exact original plan and work identity; unbound or differently bound work MUST NOT be adopted. Journal mutations MUST require the exact staged plan and unadvanced predecessor. Readback MUST verify original plan custody; exact completed replay MUST use zero inference. The pooled executor MUST NOT advance source progress. Existing acknowledgement MUST verify all selected completions and original origins. Cross-plan partial recovery and cross-work cooldown persistence remain outside this increment.
+
 ### Requirement: Source acknowledgement retains original plan
 
 A durable source acknowledgement MUST require the exact current staged plan and verify each completion against its immutable original reservation plan under the existing transaction lock. An unbound completion MUST NOT advance source progress. The durable receipt MUST bind both the current plan and each original plan pointer, and verify the original packet, request and evidence identities against the completion. A later witness MUST NOT relabel the original work origin.
