@@ -8,6 +8,7 @@ import { policyIdentity, bindRule } from './policy-identity.mjs';
 import { executeOpenAIChatTransport } from '../../src/dreaming/openai-provider-adapter.ts';
 import { parseStrictModelJson } from '../../src/dreaming/strict-model-json.ts';
 
+const baseURL='https://nvidi-nim.int.exe.xyz/v1',model='nvidia/nemotron-3-ultra-550b-a55b',cap=3072,timeoutMs=60000;
 const read=name=>readFileSync(new URL('./'+name,import.meta.url));
 const sha=x=>createHash('sha256').update(x).digest('hex');
 const bytes=read('paired-cases.json'), goldBytes=read('paired-gold.json'), prior=read('paired-observation.jsonl');
@@ -74,26 +75,36 @@ if(process.argv[2]==='--check'){
   console.log('REUSE_IDENTITY_PASS 10 negative, 4 positive controls');process.exit(0);
 }
 if(process.argv[2]==='--verify'){
-  const rows=readFileSync(process.argv[3],'utf8').trim().split('\n').map(parseStrictModelJson);
+  const recorded=readFileSync(process.argv[3]);
+  // Verify this exact historical experiment, not arbitrary new observations.
+  // Git custody of the retained bytes is not upstream billing authentication.
+  assert.equal(sha(recorded),'0ecc01271c21bad67af4a9d247223e48e6954822d83de32696bffcbeda9a8185','OBSERVATION_BYTES_CHANGED');
+  const rows=recorded.toString('utf8').trim().split('\n').map(parseStrictModelJson);
+  assert.equal(rows[0].model,model);
   assert.equal(rows[0].kind,'catalog');assert.equal(rows[0].priorSha,sha(prior));assert.equal(rows[0].fixtureSha,sha(bytes));assert.equal(rows[0].goldSha,sha(goldBytes));assert.equal(rows[0].snapshotSha,sha(snapshots));assert.equal(rows[0].reuseGoldSha,sha(reuseGold));
   let cursor=1,attempts=0,stopped=false;
   for(const j of jobs){
     const a=rows[cursor++];
     if(stopped){assert.deepEqual(a,{kind:'case',id:j.c.id,status:'NOT_ATTEMPTED'});continue;}
-    assert.equal(a.kind,'attempt');assert.equal(a.id,j.c.id);assert.equal(a.ruleSha,j.ruleSha);assert.equal(a.policySha,j.policySha);assert.equal(a.promptSha,sha(JSON.stringify(messages(j))));assert.match(a.wireSha,/^[0-9a-f]{64}$/);attempts++;
+    assert.equal(a.kind,'attempt');assert.equal(a.id,j.c.id);assert.equal(a.ruleSha,j.ruleSha);assert.equal(a.policySha,j.policySha);assert.equal(a.promptSha,sha(JSON.stringify(messages(j))));assert.equal(a.maxOutputTokens,cap);assert.equal(a.timeoutMs,timeoutMs);assert.equal(a.reasoningEffort,'medium');
+    const expectedWire=JSON.stringify({model,messages:messages(j),max_tokens:cap,response_format:{type:'json_object'},stream:false,reasoning_effort:'medium'});
+    assert.equal(a.wireSha,sha(expectedWire));attempts++;
     const r=rows[cursor++];assert.equal(r.kind,'case');assert.equal(r.id,j.c.id);
     if(r.status==='TRANSPORT_FAILED'){stopped=true;assert.equal(r.rawFinal,null);}
     else {
-      assert.equal(r.transport.status,200);assert.equal(r.transport.model,rows[0].model);assert.equal(r.transport.finish,'stop');
+      assert.equal(r.transport.status,200);assert.equal(r.transport.model,model);assert.equal(r.transport.finish,'stop');
       const actual=evalFinal(r.rawFinal,j);assert.equal(r.status,actual.status);
       if(r.status==='VALIDATED')assert.deepEqual(r.evaluation,actual.evaluation);else assert.equal(r.error,actual.error);
     }
   }
   assert.equal(cursor,rows.length-1);assert.deepEqual(rows.at(-1),{kind:'end',attempts,stopped});
+  const cases=rows.filter(r=>r.kind==='case');
+  assert.ok(cases.every(r=>r.status==='VALIDATED'&&r.transport.cost===null));
+  assert.equal(cases.reduce((sum,r)=>sum+r.usage.totalTokens,0),1893);
+  assert.equal(cases.reduce((sum,r)=>sum+r.latencyMs,0),20691);
   console.log('REUSE_READBACK_PASS',attempts);process.exit(0);
 }
 const output=process.argv[2];assert.ok(output);
-const baseURL='https://nvidi-nim.int.exe.xyz/v1',model='nvidia/nemotron-3-ultra-550b-a55b',cap=3072,timeoutMs=60000;
 const catalog=await fetch(baseURL+'/models',{signal:AbortSignal.timeout(10000)});assert.ok(catalog.ok);
 const item=(await catalog.json()).data.find(x=>x.id===model);assert.equal(item?.id,model);
 if(item.pricing)assert.ok(Object.keys(item.pricing).length&&Object.values(item.pricing).every(v=>v===0||v==='0'));

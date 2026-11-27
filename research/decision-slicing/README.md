@@ -275,3 +275,16 @@ descriptive measurement only, not a controlled speedup benchmark: snapshots
 differ. Rule extraction calls avoided by construction, no semantic assurance
 from matching hashes alone. Exact launcher/log readback, seven negative
 receipt mutations rejected. No production activation.
+
+### Exact historical receipt verification
+
+Codex identified three gaps in the first reuse verifier: consistent replacement
+of model identity, unbound launch controls/wire hash, and modified response
+measurements. The retained observation is now pinned byte-for-byte by its
+SHA-256. The verifier also checks the explicit expected model, cap, timeout,
+reasoning mode and reconstructs the exact request body for each recorded wire
+hash. It recomputes token/latency sums and checks absent reported cost, then
+replays semantics. Fifteen deliberately modified receipts are rejected by the
+pinned-byte boundary. This establishes consistency and custody of the retained
+artifact, not independent upstream authentication of usage or billing. No
+historical observation bytes changed, no repeated model calls.
