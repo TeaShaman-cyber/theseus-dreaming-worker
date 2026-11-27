@@ -394,3 +394,32 @@ test('batch replay matches sequential replay on every directed graph of three ve
     }
   }
 });
+
+test('forward inserts and fresh proposals retain the rank certificate for later bounded searches',()=>{
+  const records=Array.from({length:128},(_,i)=>createProposalRecord({proposal:{...hypothesisA,claim:'retain-rank-'+i},origin:origin('route-a',routeA)}));
+  const edge=(i,j)=>createSupersessionEvent({supersededRecordId:records[i].recordId,replacementRecordId:records[j].recordId,reason:'retain-rank'});
+  const history=[...records.slice(0,127),...Array.from({length:125},(_,i)=>edge(i+1,i+2))];
+  const replay=createLedgerReplay(history);
+  const get=Map.prototype.get;let reads=0;
+  try{
+    Map.prototype.get=function(key){if(typeof key==='string'&&key.startsWith('sha256:'))reads++;return get.call(this,key);};
+    replay.append(records[127]);
+    replay.append(edge(0,1));
+    replay.append(edge(126,127));
+    assert.throws(()=>replay.append(edge(127,0)),/LEDGER_SUPERSESSION_CYCLE/);
+    // A forward edge into a long existing chain must not traverse the chain.
+    // The cycle query above is intentionally excluded from the operation bound.
+  }finally{Map.prototype.get=get;}
+  assert.deepEqual(replay.snapshot(),[...history,records[127],edge(0,1),edge(126,127)]);
+  // A fresh forward insertion into a long chain independently tests fast-path
+  // retention after the preceding successful proposal and forward appends.
+  const extra=createProposalRecord({proposal:{...hypothesisA,claim:'retain-rank-extra'},origin:origin('route-a',routeA)});
+  const fresh=createSupersessionEvent({supersededRecordId:records[0].recordId,replacementRecordId:records[2].recordId,reason:'transitively redundant'});
+  reads=0;
+  try{
+    Map.prototype.get=function(key){if(typeof key==='string'&&key.startsWith('sha256:'))reads++;return get.call(this,key);};
+    replay.append(extra);replay.append(fresh);
+  }finally{Map.prototype.get=get;}
+  assert.ok(reads<=12,'forward append lost rank certificate: '+reads+' map reads');
+  assert.deepEqual(replay.snapshot(),[...history,records[127],edge(0,1),edge(126,127),extra,fresh]);
+});

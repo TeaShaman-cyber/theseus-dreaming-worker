@@ -159,6 +159,7 @@ function pathExists(
     const current = pending.pop();
     if (!current || visited.has(current)) continue;
     if (current === target) return true;
+    // Stryker disable next-line EqualityOperator: live ranks are injective and current === target already returned; > and >= coincide here.
     if (ranks && ranks.get(current)! > ranks.get(target)!) continue;
     // Stryker disable next-line CallExpression: visited bookkeeping preserves linear traversal on valid acyclic ledgers; removing it is functionally equivalent but violates the bounded-DAG performance invariant covered by the regression test.
     visited.add(current);
@@ -194,6 +195,7 @@ function createLedgerIndex() {
   function validate(event: ProposalLedgerEvent, ranks?: ReadonlyMap<string, number>): boolean {
     validateBasics(event);
     if (event.eventType === 'PROPOSAL') return true;
+    // Stryker disable next-line EqualityOperator: validateBasics rejects self-supersession and live ranks are injective; < and <= coincide here.
     if (ranks && ranks.get(event.supersededRecordId)! < ranks.get(event.replacementRecordId)!) return true;
     if (pathExists(edges, event.replacementRecordId, event.supersededRecordId, ranks)) {
       throw new Error('LEDGER_SUPERSESSION_CYCLE');
@@ -212,7 +214,9 @@ function createLedgerIndex() {
     // Array iteration sees appended elements; no quadratic shift().
     for (const id of ready) {
       ranks.set(id, ranks.size);
-      for (const target of edges.get(id) ?? []) {
+      const targets = edges.get(id);
+      if (!targets) continue;
+      for (const target of targets) {
         const remaining = indegrees.get(target)! - 1;
         indegrees.set(target, remaining);
         if (remaining === 0) ready.push(target);
