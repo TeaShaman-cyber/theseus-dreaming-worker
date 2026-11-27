@@ -77,6 +77,12 @@
       ]
     },
     {
+      "requirement": "Same-plan finite provider cooldown",
+      "rules": [
+        "Within an exact staged synthetic source plan, the pooled selector MUST incorporate known finite provider-scoped HTTP 429 Retry-After deadlines from journal events of source-bound work. It MUST use the maximum deadline for each applicable provider and MUST NOT infer account-wide quotas or propagate indefinite or unknown outcomes as finite waits. Before a new START is inserted, the same ledger lock MUST protect a fresh check of the applicable deadline; a newly active restriction MUST defer without recording START or dispatching inference. An already admitted START is not revoked. Provider identities MUST be stable caller-provided keys within this plan. Other plans MUST NOT supply these restrictions. Expired waits MUST NOT prevent otherwise eligible selection."
+      ]
+    },
+    {
       "requirement": "Source acknowledgement retains original plan",
       "rules": [
         "A durable source acknowledgement MUST require the exact current staged plan and verify each completion against its immutable original reservation plan under the existing transaction lock. An unbound completion MUST NOT advance source progress. The durable receipt MUST bind both the current plan and each original plan pointer, and verify the original packet, request and evidence identities against the completion. A later witness MUST NOT relabel the original work origin."
@@ -437,6 +443,34 @@
       ]
     },
     {
+      "requirement": "Same-plan finite provider cooldown",
+      "name": "Known wait across selected work",
+      "given": [
+        "a source-bound work recorded a finite provider-scoped 429 deadline"
+      ],
+      "when": [
+        "another work in the same plan selects before the deadline"
+      ],
+      "then": [
+        "it avoids that provider or defers with no call",
+        "AND after expiry an otherwise eligible route can be selected"
+      ]
+    },
+    {
+      "requirement": "Same-plan finite provider cooldown",
+      "name": "Restriction published between selection and start",
+      "given": [
+        "a selected route was eligible before a concurrent work committed a finite wait"
+      ],
+      "when": [
+        "its START is checked under the ledger lock"
+      ],
+      "then": [
+        "it defers with no new START and no inference",
+        "AND unrelated plans and indefinite per-work refusals do not supply a shared deadline"
+      ]
+    },
+    {
       "requirement": "Source acknowledgement retains original plan",
       "name": "Distinct original and current plans",
       "given": [
@@ -452,8 +486,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:9c32b2eaa781f0c5a65b7b59a80ffdc49136b1d54e061dc7b55e95010a474308",
-    "verify.md": "sha256:fefca5458940f38896a5a50d07d2c4a9bed63b0c035c02bbcf0fc106b5b85125"
+    "spec.md": "sha256:e531250d610570928ec5b1fa55c0689472b75aafac5c943c6140fbdcf78c468a",
+    "verify.md": "sha256:ba9e54aeca88a6b747dc7dbf5601b1e5f4a1747f6866014fa959acca205ffd76"
   },
   "generatedBy": "core"
 }

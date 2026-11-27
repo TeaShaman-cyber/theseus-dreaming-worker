@@ -499,3 +499,44 @@ test('source plan rejection or origin insert failure prevents admission or dispa
     await assert.rejects(op(s.store),err);s.done();
   }
 });
+
+const {PoolStartDeferred}=await import('../src/dreaming/pool-attempt-journal.ts');
+const sharedWait=(key,notBeforeMs)=>({scope:'provider',key,notBeforeMs});
+const sharedRead=(providers,waits)=>poolQ('read-shared-waits',[providers],waits);
+const cooldownBinding=clock=>({...sourceBinding,cooldowns:{
+  clock,
+  async read(client,providers){return (await client.query('read-shared-waits',[providers])).rows;},
+}});
+test('pool journal shared waits use explicit candidate providers and checked client lifecycle',async()=>{
+  const waits=[sharedWait(routeA.provider,5100)];
+  const s=poolScript([group([sharedRead([routeA.provider],waits)])],cooldownBinding(()=>100));
+  assert.deepEqual(await s.store.readCooldowns([routeA.provider]),waits);s.done();
+  const generic=poolScript([]);
+  assert.equal(generic.store.readCooldowns,undefined);generic.done();
+});
+test('pool journal checks active shared wait under lock, before any START write',async()=>{
+  const read=sharedRead([routeA.provider],[sharedWait(routeA.provider,4000),sharedWait(routeA.provider,5100),sharedWait('unrelated',9000)]);
+  const steps=[poolRead(poolRows([poolFirst])),sourceVerify('append','JOURNAL'),read];
+  const s=poolScript([group(poolRollback(steps))],cooldownBinding(()=>100));
+  await assert.rejects(s.store.append(poolInput,poolFirst.entryFingerprint,poolStart),e=>e instanceof PoolStartDeferred&&e.wakeAtMs===5100);
+  s.done();
+  const epoch=poolScript([group(poolRollback(steps))],cooldownBinding(()=>0));
+  await assert.rejects(epoch.store.append(poolInput,poolFirst.entryFingerprint,poolStart),e=>e instanceof PoolStartDeferred&&e.wakeAtMs===5100);
+  epoch.done();
+  for(const bad of [-1,0.5,Number.NaN]){
+    const invalid=poolScript([group(poolRollback(steps))],cooldownBinding(()=>bad));
+    await assert.rejects(invalid.store.append(poolInput,poolFirst.entryFingerprint,poolStart),/POOL_EXECUTION_CLOCK/);invalid.done();
+  }
+});
+test('pool journal allows START exactly at expiry and outcome append does not recheck waits',async()=>{
+  const read=sharedRead([routeA.provider],[sharedWait(routeA.provider,5100),sharedWait('unrelated',9000)]);
+  const s=poolScript([group(poolTx([poolRead(poolRows([poolFirst])),sourceVerify('append','JOURNAL'),read,poolAppend])),
+    group([poolRead(poolRows([poolFirst,poolNext])),sourceVerify('read','JOURNAL')])],cooldownBinding(()=>5100));
+  assert.deepEqual(await s.store.append(poolInput,poolFirst.entryFingerprint,poolStart),poolState([poolFirst,poolNext]));s.done();
+  const unknown={kind:'UNKNOWN',attemptId:poolStart.attemptId,code:'TIMEOUT'};
+  const end=makePoolJournalEntry(poolNext,unknown);
+  const out=poolScript([group(poolTx([poolRead(poolRows([poolFirst,poolNext])),sourceVerify('append','JOURNAL'),
+    poolQ(poolAppendSQL,[poolContext.workFingerprint,poolOwner,2,JSON.stringify(end)])])),
+    group([poolRead(poolRows([poolFirst,poolNext,end])),sourceVerify('read','JOURNAL')])],cooldownBinding(()=>{throw Error('not a START');}));
+  assert.deepEqual(await out.store.append(poolInput,poolNext.entryFingerprint,unknown),poolState([poolFirst,poolNext,end]));out.done();
+});

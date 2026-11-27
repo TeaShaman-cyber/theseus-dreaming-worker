@@ -252,7 +252,38 @@ export function createPostgresSourceBatchStore(options: {
       if (!selected) throw Error('SOURCE_EXECUTION_SELECTION');
       const expected = plan.work.find(work => work.workFingerprint === selected.workFingerprint);
       if (!expected) throw Error('SOURCE_EXECUTION_WORK');
+      const clock = policy.clock;
       const journal = createPostgresPoolJournalStore(options, {
+        cooldowns: {
+          clock,
+          async read(client, providers) {
+            if (!providers.length) return [];
+            // Derived only from the trusted journal writer, whose replay validates
+            // event identity and provider scope. Not an account-wide rate limit.
+            const { rows } = await client.query<{ provider: string; deadline: string }>(
+              `SELECT j.entry #>> '{event,cooldown,key}' AS provider,
+                MAX((j.entry #>> '{event,cooldown,notBeforeMs}')::bigint)::text AS deadline
+              FROM dw_ledger.source_work_origins o
+              JOIN dw_ledger.work_pool_journal j ON j.work_fingerprint=o.work_fingerprint
+              WHERE o.chain_id=$1 AND o.previous_checkpoint=$2 AND o.plan_fingerprint=$3
+                AND j.entry #>> '{event,kind}'='KNOWN_FAILURE'
+                AND j.entry #>> '{event,code}'='RATE_LIMITED'
+                AND j.entry #>> '{event,httpStatus}'='429'
+                AND jsonb_typeof(j.entry #> '{event,retryAfterMs}')='number'
+                AND j.entry #>> '{event,cooldown,scope}'='provider'
+                AND j.entry #>> '{event,cooldown,key}'=ANY($4::text[])
+                AND (j.entry #>> '{event,cooldown,notBeforeMs}')::bigint < 9007199254740991
+              GROUP BY 1`, [chain,plan.previousCheckpoint,plan.planFingerprint,providers],
+            );
+            return rows.map(row => {
+              const notBeforeMs=Number(row.deadline);
+              if (!providers.includes(row.provider) || !Number.isSafeInteger(notBeforeMs) || notBeforeMs<0) {
+                throw Error('SOURCE_POOL_COOLDOWN_READBACK');
+              }
+              return {scope:'provider' as const,key:row.provider,notBeforeMs};
+            });
+          },
+        },
         async verify(client, ctx, current, operation) {
           if (ctx.workFingerprint !== expected.workFingerprint
             || ctx.requestFingerprint !== expected.requestFingerprint

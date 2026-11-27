@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { runPooledDurablePilot2 } from '../src/dreaming/pooled-durable-pilot2.ts';
 import { ProviderAdapterError } from '../src/dreaming/openai-provider-adapter.ts';
-import { preparePoolJournal, poolJournalAdmission, makePoolJournalEntry, replayPoolJournal } from '../src/dreaming/pool-attempt-journal.ts';
+import { PoolStartDeferred, preparePoolJournal, poolJournalAdmission, makePoolJournalEntry, replayPoolJournal } from '../src/dreaming/pool-attempt-journal.ts';
 
 const request = {
   acceptedSourceFingerprint:'sha256:'+'a'.repeat(64),analysisVersion:'pooled-executor-test',
@@ -127,4 +127,37 @@ test('full external cooldown set plus journal failure preserves all relevant res
   const resumed=await store.run({...p,clock:()=>5100,rotation:first.nextRotation});
   assert.equal(resumed.decision,'COMMITTED');
   assert.deepEqual(calls,['a','b','d']);
+});
+
+test('shared cooldown prevents admission, expires, and locked deferral consumes no attempt',async()=>{
+  const calls=[],store=fake(),p=policy([route('a',calls),route('b',calls)]);
+  let clock=100;
+  store.journal.readCooldowns=async providers=>{
+    assert.deepEqual(providers,['provider-a','provider-b']);
+    return [{scope:'provider',key:'provider-a',notBeforeMs:5100}];
+  };
+  const waiting=await store.run({...p,clock:()=>clock});
+  assert.equal(waiting.decision,'DEFERRED');assert.equal(waiting.wakeAtMs,5100);
+  assert.equal(waiting.attemptedPasses,0);
+  assert.equal((await store.journal.read(request)).status,'ABSENT');
+  clock=5100;
+  const append=store.journal.append;
+  store.journal.append=async (raw,tip,event)=>{
+    if(event.kind==='START')throw new PoolStartDeferred(6100);
+    return append(raw,tip,event);
+  };
+  const race=await store.run({...p,clock:()=>clock});
+  assert.equal(race.decision,'DEFERRED');assert.equal(race.wakeAtMs,6100);
+  assert.equal(race.attemptedPasses,0);assert.equal(store.state.attempts.length,0);
+  assert.deepEqual(calls,[]);
+  store.journal.append=append;clock=6100;
+  assert.equal((await store.run({...p,clock:()=>clock})).decision,'COMMITTED');
+  assert.deepEqual(calls,['a','b']);
+});
+test('shared cooldown is merged with local and caller restrictions; alternative is selected',async()=>{
+  const calls=[],store=fake(),p=policy([route('a',calls),route('b',calls),route('c',calls),route('d',calls)]);
+  store.journal.readCooldowns=async()=>[{scope:'provider',key:'provider-a',notBeforeMs:5100}];
+  const next=await store.run({...p,cooldowns:[{scope:'provider',key:'provider-b',notBeforeMs:6100}]});
+  assert.equal(next.decision,'COMMITTED');
+  assert.deepEqual(calls,['c','d']);
 });
