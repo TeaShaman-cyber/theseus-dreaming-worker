@@ -12,6 +12,11 @@ test('draft feedback selects all shards sharing a changed test, without claiming
   assert.deepEqual(focused(['test/durable-pilot2.test.mjs']),{mode:'feedback',shards:all.filter(s=>MUTATION_SHARDS[s].tests.includes('test/durable-pilot2.test.mjs'))});
   assert.deepEqual(focused(['test/serializer-benchmark.test.mjs','test/pilot2-runner.test.mjs']),{mode:'feedback',shards:all.filter(s=>['serializer','pilot2'].includes(s))});
 });
+test('source-batch test feedback always selects both independent mutation ranges',()=>{
+  assert.deepEqual(focused(['test/source-batch-run.test.mjs']),{
+    mode:'feedback',shards:['source-batch-fixed','source-batch-pooled']
+  });
+});
 test('unknown, empty, shared fixture and runtime changes conservatively select every shard',()=>{
   for(const paths of [null,[],['test/fixtures/source-reader.json'],['src/dreaming/pilot2-runner.ts'],['test/pilot2-runner.test.mjs','package.json'],['test/unknown.test.mjs']]) {
     assert.deepEqual(focused(paths),{mode:'feedback',shards:all});

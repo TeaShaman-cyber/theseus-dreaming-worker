@@ -1,3 +1,22 @@
+import { readFileSync } from 'node:fs';
+
+const sourceBatchPath = 'src/dreaming/source-batch-run.ts';
+
+// Resolve the top-level fixed/pooled boundary against this checkout, not
+// stale line constants. Canonical QA compares the actual mutant inventory.
+export function sourceBatchMutationRanges(content) {
+  const lines = content.split('\n');
+  const boundaries = lines.flatMap((line, index) => line.startsWith('type PooledStore =') ? [index] : []);
+  if (boundaries.length !== 1 || boundaries[0] < 2 || boundaries[0] >= lines.length - 1) {
+    throw new Error('SOURCE_BATCH_MUTATION_BOUNDARY_INVALID');
+  }
+  const split = boundaries[0];
+  return [sourceBatchPath + ':1-' + split, sourceBatchPath + ':' + (split + 1) + '-' + lines.length];
+}
+const [sourceBatchFixed, sourceBatchPooled] = sourceBatchMutationRanges(
+  readFileSync(new URL('../' + sourceBatchPath, import.meta.url), 'utf8'),
+);
+
 export const MUTATION_SHARDS = Object.freeze({
   'pilot0-1': Object.freeze({
     mutate: Object.freeze([
@@ -69,8 +88,12 @@ export const MUTATION_SHARDS = Object.freeze({
       'test/durable-pilot2.test.mjs',
     ]),
   }),
-  'source-batch': Object.freeze({
-    mutate: Object.freeze(['src/dreaming/source-batch-run.ts']),
+  'source-batch-fixed': Object.freeze({
+    mutate: Object.freeze([sourceBatchFixed]),
+    tests: Object.freeze(['test/source-batch-run.test.mjs']),
+  }),
+  'source-batch-pooled': Object.freeze({
+    mutate: Object.freeze([sourceBatchPooled]),
     tests: Object.freeze(['test/source-batch-run.test.mjs']),
   }),
   'source-cycle': Object.freeze({
