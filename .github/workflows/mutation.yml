@@ -64,7 +64,7 @@ jobs:
     needs: plan
     name: ${{ needs.plan.outputs.mode == 'full' && 'mutation' || 'mutation feedback' }} (${{ matrix.shard }})
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ matrix.shard == 'ledger' && 60 || 30 }}
+    timeout-minutes: ${{ startsWith(matrix.shard, 'ledger-') && 60 || 30 }}
     strategy:
       fail-fast: false
       matrix:

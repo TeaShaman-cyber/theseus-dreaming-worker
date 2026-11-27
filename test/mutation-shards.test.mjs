@@ -11,7 +11,8 @@ test('heavy mutation is split into explicit hosted shards', () => {
     'checkpoint',
     'critique',
     'critique-live',
-    'ledger',
+    'ledger-core',
+    'ledger-postgres',
     'observability',
     'pilot0-1',
     'pilot2',
@@ -29,10 +30,15 @@ test('heavy mutation is split into explicit hosted shards', () => {
   assert.deepEqual(MUTATION_SHARDS['critique-live'].mutate, [
     'src/dreaming/pilot2-critique-live.ts',
   ]);
-  assert.deepEqual(MUTATION_SHARDS.ledger.mutate, [
-    'src/dreaming/proposal-ledger.ts',
-    'src/dreaming/proposal-ledger-postgres.ts',
-  ]);
+  assert.deepEqual(MUTATION_SHARDS['ledger-core'].mutate, ['src/dreaming/proposal-ledger.ts']);
+  assert.deepEqual(MUTATION_SHARDS['ledger-postgres'].mutate, ['src/dreaming/proposal-ledger-postgres.ts']);
+  for (const name of ['ledger-core', 'ledger-postgres']) {
+    assert.deepEqual(MUTATION_SHARDS[name].tests, [
+      'test/proposal-ledger.test.mjs',
+      'test/proposal-ledger-postgres.test.mjs',
+      'test/durable-pilot2.test.mjs',
+    ]);
+  }
   assert.ok(MUTATION_SHARDS['pilot0-1'].mutate.includes('src/dreaming/pilot1-runner.ts'));
   assert.ok(MUTATION_SHARDS['pilot0-1'].mutate.includes('src/dreaming/structured-output-recovery.ts'));
   assert.ok(MUTATION_SHARDS.pilot2.mutate.includes('src/dreaming/pilot2-live-composition.ts'));
