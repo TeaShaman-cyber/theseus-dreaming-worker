@@ -12,6 +12,12 @@ test('draft feedback selects all shards sharing a changed test, without claiming
   assert.deepEqual(focused(['test/durable-pilot2.test.mjs']),{mode:'feedback',shards:all.filter(s=>MUTATION_SHARDS[s].tests.includes('test/durable-pilot2.test.mjs'))});
   assert.deepEqual(focused(['test/serializer-benchmark.test.mjs','test/pilot2-runner.test.mjs']),{mode:'feedback',shards:all.filter(s=>['serializer','pilot2'].includes(s))});
 });
+test('ledger feedback retains both full-file scopes for every shared ledger test',()=>{
+  for (const path of ['test/proposal-ledger.test.mjs','test/proposal-ledger-postgres.test.mjs','test/durable-pilot2.test.mjs']) {
+    const expected = path === 'test/durable-pilot2.test.mjs' ? ['checkpoint','ledger-core','ledger-postgres'] : ['ledger-core','ledger-postgres'];
+    assert.deepEqual(focused([path]),{mode:'feedback',shards:expected});
+  }
+});
 test('source-batch test feedback always selects both independent mutation ranges',()=>{
   assert.deepEqual(focused(['test/source-batch-run.test.mjs']),{
     mode:'feedback',shards:['source-batch-fixed','source-batch-pooled']
@@ -28,7 +34,7 @@ test('ready, non-draft, main and default manual dispatch always run all shards',
   }
 });
 test('manual focused dispatch is explicit and invalid names fail closed',()=>{
-  assert.deepEqual(planMutation('workflow_dispatch',{inputs:{shard:'ledger'}}),{mode:'feedback',shards:['ledger']});
+  assert.deepEqual(planMutation('workflow_dispatch',{inputs:{shard:'ledger-core'}}),{mode:'feedback',shards:['ledger-core']});
   for (const shard of ['unknown','constructor','__proto__','toString','ledger\nother']) assert.throws(()=>planMutation('workflow_dispatch',{inputs:{shard}}),/MUTATION_SHARD_UNKNOWN/);
 });
 test('only modified paths are eligible for automatic narrowing; additions, deletes, renames and malformed records fall back',()=>{
