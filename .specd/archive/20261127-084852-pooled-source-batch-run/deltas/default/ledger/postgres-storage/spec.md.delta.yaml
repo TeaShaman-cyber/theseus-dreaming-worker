@@ -1,0 +1,12 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Same-plan finite provider cooldown$'
+  content: |
+    ### Requirement: Bounded pooled source batch
+
+    An explicit synthetic pooled batch MUST validate its caller policy and exact staged plan before inference. It MUST visit each selected work at most once per invocation, preserve rotation and enforce a batch-wide actual inference callback budget, including zero-call replay and completion recovery. Known budget exhaustion, insufficient eligibility or deferral MAY leave work pending while other selected work is considered once; unknown or conflicting custody MUST stop. The result MUST retain work identity, observed attempts and applicable wake deadlines. Source acknowledgement MUST require all selected completions verified through existing receipt custody; incomplete work MUST NOT advance the source. No automatic retries, waiting or real-source permission follows.

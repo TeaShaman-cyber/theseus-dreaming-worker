@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { runSourceBatch } from '../src/dreaming/source-batch-run.ts';
+import { runSourceBatch, runPooledSourceBatch } from '../src/dreaming/source-batch-run.ts';
 import { prepareSourceBatchExecution, prepareSourceBatchReceipt, sourceReceiptFingerprint } from '../src/dreaming/source-batch-receipt.ts';
 import { runDurablePilot2 } from '../src/dreaming/durable-pilot2.ts';
 import { sha256Fingerprint } from '../src/dreaming/proposal-schema.ts';
@@ -145,4 +145,77 @@ test('zero pass budget distinguishes unknown acknowledgement from incomplete wor
   assert.equal(counts().calls, 0);
   assert.equal(counts().reservations, 0);
   assert.equal((await store.readTip()).receiptFingerprint, x.previousCheckpoint);
+});
+
+const pooledPolicy=(routes,extra={})=>({
+  routes:routes.map(r=>({...r,admission:'FREE_RESEARCH',qualifiedTasks:['analysis'],catalog:'PRESENT',catalogValidUntilMs:10000})),
+  taskClass:'analysis',maxAttempts:4,maxInvocations:4,rotation:0,cooldowns:[],clock:()=>100,...extra,
+});
+function pooledStub(x,decisions){
+  const plan=prepareSourceBatchExecution(x).plan;
+  const visits=[],calls=[];
+  const receiptPayload={schema:'theseus.dreaming-worker.source-batch-receipt.v2',previousCheckpoint:plan.previousCheckpoint,currentPlanFingerprint:plan.planFingerprint};
+  const receipt={...receiptPayload,receiptFingerprint:sourceReceiptFingerprint(receiptPayload)};
+  let tip={receiptFingerprint:x.previousCheckpoint},acks=0;
+  const store={
+    async readTip(){return tip;},
+    async stage(){return {status:'STAGED',plan};},
+    async runSelectedPooled(raw,id,p){
+      const n=visits.length;
+      const entry=plan.work.find(e=>e.witness.session.session_id===id);
+      visits.push({id,budget:p.maxInvocations,rotation:p.rotation});
+      const step=decisions[n];
+      for(let i=0;i<(step.calls??0);i++)await p.routes[0].infer({packet:{evidence:[]}});
+      const complete=['COMMITTED','ALREADY_PROCESSED'].includes(step.decision);
+      return {workFingerprint:entry.workFingerprint,decision:step.decision,attemptedPasses:step.calls??0,
+        completion:complete?{checkpoint:{workFingerprint:entry.workFingerprint}}:null,nextRotation:n+1,wakeAtMs:null,...step};
+    },
+    async acknowledge(){acks++;if(tip===receipt)return {status:'ALREADY_ACKNOWLEDGED',receipt};tip=receipt;return {status:'ACKNOWLEDGED',receipt};},
+  };
+  const routes=['a','b'].map(id=>({id,provider:id,model:id,modelFamily:id,async infer(){calls.push(id);}}));
+  return {store,policy:pooledPolicy(routes),visits,calls,acks:()=>acks};
+}
+test('pooled batch passes remaining actual budget and rotation, recovers zero-call work and exact replay',async()=>{
+  const x=input(),s=pooledStub(x,[{decision:'COMMITTED',calls:3},{decision:'COMMITTED',calls:1}]);
+  const r=await runPooledSourceBatch(x,s.policy,s.store);
+  assert.equal(r.status,'ACKNOWLEDGED');assert.equal(r.attemptedPasses,4);assert.equal(r.nextRotation,2);
+  assert.deepEqual(s.visits.map(v=>[v.budget,v.rotation]),[[4,0],[1,1]]);
+  assert.equal(s.acks(),1);
+  const replay=await runPooledSourceBatch(x,{...s.policy,maxInvocations:0},s.store);
+  assert.equal(replay.status,'ALREADY_ACKNOWLEDGED');assert.equal(replay.attemptedPasses,0);
+  assert.deepEqual(replay.receipt,r.receipt);assert.equal(s.visits.length,2);
+  const zero=pooledStub(x,[{decision:'COMMITTED'},{decision:'ALREADY_PROCESSED'}]);
+  const recovered=await runPooledSourceBatch(x,{...zero.policy,maxInvocations:0},zero.store);
+  assert.equal(recovered.status,'ACKNOWLEDGED');assert.equal(recovered.attemptedPasses,0);
+  assert.deepEqual(zero.visits.map(v=>v.budget),[0,0]);
+});
+test('pooled batch considers each known pending work once but does not acknowledge partial plan',async()=>{
+  for(const step of [{decision:'DEFERRED',wakeAtMs:5100},{decision:'INSUFFICIENT_ELIGIBILITY'},{decision:'BUDGET_EXHAUSTED',calls:2}]){
+    const x=input(),s=pooledStub(x,[step,{decision:'COMMITTED',calls:2}]);
+    const r=await runPooledSourceBatch(x,s.policy,s.store);
+    assert.equal(r.status,step.decision==='INSUFFICIENT_ELIGIBILITY'?'WORK_UNRESOLVED':step.decision);
+    assert.equal(r.wakeAtMs,step.wakeAtMs??null);assert.equal(r.attemptedPasses,(step.calls??0)+2);
+    assert.equal(s.visits.length,2);assert.equal(s.acks(),0);assert.equal(r.receipt,null);
+  }
+});
+test('pooled batch unknown, conflicting and inconsistent results stop later dispatch',async()=>{
+  const x=input();
+  for(const step of [{decision:'BLOCKED_UNKNOWN',calls:1},{decision:'STORAGE_UNKNOWN'},{decision:'POLICY_CONFLICT'},
+    {decision:'LEGACY_UNRESOLVED'},{decision:'DEFERRED',wakeAtMs:null},{decision:'COMMITTED',workFingerprint:'wrong'},
+    {decision:'ALREADY_PROCESSED',calls:1},{decision:'COMMITTED',attemptedPasses:2},{decision:'COMMITTED',nextRotation:-1}]){
+    const s=pooledStub(x,[step]);
+    const r=await runPooledSourceBatch(x,s.policy,s.store);
+    assert.ok(['WORK_UNRESOLVED','STORAGE_UNKNOWN'].includes(r.status),step.decision);
+    assert.equal(s.visits.length,1);assert.equal(s.acks(),0);
+  }
+});
+test('pooled batch invalid policy/stage and overspend fail closed',async()=>{
+  const x=input(),s=pooledStub(x,[{decision:'COMMITTED',calls:3}]);
+  await assert.rejects(()=>runPooledSourceBatch(x,{...s.policy,maxInvocations:-1},s.store));
+  await assert.rejects(()=>runPooledSourceBatch(x,{...s.policy,routes:[s.policy.routes[0],s.policy.routes[0]]},s.store));
+  const rejected=await runPooledSourceBatch(x,s.policy,{...s.store,stage:async()=>({status:'STORAGE_UNKNOWN',plan:prepareSourceBatchExecution(x).plan})});
+  assert.equal(rejected.status,'STORAGE_UNKNOWN');assert.equal(s.visits.length,0);
+  const capped=await runPooledSourceBatch(x,{...s.policy,maxInvocations:2},s.store);
+  assert.equal(capped.status,'STORAGE_UNKNOWN');assert.equal(capped.attemptedPasses,2);
+  assert.equal(s.calls.length,2);assert.equal(s.acks(),0);
 });

@@ -912,6 +912,31 @@ try {
     assert.equal(independent.decision,'COMMITTED');
     assert.deepEqual(pooledCalls.slice(-3),['b','b','a']);
     console.log('SOURCE_POOLED_COOLDOWN_PG_PASS finite_wait=deferred alternative=selected different_plan=isolated start_race=no_dispatch expired=allowed indefinite=local_only');
+    const {runPooledSourceBatch}=await import('../../src/dreaming/source-batch-run.ts');
+    const batchPoolInput={...pooledInput,analysisVersion:'source-pooled-batch-v1'};
+    const batchPoolRoot=await sourceStore.initialize(batchPoolInput);
+    assert.equal(batchPoolRoot.status,'ACKNOWLEDGED');
+    batchPoolInput.previousCheckpoint=batchPoolRoot.receipt.receiptFingerprint;
+    const beforeBatch=pooledCalls.length;
+    const partialBatch=await runPooledSourceBatch(batchPoolInput,policy,sourceStore);
+    assert.equal(partialBatch.status,'BUDGET_EXHAUSTED');
+    assert.equal(partialBatch.attemptedPasses,2);
+    assert.deepEqual(partialBatch.work.map(w=>w.decision),['BUDGET_EXHAUSTED','BUDGET_EXHAUSTED']);
+    assert.deepEqual(pooledCalls.slice(beforeBatch),['a','b']);
+    assert.deepEqual(await sourceStore.readTip(batchPoolInput),batchPoolRoot.receipt);
+    const finishedBatch=await runPooledSourceBatch(batchPoolInput,{...policy,maxInvocations:3,rotation:partialBatch.nextRotation},restartPool);
+    assert.equal(finishedBatch.status,'ACKNOWLEDGED');
+    assert.equal(finishedBatch.attemptedPasses,3);
+    assert.deepEqual(finishedBatch.work.map(w=>w.decision),['COMMITTED','COMMITTED']);
+    assert.deepEqual(pooledCalls.slice(beforeBatch),['a','b','c','a','c']);
+    assert.deepEqual(await restartPool.readTip(batchPoolInput),finishedBatch.receipt);
+    const replayBatch=await runPooledSourceBatch(batchPoolInput,{...policy,maxInvocations:0},restartPool);
+    assert.equal(replayBatch.status,'ALREADY_ACKNOWLEDGED');
+    assert.equal(replayBatch.attemptedPasses,0);
+    assert.deepEqual(replayBatch.receipt,finishedBatch.receipt);
+    assert.equal(pooledCalls.length,beforeBatch+5);
+    console.log('SOURCE_POOLED_BATCH_PG_PASS first_budget=2 restart_budget=3 prior_pass_repeated=0 shared_wait=honored exact_replay=0 source_ack=verified');
+
 
   }
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
