@@ -35,7 +35,7 @@ jobs:
   mutation:
     name: mutation (${{ matrix.shard }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: ${{ matrix.shard == 'ledger' && 60 || 30 }}
     strategy:
       fail-fast: false
       matrix:

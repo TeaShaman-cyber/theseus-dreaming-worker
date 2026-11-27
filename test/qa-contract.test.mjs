@@ -169,3 +169,10 @@ test('hosted PostgreSQL remains a path-scoped database QA lane, not a global PR 
   assert.doesNotMatch(workflow, /- ['"]docs\/\*\*['"]/);
   assert.doesNotMatch(workflow, /^\s*push:/m);
 });
+
+test('ledger mutation receives a bounded extended runner deadline without weakening other shards', () => {
+  const workflow = readFileSync('.github/workflows/mutation.yml', 'utf8');
+  assert.ok(workflow.includes("timeout-minutes: ${{ matrix.shard == 'ledger' && 60 || 30 }}"));
+  const config = readFileSync('stryker.config.mjs', 'utf8');
+  assert.match(config, /break:\s*100/);
+});
