@@ -178,6 +178,8 @@ test('source orchestration mutation checks run on separate hosted matrix jobs', 
   const workflow = readFileSync('.github/workflows/mutation.yml', 'utf8');
   assert.match(workflow, /fromJSON\(needs\.plan\.outputs\.shards\)/);
   const names = planMutation('push', {}).shards;
-  assert.equal(names.filter(name => name === 'source-batch').length, 1);
+  assert.equal(names.filter(name => name === 'source-batch-fixed').length, 1);
+  assert.equal(names.filter(name => name === 'source-batch-pooled').length, 1);
+  assert.ok(!names.includes('source-batch'));
   assert.equal(names.filter(name => name === 'source-cycle').length, 1);
 });
