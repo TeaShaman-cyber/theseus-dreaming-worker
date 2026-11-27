@@ -1,0 +1,2 @@
+- op: no-op
+  description: Preserve all existing source boundary requirements and verification scenarios; classify equivalent mutations only.
