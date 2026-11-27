@@ -92,6 +92,61 @@
 - **THEN** an exact matching completion is returned without writing, otherwise state remains unknown
 - **AND** malformed candidate and wrong reservation correlation do not create a completion
 
+### Requirement: Bounded durable attempt journal
+
+#### Scenario: Recover only the missing perspective
+
+- **GIVEN** a confirmed journal with one validated slot and one known failed attempt
+- **WHEN** the store is reconstructed and the exact journal is read
+- **THEN** the validated slot and attempt history remain immutable
+- **AND** only a new distinct route may fill the missing slot within the remaining budget
+
+#### Scenario: Concurrent or ambiguous admission
+
+- **GIVEN** two callers contend on the same journal tip or one outcome is unknown
+- **WHEN** attempt admission is requested
+- **THEN** at most one start is confirmed and unresolved state blocks further starts
+- **AND** no completion or source acknowledgement follows merely from a journal entry
+
+### Requirement: Explicit resumable pooled execution
+
+#### Scenario: Known failure and restart
+
+- **GIVEN** a validated first slot and an observed rate-limit failure for a second route
+- **WHEN** execution restarts with a remaining permitted route and invocation budget
+- **THEN** the frozen first slot is not invoked again
+- **AND** the exact two-slot projection commits through the existing completion recovery
+- **AND** completed replay performs zero inference
+
+#### Scenario: Unknown or unconfirmed start
+
+- **GIVEN** a pending or unknown attempt or ambiguous storage acknowledgement
+- **WHEN** pooled execution is invoked again
+- **THEN** it does not dispatch another inference
+- **AND** it does not advance source progress
+
+### Requirement: Pooled completion custody
+
+#### Scenario: Ordinary or incomplete pooled completion
+
+- **GIVEN** a pooled work journal with a pending attempt and no validated perspectives
+- **WHEN** an ordinary or explicit pooled completion is attempted using a structurally valid candidate
+- **THEN** no derived record or completion is inserted
+- **AND** the original journal remains unresolved
+
+#### Scenario: Exact complete pooled projection
+
+- **GIVEN** two validated distinct perspectives in an exact journal
+- **WHEN** completion is attempted under the original reservation and input
+- **THEN** only the recomputed exact projection may commit
+- **AND** wrong owner, input or projection is rejected before insertion
+
+#### Scenario: Shared projection builder trace
+
+- **GIVEN** the exact committed pooled completion implementation
+- **WHEN** the repository's SpecD diff gate runs
+- **THEN** the native design covers the shared projection builder and both its executor and storage callers
+
 ### Requirement: Durable source batch acknowledgement
 
 #### Scenario: Explicit root and exact successor

@@ -35,6 +35,24 @@
       ]
     },
     {
+      "requirement": "Bounded durable attempt journal",
+      "rules": [
+        "A separately admitted pooled work journal MUST bind an existing unique reservation to exact work, request and evidence fingerprints and an explicit finite lifetime attempt budget. It MUST NOT adopt a legacy unresolved reservation. The journal MUST be append-only, with independently validated exact ordered event identities.\n\nStarting an attempt MUST require the exact prior journal tip, a vacant perspective slot and no pending or unknown outcome. The storage transaction MUST prevent concurrent dispatch admission. A validated terminal outcome MUST preserve the actual route and observed provider/model and exact provenance; a known failed attempt MAY permit a different route for the same missing slot. A frozen validated perspective MUST NOT be overwritten or repeated. The second validated family MUST differ from the first. Every attempted route and typed terminal outcome remains visible. Pending or unknown state MUST NOT be automatically retried.\n\nAn uncertain start acknowledgement MUST NOT grant dispatch. An outcome is accepted only after independent readback. The journal itself MUST NOT grant model entitlement, call providers, create completion or advance source progress. Durable final completion and source acknowledgement require their existing separate acceptance boundaries."
+      ]
+    },
+    {
+      "requirement": "Explicit resumable pooled execution",
+      "rules": [
+        "An explicitly invoked pooled executor MUST compose the existing admitted bounded inference adapters, model pool selector and durable journal. It MUST validate no-data before inference and replay verified completion without inference. It MUST confirm a unique durable start and exact readback before dispatching one missing slot. The total durable starts and per-invocation callbacks MUST remain independently bounded; successful slots MUST NOT be rerun.\n\nKnown responded failures MAY allow replacement; unknown outcome or uncertain storage MUST stop. Rate-limit observations MUST honor a known Retry-After, conservatively scoped to the provider when no narrower scope is established. If no safe wait is known or credentials/billing are refused, that provider MUST be excluded for this work until a separately authorized recovery mechanism exists. A model identity mismatch, non-stop finish, invalid proposal or duplicate ledger record MUST NOT freeze a slot.\n\nThe completed pooled projection MUST use the existing validated work completion and atomic recovery boundary, bind its result fingerprint to the final immutable journal entry, and independently verify exact readback. Completed replay of a pooled work MUST agree with its journal. No-data, incomplete, blocked or deferred states MUST NOT manufacture completion. This API MUST NOT alter the existing source-plan admission, fixed-pair source batch or production deployment; caller-supplied route admission and cross-work cooldown evidence remain external."
+      ]
+    },
+    {
+      "requirement": "Pooled completion custody",
+      "rules": [
+        "The ordinary completion writer MUST refuse work with a pooled attempt journal. The explicit pooled completion writer MUST bind the original exact input, reservation owner and complete journal to the candidate projection under the existing ledger transaction lock, before inserting any derived records. Missing, unresolved, mismatched or incomplete journal custody MUST NOT create completion. The writer MUST recompute the exact projection using the same deterministic builder as the executor. Existing ordinary completion and source acknowledgement boundaries remain unchanged. This is a trusted application-writer invariant, not a new ACL."
+      ]
+    },
+    {
       "requirement": "Durable source batch acknowledgement",
       "rules": [
         "The synthetic source store MUST initialize a root only explicitly from a trusted predecessor membership. Acknowledgement MUST bind one existing predecessor and its exact membership, provider, scope, task and analysis version. It MUST derive the receipt using the existing verified batch builder and read completions within the existing transaction/lock boundary. No caller-provided work list or receipt may bypass this derivation.\n\nSource checkpoints MUST be append-only with one root and at most one successor per predecessor and chain. A missing or conflicting predecessor, incomplete work, corrupt storage or unresolved removal MUST NOT advance the chain. An ambiguous write MUST be resolved by independent exact readback or remain UNKNOWN. Acknowledgement MUST NOT invoke inference, enable real history access or imply source completeness."
@@ -211,6 +229,104 @@
       ]
     },
     {
+      "requirement": "Bounded durable attempt journal",
+      "name": "Recover only the missing perspective",
+      "given": [
+        "a confirmed journal with one validated slot and one known failed attempt"
+      ],
+      "when": [
+        "the store is reconstructed and the exact journal is read"
+      ],
+      "then": [
+        "the validated slot and attempt history remain immutable",
+        "AND only a new distinct route may fill the missing slot within the remaining budget"
+      ]
+    },
+    {
+      "requirement": "Bounded durable attempt journal",
+      "name": "Concurrent or ambiguous admission",
+      "given": [
+        "two callers contend on the same journal tip or one outcome is unknown"
+      ],
+      "when": [
+        "attempt admission is requested"
+      ],
+      "then": [
+        "at most one start is confirmed and unresolved state blocks further starts",
+        "AND no completion or source acknowledgement follows merely from a journal entry"
+      ]
+    },
+    {
+      "requirement": "Explicit resumable pooled execution",
+      "name": "Known failure and restart",
+      "given": [
+        "a validated first slot and an observed rate-limit failure for a second route"
+      ],
+      "when": [
+        "execution restarts with a remaining permitted route and invocation budget"
+      ],
+      "then": [
+        "the frozen first slot is not invoked again",
+        "AND the exact two-slot projection commits through the existing completion recovery",
+        "AND completed replay performs zero inference"
+      ]
+    },
+    {
+      "requirement": "Explicit resumable pooled execution",
+      "name": "Unknown or unconfirmed start",
+      "given": [
+        "a pending or unknown attempt or ambiguous storage acknowledgement"
+      ],
+      "when": [
+        "pooled execution is invoked again"
+      ],
+      "then": [
+        "it does not dispatch another inference",
+        "AND it does not advance source progress"
+      ]
+    },
+    {
+      "requirement": "Pooled completion custody",
+      "name": "Ordinary or incomplete pooled completion",
+      "given": [
+        "a pooled work journal with a pending attempt and no validated perspectives"
+      ],
+      "when": [
+        "an ordinary or explicit pooled completion is attempted using a structurally valid candidate"
+      ],
+      "then": [
+        "no derived record or completion is inserted",
+        "AND the original journal remains unresolved"
+      ]
+    },
+    {
+      "requirement": "Pooled completion custody",
+      "name": "Exact complete pooled projection",
+      "given": [
+        "two validated distinct perspectives in an exact journal"
+      ],
+      "when": [
+        "completion is attempted under the original reservation and input"
+      ],
+      "then": [
+        "only the recomputed exact projection may commit",
+        "AND wrong owner, input or projection is rejected before insertion"
+      ]
+    },
+    {
+      "requirement": "Pooled completion custody",
+      "name": "Shared projection builder trace",
+      "given": [
+        "the exact committed pooled completion implementation"
+      ],
+      "when": [
+        "the repository's SpecD diff gate runs"
+      ],
+      "then": [
+        "the native design covers the shared projection builder and both its executor and storage callers"
+      ]
+    },
+    {
       "requirement": "Durable source batch acknowledgement",
       "name": "Explicit root and exact successor",
       "given": [
@@ -301,8 +417,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:d503a6fb5fecc8c59659f7dc77f6ed477556830be5e51f52fb9d5655636a0823",
-    "verify.md": "sha256:e1170aa71104678ee178dd6ff78f21284aa018f47f8dce7e898c776f36765f19"
+    "spec.md": "sha256:ed89315b08e97f66dcf09b6c21c8ccaa25b90f2519ecdd32a975b6ea5dbd152a",
+    "verify.md": "sha256:d2b0180acef6dbf227d1ee0ca5864f4b1f6f5f89c531a6934f414d5a36037646"
   },
   "generatedBy": "core"
 }
