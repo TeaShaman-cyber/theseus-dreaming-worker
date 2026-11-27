@@ -38,6 +38,26 @@ When a validated complete candidate cannot be confirmed as committed, the truste
 
 Only an observed absent completion MAY permit one transaction using the original reservation correlation and unchanged candidate. Independently verify the result by readback even after an error. Recovery MUST NOT acquire another reservation, invoke inference, change the candidate or take over an unresolved reservation. The envelope is trusted caller custody, not a new authorization mechanism. Lost or incomplete analysis is outside this recovery boundary.
 
+### Requirement: Bounded durable attempt journal
+
+A separately admitted pooled work journal MUST bind an existing unique reservation to exact work, request and evidence fingerprints and an explicit finite lifetime attempt budget. It MUST NOT adopt a legacy unresolved reservation. The journal MUST be append-only, with independently validated exact ordered event identities.
+
+Starting an attempt MUST require the exact prior journal tip, a vacant perspective slot and no pending or unknown outcome. The storage transaction MUST prevent concurrent dispatch admission. A validated terminal outcome MUST preserve the actual route and observed provider/model and exact provenance; a known failed attempt MAY permit a different route for the same missing slot. A frozen validated perspective MUST NOT be overwritten or repeated. The second validated family MUST differ from the first. Every attempted route and typed terminal outcome remains visible. Pending or unknown state MUST NOT be automatically retried.
+
+An uncertain start acknowledgement MUST NOT grant dispatch. An outcome is accepted only after independent readback. The journal itself MUST NOT grant model entitlement, call providers, create completion or advance source progress. Durable final completion and source acknowledgement require their existing separate acceptance boundaries.
+
+### Requirement: Explicit resumable pooled execution
+
+An explicitly invoked pooled executor MUST compose the existing admitted bounded inference adapters, model pool selector and durable journal. It MUST validate no-data before inference and replay verified completion without inference. It MUST confirm a unique durable start and exact readback before dispatching one missing slot. The total durable starts and per-invocation callbacks MUST remain independently bounded; successful slots MUST NOT be rerun.
+
+Known responded failures MAY allow replacement; unknown outcome or uncertain storage MUST stop. Rate-limit observations MUST honor a known Retry-After, conservatively scoped to the provider when no narrower scope is established. If no safe wait is known or credentials/billing are refused, that provider MUST be excluded for this work until a separately authorized recovery mechanism exists. A model identity mismatch, non-stop finish, invalid proposal or duplicate ledger record MUST NOT freeze a slot.
+
+The completed pooled projection MUST use the existing validated work completion and atomic recovery boundary, bind its result fingerprint to the final immutable journal entry, and independently verify exact readback. Completed replay of a pooled work MUST agree with its journal. No-data, incomplete, blocked or deferred states MUST NOT manufacture completion. This API MUST NOT alter the existing source-plan admission, fixed-pair source batch or production deployment; caller-supplied route admission and cross-work cooldown evidence remain external.
+
+### Requirement: Pooled completion custody
+
+The ordinary completion writer MUST refuse work with a pooled attempt journal. The explicit pooled completion writer MUST bind the original exact input, reservation owner and complete journal to the candidate projection under the existing ledger transaction lock, before inserting any derived records. Missing, unresolved, mismatched or incomplete journal custody MUST NOT create completion. The writer MUST recompute the exact projection using the same deterministic builder as the executor. Existing ordinary completion and source acknowledgement boundaries remain unchanged. This is a trusted application-writer invariant, not a new ACL.
+
 ### Requirement: Durable source batch acknowledgement
 
 The synthetic source store MUST initialize a root only explicitly from a trusted predecessor membership. Acknowledgement MUST bind one existing predecessor and its exact membership, provider, scope, task and analysis version. It MUST derive the receipt using the existing verified batch builder and read completions within the existing transaction/lock boundary. No caller-provided work list or receipt may bypass this derivation.

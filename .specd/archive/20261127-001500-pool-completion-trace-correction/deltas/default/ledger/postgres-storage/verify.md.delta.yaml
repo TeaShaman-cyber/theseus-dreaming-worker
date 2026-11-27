@@ -1,0 +1,11 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirement: Pooled completion custody$'
+  content: |
+    #### Scenario: Shared projection builder trace
+
+    - **GIVEN** the exact committed pooled completion implementation
+    - **WHEN** the repository's SpecD diff gate runs
+    - **THEN** the native design covers the shared projection builder and both its executor and storage callers

@@ -85,6 +85,17 @@ CREATE TABLE IF NOT EXISTS dw_ledger.work_membership (
   UNIQUE (work_fingerprint, record_id)
 );
 
+-- Separately admitted pooled-work attempt custody. No completion authority.
+CREATE TABLE IF NOT EXISTS dw_ledger.work_pool_journal (
+  work_fingerprint text NOT NULL,
+  owner_token uuid NOT NULL,
+  ordinal integer NOT NULL CHECK (ordinal BETWEEN 0 AND 400),
+  entry jsonb NOT NULL CHECK (jsonb_typeof(entry) = 'object'),
+  PRIMARY KEY (work_fingerprint, ordinal),
+  FOREIGN KEY (work_fingerprint, owner_token)
+    REFERENCES dw_ledger.work_reservations(work_fingerprint, owner_token)
+);
+
 -- One explicit root and one successor per source/analysis chain.
 CREATE TABLE IF NOT EXISTS dw_ledger.source_checkpoints (
   chain_id text NOT NULL CHECK (chain_id ~ '^sha256:[0-9a-f]{64}$'),
@@ -129,6 +140,7 @@ GRANT SELECT, INSERT ON TABLE
   dw_ledger.work_reservations,
   dw_ledger.work_completions,
   dw_ledger.work_membership,
+  dw_ledger.work_pool_journal,
   dw_ledger.source_checkpoints,
   dw_ledger.source_plans,
   dw_ledger.source_work_origins
@@ -140,6 +152,7 @@ REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE
   dw_ledger.work_reservations,
   dw_ledger.work_completions,
   dw_ledger.work_membership,
+  dw_ledger.work_pool_journal,
   dw_ledger.source_checkpoints,
   dw_ledger.source_plans,
   dw_ledger.source_work_origins

@@ -86,7 +86,7 @@ DO $$
 DECLARE
   t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['work_reservations','work_completions','work_membership','source_checkpoints','source_plans','source_work_origins'] LOOP
+  FOREACH t IN ARRAY ARRAY['work_reservations','work_completions','work_membership','work_pool_journal','source_checkpoints','source_plans','source_work_origins'] LOOP
     IF to_regclass('dw_ledger.' || t) IS NULL
       OR NOT has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'SELECT')
       OR NOT has_table_privilege('dw_runtime_issue23', 'dw_ledger.' || t, 'INSERT')
@@ -134,6 +134,18 @@ BEGIN
       WHERE conrelid='dw_ledger.source_work_origins'::regclass AND contype='f'
       AND confrelid IN ('dw_ledger.source_plans'::regclass,'dw_ledger.work_reservations'::regclass)) <> 2
   THEN RAISE EXCEPTION 'SOURCE_WORK_ORIGIN_CONSTRAINT_INVALID';
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='dw_ledger.work_pool_journal'::regclass AND contype='f'
+      AND confrelid='dw_ledger.work_reservations'::regclass
+      AND pg_get_constraintdef(oid) LIKE 'FOREIGN KEY (work_fingerprint, owner_token)%'
+  ) THEN RAISE EXCEPTION 'POOL_JOURNAL_RESERVATION_CONSTRAINT_INVALID';
   END IF;
 END
 $$;
