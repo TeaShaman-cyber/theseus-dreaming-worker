@@ -540,3 +540,13 @@ test('pool journal allows START exactly at expiry and outcome append does not re
     group([poolRead(poolRows([poolFirst,poolNext,end])),sourceVerify('read','JOURNAL')])],cooldownBinding(()=>{throw Error('not a START');}));
   assert.deepEqual(await out.store.append(poolInput,poolNext.entryFingerprint,unknown),poolState([poolFirst,poolNext,end]));out.done();
 });
+
+test('stored history is revalidated once rather than once per prefix',async()=>{
+  const records=Array.from({length:64},(_,i)=>createProposalRecord({proposal:hypothesis(`linear-${i}`),origin:origin('route-a',routeA)}));
+  const client=fakeClient({rows:records.map((r,i)=>rowFor(r,i+1))});
+  const ledger=createPostgresProposalLedger({connectionString:'postgresql://synthetic.invalid/db',clientFactory:()=>client});
+  const clone=globalThis.structuredClone;let copies=0;
+  try {globalThis.structuredClone=(value,...args)=>{copies++;return clone(value,...args);};assert.deepEqual(await ledger.readEvents(),records);}
+  finally{globalThis.structuredClone=clone;}
+  assert.ok(copies<=4*records.length,`read copies ${copies} objects for ${records.length} records`);
+});

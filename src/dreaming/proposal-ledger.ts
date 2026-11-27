@@ -166,57 +166,70 @@ function pathExists(
   return false;
 }
 
+function createLedgerIndex() {
+  const ids = new Set<string>();
+  const records = new Set<string>();
+  const edges = new Map<string, Set<string>>();
+  function index(event: ProposalLedgerEvent) {
+    ids.add(eventId(event));
+    if (event.eventType === 'PROPOSAL') records.add(event.recordId);
+    else {
+      const existing = edges.get(event.supersededRecordId);
+      if (existing) existing.add(event.replacementRecordId);
+      else edges.set(event.supersededRecordId, new Set([event.replacementRecordId]));
+    }
+  }
+  function validate(event: ProposalLedgerEvent) {
+    assertEventIdentity(event);
+    if (ids.has(eventId(event))) throw new Error(`LEDGER_DUPLICATE_EVENT: ${eventId(event)}`);
+    if (event.eventType === 'SUPERSEDE') {
+      if (event.supersededRecordId === event.replacementRecordId) throw new Error('LEDGER_SELF_SUPERSESSION');
+      if (!records.has(event.supersededRecordId) || !records.has(event.replacementRecordId)) {
+        throw new Error('LEDGER_SUPERSESSION_REF_MISSING');
+      }
+      if (pathExists(edges, event.replacementRecordId, event.supersededRecordId)) throw new Error('LEDGER_SUPERSESSION_CYCLE');
+    }
+  }
+  return { index, validate };
+}
+
+/** Ordered, transaction-local validation; no externally supplied trusted prefix.
+ * All inputs and returned snapshots are isolated from the private index. */
+export function createLedgerReplay() {
+  const state = createLedgerIndex();
+  const events: ProposalLedgerEvent[] = [];
+  return {
+    append(input: ProposalLedgerEvent) {
+      const event = proposalLedgerEventSchema.parse(structuredClone(input));
+      state.validate(event);
+      state.index(event);
+      events.push(event);
+    },
+    snapshot(): ProposalLedgerEvent[] { return events.map(event => structuredClone(event)); },
+  };
+}
+
 export function appendLedgerEvent(
   ledgerInput: readonly ProposalLedgerEvent[],
   eventInput: ProposalLedgerEvent,
 ): ProposalLedgerEvent[] {
   const ledger = ledgerInput.map(event => proposalLedgerEventSchema.parse(structuredClone(event)));
   const event = proposalLedgerEventSchema.parse(structuredClone(eventInput));
-
-  for (const existing of ledger) assertEventIdentity(existing);
-  assertEventIdentity(event);
-
-  if (ledger.some(existing => eventId(existing) === eventId(event))) {
-    throw new Error(`LEDGER_DUPLICATE_EVENT: ${eventId(event)}`);
+  const state = createLedgerIndex();
+  // Preserve the legacy standalone API: check existing identities, then validate
+  // the new candidate. Full ordered replay uses createLedgerReplay instead.
+  for (const existing of ledger) {
+    assertEventIdentity(existing);
+    state.index(existing);
   }
-
-  if (event.eventType === 'SUPERSEDE') {
-    if (event.supersededRecordId === event.replacementRecordId) {
-      throw new Error('LEDGER_SELF_SUPERSESSION');
-    }
-
-    // Stryker disable ConditionalExpression: broadening this type guard is equivalent at runtime because SUPERSEDE events have no recordId; their undefined value cannot equal a nonempty string record reference.
-    const records = new Set(
-      ledger
-        .filter((item): item is ProposalLedgerRecord => item.eventType === 'PROPOSAL')
-        .map(item => item.recordId),
-    );
-    // Stryker restore ConditionalExpression
-    if (!records.has(event.supersededRecordId) || !records.has(event.replacementRecordId)) {
-      throw new Error('LEDGER_SUPERSESSION_REF_MISSING');
-    }
-
-    const edges = new Map<string, Set<string>>();
-    for (const item of ledger) {
-      if (item.eventType !== 'SUPERSEDE') continue;
-      const existing = edges.get(item.supersededRecordId);
-      if (existing) {
-        existing.add(item.replacementRecordId);
-      } else {
-        edges.set(item.supersededRecordId, new Set([item.replacementRecordId]));
-      }
-    }
-    if (pathExists(edges, event.replacementRecordId, event.supersededRecordId)) {
-      throw new Error('LEDGER_SUPERSESSION_CYCLE');
-    }
-  }
-
+  state.validate(event);
   return [...ledger, event];
 }
 
 export function materializeLedger(ledgerInput: readonly ProposalLedgerEvent[]) {
-  let validated: ProposalLedgerEvent[] = [];
-  for (const event of ledgerInput) validated = appendLedgerEvent(validated, event);
+  const replay = createLedgerReplay();
+  for (const event of ledgerInput) replay.append(event);
+  const validated = replay.snapshot();
 
   const supersededBy = new Map<string, string[]>();
   for (const event of validated) {
