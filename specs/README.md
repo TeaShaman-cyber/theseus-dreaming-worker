@@ -15,7 +15,7 @@ This directory is the durable map from project intent to implementation work.
 
 ### Implemented and verified in isolated environments; not operational
 
-- `ledger/neon-persistence` — dedicated `dw_ledger` Neon/Postgres persistence boundary and future Session Search read seam; SQL is versioned and tested on disposable PostgreSQL and Neon schema-only previews; no live application claimed.
+- `ledger/neon-persistence` — dedicated `dw_ledger` Neon/Postgres persistence boundary and future Session Search read seam; SQL is versioned and tested on disposable PostgreSQL and Neon schema-only previews; the accepted migration is also applied to the dedicated issue23 cloud development/test database (#23), with independent grant readback.
 - `ledger/postgres-storage` — `pg` storage adapter plus hosted PostgreSQL contract lane over the existing Hyperdrive boundary.
 
 ### Core contract and bounded intake
@@ -31,12 +31,8 @@ The worker contract remains a cross-cutting contract. The intake implementation 
 
 ## Immediate next coding task
 
-The storage adapter and synthetic source-batch recovery are accepted in hosted PostgreSQL 18. The next operational boundary is a separately authorized bounded persistence canary in the cloud development/test runtime:
+The bounded cloud persistence canary is verified (#23): actual Cloudflare edge preview, existing Hyperdrive and dedicated Neon development/test database, synthetic-only execution and zero-call replay. See [QA witness](../qa/cloudflare/README.md). This does not establish an operational deployed agent.
 
-1. reuse the existing Hyperdrive binding;
-2. persist only already-validated ledger events;
-3. keep the call internal/bounded rather than adding a broad external API;
-4. prove the path on the cloud development/test environment before adding Session Search read access;
-5. keep scheduler, private Session Search intake, automatic promotion and real production deployment out of scope.
+Next: finish the read-only source custody inspector (#117/#118), and connect the existing Session Search native HTTP browse candidate (Session Search #345/PR346, Theseus Research #127/PR140) to the trusted accepted-membership/current catalog handoff on synthetic fixtures. Verify exact source identity, gaps, bounded pages, and generation pinning before any real intake. Do not treat route-level authorization as source custody or private-data egress approval.
 
 Clef remains a separate researched decision/relevance layer candidate and is not counted as one of the two analytical perspectives.
