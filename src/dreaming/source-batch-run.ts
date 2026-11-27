@@ -114,9 +114,7 @@ type PooledRun = {
   receipt: Stored | null;
 };
 
-/** Explicit bounded batch over the existing selected-work custody. No sleep,
- * retry, provider authorization or default source acquisition. */
-export async function runPooledSourceBatch(raw: BatchInput, policy: PooledPolicy, store: PooledStore): Promise<PooledRun> {
+export function preparePooledSourceRunPolicy(policy: PooledPolicy): PooledPolicy {
   const budget = z.number().int().min(0).max(200).parse(policy.maxInvocations);
   const maxAttempts = z.number().int().min(2).max(200).parse(policy.maxAttempts);
   const { taskClass, clock } = policy;
@@ -125,9 +123,17 @@ export async function runPooledSourceBatch(raw: BatchInput, policy: PooledPolicy
     if(typeof infer!=='function')throw Error('POOL_EXECUTION_ADAPTER');
     return {...structuredClone(metadata),infer};
   });
-  let rotation=policy.rotation;
+  const rotation=policy.rotation;
   selectModelPool({routes:routes.map(({infer,...metadata})=>metadata),taskClass,nowMs:clock(),rotation,
     remainingAttempts:0,attemptedRouteIds:[],cooldowns,frozen:null,unresolvedAttempt:false});
+  return {routes,taskClass,maxAttempts,maxInvocations:budget,rotation,cooldowns,clock};
+}
+
+/** Explicit bounded batch over the existing selected-work custody. No sleep,
+ * retry, provider authorization or default source acquisition. */
+export async function runPooledSourceBatch(raw: BatchInput, policy: PooledPolicy, store: PooledStore): Promise<PooledRun> {
+  const {routes,taskClass,maxAttempts,maxInvocations:budget,cooldowns,clock,rotation:initialRotation}=preparePooledSourceRunPolicy(policy);
+  let rotation=initialRotation;
   const input=structuredClone(raw),plan=prepareSourceBatchPlan(input);
   let attemptedPasses=0;
   const work:PooledWork[]=[];

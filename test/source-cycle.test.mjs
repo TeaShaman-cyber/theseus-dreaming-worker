@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { runSourceCycle } from '../src/dreaming/source-cycle.ts';
+import { runSourceCycle, runPooledSourceCycle } from '../src/dreaming/source-cycle.ts';
 import { sha256Fingerprint } from '../src/dreaming/proposal-schema.ts';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/source-reader.json', import.meta.url), 'utf8'));
@@ -130,4 +130,63 @@ test('stale generation response stops the cycle without touching the ledger', as
   assert.equal(r.status, 'ACQUISITION_BLOCKED');
   assert.equal(r.attemptedPasses, 0);
   assert.deepEqual(counts, { transport: 1, store: 0, inference: 0 });
+});
+
+function pooledSetup(){
+  const {options,counts}=setup();
+  const {routes,maxPasses,...rest}=options;
+  return {counts,options:{...rest,policy:{
+    routes:routes.map(r=>({...r,admission:'FREE_RESEARCH',qualifiedTasks:['analysis'],catalog:'PRESENT',catalogValidUntilMs:10000})),
+    taskClass:'analysis',maxAttempts:4,maxInvocations:maxPasses,rotation:0,cooldowns:[],clock:()=>100,
+  }}};
+}
+test('pooled cycle rejects invalid policy and preserves no-work/removal gates',async()=>{
+  const {options,counts}=pooledSetup();
+  const wrong=structuredClone(input());wrong.expected.previousSnapshotSha256='0'.repeat(64);
+  assert.equal((await runPooledSourceCycle(wrong,options)).status,'INPUT_REJECTED');
+  assert.equal((await runPooledSourceCycle(input(),{...options,policy:{...options.policy,maxInvocations:-1}})).status,'INPUT_REJECTED');
+  const empty=changed(input(),c=>{c.selected=[];});empty.indexes=[];
+  assert.equal((await runPooledSourceCycle(empty,options)).status,'NO_SELECTED_WORK');
+  assert.equal((await runPooledSourceCycle(changed(input(),c=>{c.removed=['synthetic-removal'];}),options)).status,'REMOVAL_PENDING');
+  assert.deepEqual(counts,{transport:0,store:0,inference:0});
+});
+test('pooled cycle acquisition failure does not start ledger execution',async()=>{
+  const {options,counts}=pooledSetup();
+  const r=await runPooledSourceCycle(input(),options);
+  assert.equal(r.status,'ACQUISITION_BLOCKED');assert.equal(r.attemptedPasses,0);
+  assert.deepEqual(counts,{transport:1,store:0,inference:0});
+});
+test('pooled cycle preserves snapshotted execution budget and metadata across acquisition',async()=>{
+  const {options,counts}=pooledSetup();
+  const x=input();
+  const {prepareSourceBatchPlan}=await import('../src/dreaming/source-batch-receipt.ts');
+  let plan;
+  const r=await runPooledSourceCycle(x,{
+    ...options,
+    transport:async request=>{
+      counts.transport++;
+      options.policy.maxInvocations=0;
+      options.policy.routes[0].admission='NOT_AUTHORIZED';
+      options.policy.routes[0].qualifiedTasks.length=0;
+      const entry=fixture.entries.find(e=>e.session_id===request.session_id);
+      const i=request.cursor?entry.pages.findIndex(p=>p.next_cursor===request.cursor)+1:0;
+      return Response.json(entry.pages[i]);
+    },
+    store:{
+      async readTip(){return {receiptFingerprint:x.previousCheckpoint};},
+      async stage(raw){plan=prepareSourceBatchPlan(raw);return {status:'STAGED',plan};},
+      async runSelectedPooled(raw,id,p){
+        counts.store++;
+        assert.equal(p.maxInvocations,4);
+        assert.equal(p.routes[0].admission,'FREE_RESEARCH');
+        assert.deepEqual(p.routes[0].qualifiedTasks,['analysis']);
+        const entry=plan.work.find(w=>w.witness.session.session_id===id);
+        return {workFingerprint:entry.workFingerprint,decision:'DEFERRED',attemptedPasses:0,nextRotation:0,wakeAtMs:5100,completion:null};
+      },
+      async acknowledge(){throw Error('unexpected acknowledgement');},
+    },
+  });
+  assert.equal(r.status,'DEFERRED');assert.equal(r.run.wakeAtMs,5100);
+  assert.equal(r.attemptedPasses,0);
+  assert.deepEqual(counts,{transport:12,store:2,inference:0});
 });

@@ -75,6 +75,12 @@
       ]
     },
     {
+      "requirement": "Explicit pooled synthetic source cycle",
+      "rules": [
+        "The explicit pooled cycle MUST validate and snapshot its execution policy before bounded synthetic source acquisition. Invalid input, unresolved removal, no selected work or acquisition failure MUST NOT initiate ledger execution or inference. The cycle MUST delegate the exact acquired batch to the bounded pooled runner and preserve its observed invocation count and typed pending or unknown outcome. Exact completed replay MUST require zero inference. Existing fixed-pair composition remains available; neither path authorizes real source access or deployment."
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "rules": [
         "The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.\n\nA timestamp alone is insufficient as the durable checkpoint.\n\nThe checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope."
@@ -352,6 +358,33 @@
       ]
     },
     {
+      "requirement": "Explicit pooled synthetic source cycle",
+      "name": "Pooled source cycle rejects before execution",
+      "given": [
+        "invalid policy, disallowed scope, removal, empty selection or failed bounded acquisition"
+      ],
+      "when": [
+        "the explicit pooled cycle is invoked"
+      ],
+      "then": [
+        "no model call or ledger execution follows"
+      ]
+    },
+    {
+      "requirement": "Explicit pooled synthetic source cycle",
+      "name": "Pooled source cycle recovers exact batch",
+      "given": [
+        "a verified synthetic paginated source and known partial pooled failure"
+      ],
+      "when": [
+        "the same cycle resumes with a new finite invocation budget"
+      ],
+      "then": [
+        "only remaining calls execute, known shared wait is respected and acknowledgement follows verified completion",
+        "AND exact completed replay consumes zero inference"
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "name": "Evidence is read but provider analysis fails",
       "given": [
@@ -449,8 +482,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:5fca86c45a31bef63ed83d9eb72df50bc05b72d64d07bfb353faaf00c68de255",
-    "verify.md": "sha256:da5a9809915efb3cdfdd03aa61d7000e750c1fd1baa557dc2f6cc0980440f64c"
+    "spec.md": "sha256:f9e1c39927031eb424a97022babb6f0c864f3b24520eedd4de22ecba47d0e454",
+    "verify.md": "sha256:5a4360a73ff3a882c1182e6f0f17edd292672f1309eed89540bf91e932f6bb98"
   },
   "generatedBy": "core"
 }

@@ -1,0 +1,12 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Bounded synthetic source cycle$'
+  content: |
+    ### Requirement: Explicit pooled synthetic source cycle
+
+    The explicit pooled cycle MUST validate and snapshot its execution policy before bounded synthetic source acquisition. Invalid input, unresolved removal, no selected work or acquisition failure MUST NOT initiate ledger execution or inference. The cycle MUST delegate the exact acquired batch to the bounded pooled runner and preserve its observed invocation count and typed pending or unknown outcome. Exact completed replay MUST require zero inference. Existing fixed-pair composition remains available; neither path authorizes real source access or deployment.
