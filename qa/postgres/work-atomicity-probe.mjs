@@ -871,6 +871,21 @@ try {
     assert.equal(replayPool.decision,'ALREADY_PROCESSED');
     assert.equal(replayPool.attemptedPasses,0);
     assert.deepEqual(replayPool.completion,filled.completion);
+    const staleAlternative=await restartPool.runSelectedPooled(otherWitness,firstSession,{...policy,maxInvocations:0});
+    assert.equal(staleAlternative.decision,'STORAGE_UNKNOWN');
+    assert.equal(staleAlternative.attemptedPasses,0);
+    let fullCompletionReads=0;
+    const countedReplay=createPostgresSourceBatchStore({connectionString,clientFactory:url=>{
+      const c=new Client({connectionString:url});
+      return {connect:()=>c.connect(),end:()=>c.end(),async query(sql,params){
+        if(sql.includes('LEFT JOIN dw_ledger.work_membership m'))fullCompletionReads++;
+        return c.query(sql,params);
+      }};
+    }});
+    const samePlan=await countedReplay.runSelectedPooled(pooledInput,firstSession,{...policy,maxInvocations:0});
+    assert.equal(samePlan.decision,'ALREADY_PROCESSED');
+    assert.equal(fullCompletionReads,1);
+    console.log('SOURCE_POOLED_REUSE_READ_COST_PASS same_plan_full_reads=1 stale_alternative=blocked');
     assert.equal((await restartPool.acknowledge(pooledInput)).status,'ALREADY_ACKNOWLEDGED');
     const unbound={...pooledInput,analysisVersion:'source-pooled-unbound-v1'};
     const unboundRoot=await restartPool.initialize(unbound);

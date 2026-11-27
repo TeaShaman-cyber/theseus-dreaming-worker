@@ -1,6 +1,7 @@
 """Reproduce synthetic cross-generation custody fixture from pinned SS source.
 
-Usage: python3 qa/postgres/generate-source-refresh-fixture.py /path/to/ss-checkout
+Usage: python3 qa/postgres/generate-source-refresh-fixture.py /path/to/ss-checkout [sequential-output.json]
+With an explicit output path, capture the acknowledged membership before refresh.
 No network or PostgreSQL. Projected page bodies are simulated serving of
 independently verified canonical bundle rows; not a live reader receipt.
 """
@@ -20,7 +21,7 @@ from test_refresh_handoff_candidate import RefreshHandoffCandidateTest
 from test_chatgpt_export import ChatGPTExportAdapterTest
 from test_verified_bundle_handoff_reference import fixture_allocation
 from session_search.chatgpt_export import ingest_export
-from session_search.accepted_membership import rederive_session_delta
+from session_search.accepted_membership import capture_accepted_membership, rederive_session_delta
 from session_search.corpus_store import CorpusPaths
 from session_search.shard_allocation import load_session_rows
 from session_search.neon_materializer import capture_source_evidence_index
@@ -68,6 +69,9 @@ f = RefreshHandoffCandidateTest()
 try:
     f.setUp()
     before = observation(f)
+    if len(sys.argv) == 3:
+        f.previous = capture_accepted_membership(f.corpus, scope="synthetic:chatgpt")
+        assert f.previous == before["candidate"]["current_membership"]
     helper = ChatGPTExportAdapterTest()
     ingest_export(helper.write_export(f.root,[helper.conversation(cid="unrelated-refresh")]),f.corpus)
     f.delta = rederive_session_delta(f.corpus,f.previous,scope="synthetic:chatgpt")
@@ -99,6 +103,12 @@ try:
     f.catalog=[{k:r[k] for k in ("provider","shard_id","generation_id","state")}
                for r in f.promotion["replacement_shards"]+f.promotion["unchanged_catalog"]]
     after=observation(f)
+    if len(sys.argv) == 3:
+        assert before["candidate"]["current_membership"] == after["candidate"]["previous_membership"]
+        out = Path(sys.argv[2]).resolve()
+        out.write_text(json.dumps(dict(producer_commit=commit,serving="verified_bundle_rows_simulated_pages",before=before,after=after),ensure_ascii=False,indent=2)+"\n")
+        print("SEQUENTIAL_SOURCE_FIXTURE_PASS",len(before["entries"]),len(after["entries"]),hashlib.sha256(out.read_bytes()).hexdigest())
+        sys.exit(0)
     assert before["candidate"]["previous_membership"]==after["candidate"]["previous_membership"]
     assert before["candidate"]["current_membership"]!=after["candidate"]["current_membership"]
     old={e["sessionId"]:e for e in before["entries"]}

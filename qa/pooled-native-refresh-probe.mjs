@@ -10,7 +10,8 @@ assert.equal(execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}
 assert.equal(execFileSync('git',['-C',root,'status','--porcelain','--untracked-files=no'],{encoding:'utf8'}),'');
 const {makeRouterHandler}=await import(pathToFileURL(root+'/functions/router/handler.mjs'));
 const {makeShardHandler}=await import(pathToFileURL(root+'/functions/shard/handler.mjs'));
-const fixture=JSON.parse(readFileSync(new URL('../test/fixtures/source-refresh.json',import.meta.url),'utf8'));
+const sequential=process.argv.length===4;
+const fixture=JSON.parse(readFileSync(sequential?resolve(process.argv[3]):new URL('../test/fixtures/source-refresh.json',import.meta.url),'utf8'));
 const url=new URL(process.env.LEDGER_DATABASE_URL);
 assert.equal(url.hostname,'127.0.0.1');
 assert.equal(url.pathname,'/dreaming_worker_contract');
@@ -41,6 +42,31 @@ const initial=await store.initialize(x);
 assert.equal(initial.status,'ACKNOWLEDGED');
 x.previousCheckpoint=y.previousCheckpoint=initial.receipt.receiptFingerprint;
 const run=(input,transport,store,maxInvocations)=>runPooledSourceCycle(input,{limits,transport,store,policy:{routes,taskClass:'analysis',maxAttempts:4,maxInvocations,rotation:0,cooldowns:[],clock:()=>100}});
+if(sequential){
+ const first=await run(x,old.transport,store,4);
+ assert.equal(first.status,'ACKNOWLEDGED');
+ assert.equal(calls,4);
+ assert.deepEqual(first.run.receipt.handoff.current_membership,y.candidate.previous_membership);
+ assert.deepEqual(await store.readTip(x),first.run.receipt);
+ const restart=createPostgresSourceBatchStore(options);
+ const wrong=await run(y,fresh.transport,restart,4);
+ assert.equal(wrong.status,'CONFLICT');
+ assert.equal(calls,4);
+ assert.deepEqual(await restart.readTip(y),first.run.receipt);
+ y.previousCheckpoint=first.run.receipt.receiptFingerprint;
+ const second=await run(y,fresh.transport,restart,4);
+ assert.equal(second.status,'ACKNOWLEDGED');
+ assert.equal(second.attemptedPasses,4);
+ assert.equal(calls,8);
+ assert.equal(second.run.receipt.previousCheckpoint,first.run.receipt.receiptFingerprint);
+ assert.deepEqual(second.run.receipt.handoff.current_membership,y.candidate.current_membership);
+ assert.deepEqual(await restart.readTip(y),second.run.receipt);
+ const replay=await run(y,fresh.transport,restart,0);
+ assert.equal(replay.status,'ALREADY_ACKNOWLEDGED');
+ assert.deepEqual(replay.run.receipt,second.run.receipt);
+ assert.equal(calls,8);
+ console.log('SEQUENTIAL_NATIVE_PG_PASS first=2 next=2 wrong_parent=blocked replay_calls=0 external_calls=0');
+}else{
 const first=await run(x,old.transport,store,2);
 assert.equal(first.status,'BUDGET_EXHAUSTED');
 assert.equal(first.attemptedPasses,2);
@@ -65,3 +91,4 @@ assert.equal(replay.status,'ALREADY_ACKNOWLEDGED');
 assert.deepEqual(replay.run.receipt,next.run.receipt);
 assert.equal(calls,8);
 console.log('POOLED_NATIVE_REFRESH_PG_PASS old=2 new=4 reused=1 new_calls=6 replay_calls=0 external_calls=0');
+}
