@@ -1,0 +1,12 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Same-plan pooled source admission$'
+  content: |
+    ### Requirement: Same-plan finite provider cooldown
+
+    Within an exact staged synthetic source plan, the pooled selector MUST incorporate known finite provider-scoped HTTP 429 Retry-After deadlines from journal events of source-bound work. It MUST use the maximum deadline for each applicable provider and MUST NOT infer account-wide quotas or propagate indefinite or unknown outcomes as finite waits. Before a new START is inserted, the same ledger lock MUST protect a fresh check of the applicable deadline; a newly active restriction MUST defer without recording START or dispatching inference. An already admitted START is not revoked. Provider identities MUST be stable caller-provided keys within this plan. Other plans MUST NOT supply these restrictions. Expired waits MUST NOT prevent otherwise eligible selection.

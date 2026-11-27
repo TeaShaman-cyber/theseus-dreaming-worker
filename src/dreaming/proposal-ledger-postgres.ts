@@ -1,7 +1,7 @@
 import { Client } from 'pg';
 import { buildPoolCompletion } from './pool-completion.ts';
 import { validateWorkCompletion, type DurablePilot2Input, type WorkCompletion, type WorkStore } from './durable-pilot2.ts';
-import { makePoolJournalEntry, poolJournalAdmission, preparePoolJournal, replayPoolJournal, type PoolJournalEvent } from './pool-attempt-journal.ts';
+import { PoolStartDeferred, makePoolJournalEntry, poolJournalAdmission, preparePoolJournal, replayPoolJournal, type PoolJournalEvent } from './pool-attempt-journal.ts';
 
 import {
   appendLedgerEvent,
@@ -367,6 +367,10 @@ export type PoolJournalSourceBinding = {
   verify(client: LedgerPgClient, context: PoolJournalContext, current: PoolJournalRead,
     operation: 'read' | 'admit' | 'append'): Promise<void>;
   bind(client: LedgerPgClient, context: PoolJournalContext): Promise<void>;
+  cooldowns?: {
+    read(client: LedgerPgClient, providers: string[]): Promise<{ scope: 'provider'; key: string; notBeforeMs: number }[]>;
+    clock(): number;
+  };
 };
 
 /** Append-only partial custody. No model invocation, takeover or completion. */
@@ -403,6 +407,9 @@ export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOp
   const readContext = (context: PoolJournalContext) => withClient(client => readBound(client, context, 'read'));
   return {
     async read(raw: DurablePilot2Input) { return readContext(preparePoolJournal(raw)); },
+    readCooldowns: source?.cooldowns
+      ? (providers: string[]) => withClient(client => source.cooldowns!.read(client, providers))
+      : undefined,
     async admit(raw: DurablePilot2Input, maxAttempts: number, ownerToken: string) {
       const context = preparePoolJournal(raw);
       const first = makePoolJournalEntry(null, poolJournalAdmission(context, maxAttempts));
@@ -436,6 +443,13 @@ export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOp
         }
         const next = makePoolJournalEntry(current.state.entries[current.state.entries.length - 1],event);
         replayPoolJournal(context,[...current.state.entries,next]);
+        if (event.kind === 'START' && source?.cooldowns) {
+          const waits = await source.cooldowns.read(client,[event.route.provider]);
+          const now = source.cooldowns.clock();
+          if (!Number.isSafeInteger(now) || now < 0) throw Error('POOL_EXECUTION_CLOCK');
+          const deadline = Math.max(now,...waits.filter(w=>w.key===event.route.provider).map(w=>w.notBeforeMs));
+          if (deadline > now) throw new PoolStartDeferred(deadline);
+        }
         await client.query('INSERT INTO dw_ledger.work_pool_journal(work_fingerprint,owner_token,ordinal,entry) VALUES ($1,$2,$3,$4::jsonb)',
           [context.workFingerprint,current.ownerToken,next.ordinal,JSON.stringify(next)]);
         return next;

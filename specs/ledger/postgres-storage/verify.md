@@ -210,6 +210,22 @@
 - **AND** the original plan remains immutable and the source checkpoint does not advance until every selected work completes
 - **AND** exact completed replay uses zero inference
 
+### Requirement: Same-plan finite provider cooldown
+
+#### Scenario: Known wait across selected work
+
+- **GIVEN** a source-bound work recorded a finite provider-scoped 429 deadline
+- **WHEN** another work in the same plan selects before the deadline
+- **THEN** it avoids that provider or defers with no call
+- **AND** after expiry an otherwise eligible route can be selected
+
+#### Scenario: Restriction published between selection and start
+
+- **GIVEN** a selected route was eligible before a concurrent work committed a finite wait
+- **WHEN** its START is checked under the ledger lock
+- **THEN** it defers with no new START and no inference
+- **AND** unrelated plans and indefinite per-work refusals do not supply a shared deadline
+
 ### Requirement: Source acknowledgement retains original plan
 
 #### Scenario: Distinct original and current plans

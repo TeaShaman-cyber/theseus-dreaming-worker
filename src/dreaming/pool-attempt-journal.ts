@@ -54,6 +54,12 @@ const payloadSchema = z.object({
 }).strict();
 const entrySchema = payloadSchema.extend({ entryFingerprint: fingerprint }).strict();
 
+/** Raised before writing START when a committed shared wait is active. */
+export class PoolStartDeferred extends Error {
+  readonly wakeAtMs: number;
+  constructor(wakeAtMs: number) { super('POOL_START_DEFERRED'); this.wakeAtMs=wakeAtMs; }
+}
+
 export type PoolJournalEvent = z.infer<typeof eventSchema>;
 export type PoolJournalEntry = z.infer<typeof entrySchema>;
 type Start = z.infer<typeof startSchema>;

@@ -5,7 +5,7 @@ import { readVerifiedCompletion, recoverDurableCompletion,
 import { selectModelPool, type ModelPoolInput } from './model-pool.ts';
 import { ProviderAdapterError } from './openai-provider-adapter.ts';
 import { runPilot1, type Pilot1Inference, type Pilot1InferenceResult } from './pilot1-runner.ts';
-import { preparePoolJournal, replayPoolJournal, type PoolJournalEvent } from './pool-attempt-journal.ts';
+import { PoolStartDeferred, preparePoolJournal, replayPoolJournal, type PoolJournalEvent } from './pool-attempt-journal.ts';
 import { buildPoolCompletion } from './pool-completion.ts';
 import type { createPostgresPoolJournalStore } from './proposal-ledger-postgres.ts';
 import { fingerprintProposal } from './proposal-schema.ts';
@@ -15,7 +15,7 @@ type Policy = {
   routes: Candidate[]; taskClass: string; maxAttempts: number; maxInvocations: number;
   rotation: number; cooldowns: ModelPoolInput['cooldowns']; clock: () => number;
 };
-type Journal = Pick<ReturnType<typeof createPostgresPoolJournalStore>, 'read' | 'admit' | 'append'>;
+type Journal = Pick<ReturnType<typeof createPostgresPoolJournalStore>, 'read' | 'admit' | 'append'> & Partial<Pick<ReturnType<typeof createPostgresPoolJournalStore>, 'readCooldowns'>>;
 type CompletionStore = Pick<WorkStore, 'readCompletion' | 'complete'>;
 type State = ReturnType<typeof replayPoolJournal>;
 type Start = Extract<PoolJournalEvent, {kind:'START'}>;
@@ -77,11 +77,13 @@ export async function runPooledDurablePilot2(raw: DurablePilot2Input, policy: Po
   });
   const externalCooldowns=structuredClone(policy.cooldowns);
   const time=()=>{const now=clock();if(!Number.isSafeInteger(now)||now<0)throw Error('POOL_EXECUTION_CLOCK');return now;};
-  function choose(state: State|null) {
+  async function choose(state: State|null) {
     const attempts=state?.attempts??[];
     const routes=adapters.map(({metadata:r})=>({...r,
       admission:attempts.some(a=>a.route.provider===r.provider&&a.route.model===r.model)?'NOT_AUTHORIZED' as const:r.admission}));
-    const all=[...externalCooldowns,...(state?.failures.flatMap(f=>f.result.cooldown?[f.result.cooldown]:[])??[])];
+    const shared = state?.unresolved || Math.min(maxInvocations-attemptedPasses,state?.remainingAttempts??maxAttempts)<(state?.validated.length?1:2)
+      ? [] : await journal.readCooldowns?.([...new Set(routes.map(r=>r.provider))]) ?? [];
+    const all=[...externalCooldowns,...shared,...(state?.failures.flatMap(f=>f.result.cooldown?[f.result.cooldown]:[])??[])];
     const cooldowns=new Map<string,ModelPoolInput['cooldowns'][number]>();
     // Both sources remain validated and intact; project only keys applicable
     // to this invocation. At most 64 route and 64 provider keys can matter.
@@ -113,7 +115,7 @@ export async function runPooledDurablePilot2(raw: DurablePilot2Input, policy: Po
     if(current.status==='COMPLETION_EXISTS'||(current.status==='JOURNAL'&&current.completionExists))return result('STORAGE_UNKNOWN');
     if(current.status==='LEGACY_UNRESOLVED')return result('LEGACY_UNRESOLVED');
     if(current.status==='ABSENT'){
-      const selection=choose(null);
+      const selection=await choose(null);
       if(selection.status!=='READY')return result(selection.status,null,selection.status==='DEFERRED'?selection.wakeAtMs:null);
       current=await journal.admit(input,maxAttempts,randomUUID());
     }
@@ -128,13 +130,17 @@ export async function runPooledDurablePilot2(raw: DurablePilot2Input, policy: Po
         const done=await recoverDurableCompletion({schema:'theseus.dreaming-worker.completion-recovery.v1',ownerToken,candidate:completion},workStore);
         return result(done.decision,done.completion);
       }
-      const selection=choose(state);
+      const selection=await choose(state);
       if(selection.status!=='READY')return result(selection.status,null,selection.status==='DEFERRED'?selection.wakeAtMs:null);
       const route=selection.routes[0];
       const adapter=adapters.find(a=>a.metadata.id===route.id);
       if(!adapter)return result('POLICY_CONFLICT');
       const start: Start={kind:'START',attemptId:randomUUID(),slot:state.validated.length===0?0:1,route};
-      state=await journal.append(input,state.tip,start);
+      try { state=await journal.append(input,state.tip,start); }
+      catch(error) {
+        if(error instanceof PoolStartDeferred)return result('DEFERRED',null,error.wakeAtMs);
+        throw error;
+      }
       if(state.pending?.attemptId!==start.attemptId)return result('STORAGE_UNKNOWN');
       rotation=selection.nextRotation;
       let response: Pilot1InferenceResult|null=null;

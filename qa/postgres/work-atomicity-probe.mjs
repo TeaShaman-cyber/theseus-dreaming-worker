@@ -825,7 +825,14 @@ try {
     assert.deepEqual(pooledCalls,['a','b','c']);
     assert.deepEqual((await journal.read(firstWork.input)).state.validated[0],frozenPool);
     assert.equal((await restartPool.acknowledge(pooledInput)).status,'PENDING');
-    const second=await restartPool.runSelectedPooled(pooledInput,secondSession,{...policy,routes:[pooledRoute('a'),pooledRoute('c')]});
+    const waitingSecond=await restartPool.runSelectedPooled(pooledInput,secondSession,{...policy,routes:[pooledRoute('a'),pooledRoute('b')]});
+    assert.equal(waitingSecond.decision,'DEFERRED');
+    assert.equal(waitingSecond.wakeAtMs,5100);
+    assert.equal(waitingSecond.attemptedPasses,0);
+    const secondWork=pooledPrepared.prepared.find(e=>e.provenance.session.session_id===secondSession);
+    assert.equal((await journal.read(secondWork.input)).status,'ABSENT');
+    assert.deepEqual(pooledCalls,['a','b','c']);
+    const second=await restartPool.runSelectedPooled(pooledInput,secondSession,{...policy,routes:[pooledRoute('a'),pooledRoute('b'),pooledRoute('c')]});
     assert.equal(second.decision,'COMMITTED');
     assert.deepEqual(pooledCalls,['a','b','c','a','c']);
     const pooledAck=await restartPool.acknowledge(pooledInput);
@@ -850,6 +857,62 @@ try {
     assert.equal((await journal.read(unboundWork.input)).state.attempts.length,0);
     assert.deepEqual(pooledCalls,['a','b','c','a','c']);
     console.log('SOURCE_POOLED_ADMISSION_PG_PASS missing_plan=blocked origin_rollback=verified unbound=blocked alternate_plan=blocked restart_calls=1 replay_calls=0 source_ack=verified');
+    // A second plan must not inherit the previous plan's wait.
+    const raceInput={...pooledInput,analysisVersion:'source-pooled-cooldown-race-v1'};
+    const raceRoot=await sourceStore.initialize(raceInput);
+    assert.equal(raceRoot.status,'ACKNOWLEDGED');
+    raceInput.previousCheckpoint=raceRoot.receipt.receiptFingerprint;
+    assert.equal((await sourceStore.stage(raceInput)).status,'STAGED');
+    const raceWork=prepareSourceBatchExecution(raceInput).prepared.find(e=>e.provenance.session.session_id===secondSession);
+    let selectionReads=0;
+    const racedStore=createPostgresSourceBatchStore({connectionString,clientFactory:url=>{
+      const c=new Client({connectionString:url});
+      return {connect:()=>c.connect(),end:()=>c.end(),async query(sql,params){
+        const result=await c.query(sql,params);
+        if(sql.includes("MAX((j.entry #>> '{event,cooldown,notBeforeMs}')")&&params[3].length===2){
+          selectionReads++;
+          assert.deepEqual(result.rows,[]);
+          if(selectionReads===2){
+            const failure=await sourceStore.runSelectedPooled(raceInput,firstSession,{...policy,routes:[pooledRoute('b',true),pooledRoute('a')]});
+            assert.equal(failure.decision,'BUDGET_EXHAUSTED');
+            assert.equal(failure.attemptedPasses,1);
+          }
+        }
+        return result;
+      }};
+    }});
+    const startRace=await racedStore.runSelectedPooled(raceInput,secondSession,{...policy,routes:[pooledRoute('b'),pooledRoute('a')]});
+    assert.equal(selectionReads,2);
+    assert.equal(startRace.decision,'DEFERRED');
+    assert.equal(startRace.wakeAtMs,5100);
+    assert.equal(startRace.attemptedPasses,0);
+    const storedRace=await journal.read(raceWork.input);
+    assert.equal(storedRace.status,'JOURNAL');
+    assert.equal(storedRace.state.attempts.length,0);
+    assert.deepEqual(pooledCalls,['a','b','c','a','c','b']);
+    const afterWait=await restartPool.runSelectedPooled(raceInput,secondSession,{...policy,routes:[pooledRoute('b'),pooledRoute('a')],clock:()=>5100});
+    assert.equal(afterWait.decision,'COMMITTED');
+    assert.equal(afterWait.attemptedPasses,2);
+    assert.deepEqual(pooledCalls,['a','b','c','a','c','b','b','a']);
+    assert.equal((await restartPool.acknowledge(raceInput)).status,'PENDING');
+    const indefiniteInput={...pooledInput,analysisVersion:'source-pooled-indefinite-v1'};
+    const indefiniteRoot=await sourceStore.initialize(indefiniteInput);
+    assert.equal(indefiniteRoot.status,'ACKNOWLEDGED');
+    indefiniteInput.previousCheckpoint=indefiniteRoot.receipt.receiptFingerprint;
+    assert.equal((await sourceStore.stage(indefiniteInput)).status,'STAGED');
+    const indefinite={...pooledRoute('b'),async infer(){
+      pooledCalls.push('b');
+      throw new ProviderAdapterError('RATE_LIMITED','synthetic 429 without deadline',{status:429,providerState:'RESPONDED'});
+    }};
+    const noDeadline=await sourceStore.runSelectedPooled(indefiniteInput,firstSession,{...policy,routes:[indefinite,pooledRoute('a')]});
+    assert.equal(noDeadline.decision,'BUDGET_EXHAUSTED');
+    const indWork=prepareSourceBatchExecution(indefiniteInput).prepared.find(e=>e.provenance.session.session_id===firstSession);
+    assert.equal((await journal.read(indWork.input)).state.failures[0].result.cooldown.notBeforeMs,Number.MAX_SAFE_INTEGER);
+    const independent=await restartPool.runSelectedPooled(indefiniteInput,secondSession,{...policy,routes:[pooledRoute('b'),pooledRoute('a')]});
+    assert.equal(independent.decision,'COMMITTED');
+    assert.deepEqual(pooledCalls.slice(-3),['b','b','a']);
+    console.log('SOURCE_POOLED_COOLDOWN_PG_PASS finite_wait=deferred alternative=selected different_plan=isolated start_race=no_dispatch expired=allowed indefinite=local_only');
+
   }
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
 } finally {
