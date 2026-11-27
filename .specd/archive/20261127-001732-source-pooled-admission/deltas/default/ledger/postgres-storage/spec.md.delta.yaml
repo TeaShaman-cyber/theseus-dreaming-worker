@@ -1,0 +1,12 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Staged source work admission$'
+  content: |
+    ### Requirement: Same-plan pooled source admission
+
+    Explicit synthetic pooled selected work MUST derive its exact input from the verified staged plan. New reservation, initial journal entry and immutable source origin MUST commit atomically under the existing ledger lock. Existing work MUST have the same exact original plan and work identity; unbound or differently bound work MUST NOT be adopted. Journal mutations MUST require the exact staged plan and unadvanced predecessor. Readback MUST verify original plan custody; exact completed replay MUST use zero inference. The pooled executor MUST NOT advance source progress. Existing acknowledgement MUST verify all selected completions and original origins. Cross-plan partial recovery and cross-work cooldown persistence remain outside this increment.

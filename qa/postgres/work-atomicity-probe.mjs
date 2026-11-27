@@ -759,6 +759,98 @@ try {
   assert.deepEqual(await zeroRestart.readTip(zeroPassInput), zeroRecovered.run.receipt);
   assert.equal(sourceCalls, zeroCalls + 4);
   console.log('SOURCE_ZERO_PASS_RECOVERY_PG_PASS completed=2 additional_calls=0');
+  {
+    // Exact same-plan pooled source custody, with synthetic inference only.
+    const { prepareSourceBatchExecution } = await import('../../src/dreaming/source-batch-receipt.ts');
+    const { createPostgresPoolJournalStore } = await import('../../src/dreaming/proposal-ledger-postgres.ts');
+    const { ProviderAdapterError } = await import('../../src/dreaming/openai-provider-adapter.ts');
+    const pooledInput = { ...args, analysisVersion: 'source-pooled-same-plan-v1' };
+    const pooledRoot = await sourceStore.initialize(pooledInput);
+    assert.equal(pooledRoot.status, 'ACKNOWLEDGED');
+    pooledInput.previousCheckpoint = pooledRoot.receipt.receiptFingerprint;
+    const pooledPrepared = prepareSourceBatchExecution(pooledInput);
+    const firstSession = pooledInput.entries[0].sessionId;
+    const secondSession = pooledInput.entries[1].sessionId;
+    const firstWork = pooledPrepared.prepared.find(e=>e.provenance.session.session_id===firstSession);
+    const pooledCalls = [];
+    const pooledRoute = (id, fail=false) => ({
+      id, provider:'pool-provider-'+id, model:'pool-model-'+id, modelFamily:id,
+      admission:'FREE_RESEARCH', qualifiedTasks:['analysis'], catalog:'PRESENT', catalogValidUntilMs:100000,
+      async infer(request){
+        pooledCalls.push(id);
+        if(fail) throw new ProviderAdapterError('RATE_LIMITED','synthetic 429',{status:429,retryAfterMs:5000,providerState:'RESPONDED'});
+        return {provider:'pool-provider-'+id,model:'pool-model-'+id,finishReason:'stop',
+          text:JSON.stringify({schema:'theseus.dreaming-worker.proposals.v1',proposals:[{
+            type:'FACT',claim:'Synthetic selected-session observation.',
+            source_refs:request.packet.evidence.map(e=>({source_ref:e.sourceRef,evidence_hash:e.evidenceHash})),
+          }]})};
+      },
+    });
+    const policy = {routes:[pooledRoute('a'),pooledRoute('b',true),pooledRoute('c')],
+      taskClass:'analysis',maxAttempts:4,maxInvocations:2,rotation:0,cooldowns:[],clock:()=>100};
+    const journal = createPostgresPoolJournalStore({connectionString});
+    const noPlan = await sourceStore.runSelectedPooled(pooledInput,firstSession,policy);
+    assert.equal(noPlan.decision,'STORAGE_UNKNOWN');
+    assert.equal(noPlan.attemptedPasses,0);
+    assert.equal((await journal.read(firstWork.input)).status,'ABSENT');
+    const stagedPool = await sourceStore.stage(pooledInput);
+    assert.equal(stagedPool.status,'STAGED');
+    const brokenOrigin = createPostgresSourceBatchStore({connectionString,clientFactory:url=>{
+      const c=new Client({connectionString:url});
+      return {connect:()=>c.connect(),end:()=>c.end(),async query(sql,params){
+        if(sql.startsWith('INSERT INTO dw_ledger.source_work_origins'))throw Error('synthetic origin insert failure');
+        return c.query(sql,params);
+      }};
+    }});
+    assert.equal((await brokenOrigin.runSelectedPooled(pooledInput,firstSession,policy)).decision,'STORAGE_UNKNOWN');
+    assert.equal((await journal.read(firstWork.input)).status,'ABSENT');
+    assert.deepEqual(pooledCalls,[]);
+    const partialPool=await sourceStore.runSelectedPooled(pooledInput,firstSession,policy);
+    assert.equal(partialPool.decision,'BUDGET_EXHAUSTED');
+    assert.deepEqual(pooledCalls,['a','b']);
+    assert.equal((await sourceStore.acknowledge(pooledInput)).status,'PENDING');
+    assert.deepEqual(await sourceStore.readTip(pooledInput),pooledRoot.receipt);
+    const frozenPool=(await journal.read(firstWork.input)).state.validated[0];
+    const otherWitness=structuredClone(pooledInput);
+    otherWitness.entries[0].index.sessions[0].messages[0].sources.push({
+      ...otherWitness.entries[0].index.sessions[0].messages[0].sources[0],member_name:'synthetic-pooled-other-witness',
+    });
+    assert.equal((await sourceStore.stage(otherWitness)).status,'STAGED');
+    assert.equal((await sourceStore.runSelectedPooled(otherWitness,firstSession,policy)).decision,'STORAGE_UNKNOWN');
+    assert.deepEqual(pooledCalls,['a','b']);
+    const restartPool=createPostgresSourceBatchStore({connectionString});
+    const filled=await restartPool.runSelectedPooled(pooledInput,firstSession,{...policy,maxInvocations:1,rotation:partialPool.nextRotation});
+    assert.equal(filled.decision,'COMMITTED');
+    assert.equal(filled.attemptedPasses,1);
+    assert.deepEqual(pooledCalls,['a','b','c']);
+    assert.deepEqual((await journal.read(firstWork.input)).state.validated[0],frozenPool);
+    assert.equal((await restartPool.acknowledge(pooledInput)).status,'PENDING');
+    const second=await restartPool.runSelectedPooled(pooledInput,secondSession,{...policy,routes:[pooledRoute('a'),pooledRoute('c')]});
+    assert.equal(second.decision,'COMMITTED');
+    assert.deepEqual(pooledCalls,['a','b','c','a','c']);
+    const pooledAck=await restartPool.acknowledge(pooledInput);
+    assert.equal(pooledAck.status,'ACKNOWLEDGED');
+    assert.equal(pooledAck.receipt.origins.length,2);
+    assert.ok(pooledAck.receipt.origins.every(o=>o.planFingerprint===stagedPool.plan.planFingerprint));
+    assert.deepEqual(await restartPool.readTip(pooledInput),pooledAck.receipt);
+    const replayPool=await restartPool.runSelectedPooled(pooledInput,firstSession,{...policy,routes:[],maxInvocations:0});
+    assert.equal(replayPool.decision,'ALREADY_PROCESSED');
+    assert.equal(replayPool.attemptedPasses,0);
+    assert.deepEqual(replayPool.completion,filled.completion);
+    assert.equal((await restartPool.acknowledge(pooledInput)).status,'ALREADY_ACKNOWLEDGED');
+    const unbound={...pooledInput,analysisVersion:'source-pooled-unbound-v1'};
+    const unboundRoot=await restartPool.initialize(unbound);
+    assert.equal(unboundRoot.status,'ACKNOWLEDGED');
+    unbound.previousCheckpoint=unboundRoot.receipt.receiptFingerprint;
+    assert.equal((await restartPool.stage(unbound)).status,'STAGED');
+    const unboundWork=prepareSourceBatchExecution(unbound).prepared.find(e=>e.provenance.session.session_id===firstSession);
+    const unboundAdmit=await journal.admit(unboundWork.input,4,randomUUID());
+    assert.equal(unboundAdmit.status,'JOURNAL');
+    assert.equal((await restartPool.runSelectedPooled(unbound,firstSession,policy)).decision,'STORAGE_UNKNOWN');
+    assert.equal((await journal.read(unboundWork.input)).state.attempts.length,0);
+    assert.deepEqual(pooledCalls,['a','b','c','a','c']);
+    console.log('SOURCE_POOLED_ADMISSION_PG_PASS missing_plan=blocked origin_rollback=verified unbound=blocked alternate_plan=blocked restart_calls=1 replay_calls=0 source_ack=verified');
+  }
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');
 } finally {
   await Promise.allSettled(sourceClients.map(client => client.end()));

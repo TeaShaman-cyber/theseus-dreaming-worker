@@ -193,6 +193,23 @@
 - **THEN** one reservation is bound to the original plan before inference
 - **AND** replay does not repeat inference or change the original plan
 
+### Requirement: Same-plan pooled source admission
+
+#### Scenario: Missing or changed source custody
+
+- **GIVEN** missing staged plan, unbound reservation or a different original plan
+- **WHEN** pooled selected work is requested
+- **THEN** no model call or new origin follows
+- **AND** an existing journal is not adopted
+
+#### Scenario: Partial source work and restart
+
+- **GIVEN** an exact staged synthetic plan and one validated perspective followed by known failure
+- **WHEN** the same plan is resumed
+- **THEN** only the missing slot is executed
+- **AND** the original plan remains immutable and the source checkpoint does not advance until every selected work completes
+- **AND** exact completed replay uses zero inference
+
 ### Requirement: Source acknowledgement retains original plan
 
 #### Scenario: Distinct original and current plans

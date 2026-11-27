@@ -331,7 +331,7 @@ const poolRollback=steps=>[poolQ('BEGIN'),poolQ(poolLockSQL),...steps,poolQ('ROL
 const poolReserve=rows=>poolQ(poolReserveSQL,[poolContext.workFingerprint,poolOwner],rows);
 const poolAdmit=poolQ(poolAdmitSQL,[poolContext.workFingerprint,poolOwner,JSON.stringify(poolFirst)]);
 const poolAppend=poolQ(poolAppendSQL,[poolContext.workFingerprint,poolOwner,1,JSON.stringify(poolNext)]);
-function poolScript(groups){
+function poolScript(groups,source){
   let opened=0,closed=0;
   const unexpected=[];
   const store=createPostgresPoolJournalStore({
@@ -357,7 +357,7 @@ function poolScript(groups){
         },
       };
     },
-  });
+  },source);
   return {store,done(){assert.deepEqual(unexpected,[]);assert.equal(opened,groups.length);assert.equal(closed,opened);}};
 }
 const group=steps=>({steps});
@@ -458,4 +458,44 @@ test('pool journal default client uses exact connection and closes after read',a
   const store=createPostgresPoolJournalStore({connectionString:'postgresql://fixture.invalid/pool'});
   assert.deepEqual(await store.read(poolInput),{status:'ABSENT'});
   assert.deepEqual(calls,[['connect','fixture.invalid'],[poolReadSQL,[poolContext.workFingerprint]],['end']]);
+});
+
+const sourceVerify=(operation,state)=>poolQ('verify-source',[operation,state,poolContext.workFingerprint]);
+const sourceBind=poolQ('bind-source',[poolContext.workFingerprint]);
+const sourceBinding={
+  async verify(client,ctx,current,operation){
+    assert.deepEqual(ctx,poolContext);
+    await client.query('verify-source',[operation,current.status,ctx.workFingerprint]);
+  },
+  async bind(client,ctx){
+    assert.deepEqual(ctx,poolContext);
+    await client.query('bind-source',[ctx.workFingerprint]);
+  },
+};
+test('source journal binding is atomic with reservation and admission, and checked at readback',async()=>{
+  const s=poolScript([group(poolTx([poolRead([]),sourceVerify('admit','ABSENT'),
+    poolReserve([{owner_token:poolOwner}]),poolAdmit,sourceBind])),
+    group([poolRead(poolRows([poolFirst])),sourceVerify('read','JOURNAL')])],sourceBinding);
+  assert.deepEqual(await s.store.admit(poolInput,4,poolOwner),poolView([poolFirst]));s.done();
+});
+test('source journal binding checks existing custody without rebinding',async()=>{
+  const s=poolScript([group(poolTx([poolRead(poolRows([poolFirst])),sourceVerify('admit','JOURNAL')])),
+    group([poolRead(poolRows([poolFirst])),sourceVerify('read','JOURNAL')])],sourceBinding);
+  assert.deepEqual(await s.store.admit(poolInput,4,poolOther),poolView([poolFirst]));s.done();
+});
+test('source journal verifies locked append and independent readback',async()=>{
+  const s=poolScript([group(poolTx([poolRead(poolRows([poolFirst])),sourceVerify('append','JOURNAL'),poolAppend])),
+    group([poolRead(poolRows([poolFirst,poolNext])),sourceVerify('read','JOURNAL')])],sourceBinding);
+  assert.deepEqual(await s.store.append(poolInput,poolFirst.entryFingerprint,poolStart),poolState([poolFirst,poolNext]));s.done();
+});
+test('source plan rejection or origin insert failure prevents admission or dispatch',async()=>{
+  const err=Error('fixture source custody failure');
+  for(const [steps,op] of [
+    [poolRollback([poolRead([]),{...sourceVerify('admit','ABSENT'),error:err}]),s=>s.admit(poolInput,4,poolOwner)],
+    [poolRollback([poolRead([]),sourceVerify('admit','ABSENT'),poolReserve([{owner_token:poolOwner}]),poolAdmit,{...sourceBind,error:err}]),s=>s.admit(poolInput,4,poolOwner)],
+    [poolRollback([poolRead(poolRows([poolFirst])),{...sourceVerify('append','JOURNAL'),error:err}]),s=>s.append(poolInput,poolFirst.entryFingerprint,poolStart)],
+  ]){
+    const s=poolScript([group(steps)],sourceBinding);
+    await assert.rejects(op(s.store),err);s.done();
+  }
 });
