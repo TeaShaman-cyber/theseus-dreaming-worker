@@ -324,6 +324,7 @@ test('fixed batch confirms exact acknowledgement states on both initial and repl
   for(const [status,expected] of [['ALREADY_ACKNOWLEDGED','ALREADY_ACKNOWLEDGED'],['STORAGE_UNKNOWN','STORAGE_UNKNOWN']]){
     const r=await runSourceBatch(x,routes,{...store,readTip:async()=>({receiptFingerprint:x.previousCheckpoint}),acknowledge:async()=>({status,receipt:good})},0);
     assert.equal(r.status,expected);
+    assert.deepEqual(r.receipt,expected==='ALREADY_ACKNOWLEDGED'?good:null);
   }
 });
 
@@ -351,13 +352,13 @@ test('fixed batch rejects untrusted work summaries before acknowledging or dispa
 
 test('fixed and pooled adapters deny over-budget calls before provider dispatch',async()=>{
   const x=input();
-  const fixed=setup(x);
+  const fixed=setup(x);let fixedRejected;
   const r=await runSourceBatch(x,fixed.routes,{...fixed.store,async runSelected(_raw,_id,routes){
     for(let i=0;i<2;i++)await routes[0].infer({packet:{evidence:[]}});
-    await assert.rejects(()=>routes[0].infer({packet:{evidence:[]}}),/SOURCE_RUN_PASS_BUDGET/);
+    try{await routes[0].infer({packet:{evidence:[]}});}catch(e){fixedRejected=e.message;throw e;}
     throw Error('synthetic untrusted store abort');
   }},2);
-  assert.equal(r.status,'STORAGE_UNKNOWN');assert.equal(r.attemptedPasses,2);assert.equal(fixed.counts().calls,2);assert.equal(fixed.counts().acks,0);
+  assert.equal(r.status,'STORAGE_UNKNOWN');assert.equal(fixedRejected,'SOURCE_RUN_PASS_BUDGET');assert.equal(r.attemptedPasses,2);assert.equal(fixed.counts().calls,2);assert.equal(fixed.counts().acks,0);
   const s=pooledStub(x,[]);let rejected;
   const p=await runPooledSourceBatch(x,{...s.policy,maxInvocations:0},{...s.store,async runSelectedPooled(_raw,_id,policy){
     try{await policy.routes[0].infer({packet:{evidence:[]}});}catch(e){rejected=e.message;throw e;}
