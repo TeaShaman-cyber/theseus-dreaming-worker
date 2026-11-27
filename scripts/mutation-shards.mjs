@@ -69,6 +69,14 @@ export const MUTATION_SHARDS = Object.freeze({
       'test/durable-pilot2.test.mjs',
     ]),
   }),
+  'source-batch': Object.freeze({
+    mutate: Object.freeze(['src/dreaming/source-batch-run.ts']),
+    tests: Object.freeze(['test/source-batch-run.test.mjs']),
+  }),
+  'source-cycle': Object.freeze({
+    mutate: Object.freeze(['src/dreaming/source-cycle.ts']),
+    tests: Object.freeze(['test/source-cycle.test.mjs']),
+  }),
   observability: Object.freeze({
     mutate: Object.freeze([
       'src/mastra/observability-routing.ts',

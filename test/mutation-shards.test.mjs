@@ -13,6 +13,8 @@ test('heavy mutation is split into explicit hosted shards', () => {
     'pilot0-1',
     'pilot2',
     'serializer',
+    'source-batch',
+    'source-cycle',
   ]);
 
   assert.deepEqual(MUTATION_SHARDS.checkpoint.mutate, ['src/dreaming/checkpoint-pilot2.ts', 'src/dreaming/durable-pilot2.ts']);
@@ -46,4 +48,11 @@ test('mutation shard selection fails closed when no explicit shard is supplied',
   assert.throws(() => getMutationShard(''), /MUTATION_SHARD_REQUIRED/);
   assert.throws(() => getMutationShard('all'), /MUTATION_SHARD_UNKNOWN: all/);
   assert.equal(getMutationShard('serializer'), MUTATION_SHARDS.serializer);
+});
+
+test('source orchestration mutation scopes are independent and use their behavior tests', () => {
+  assert.deepEqual(MUTATION_SHARDS['source-batch'].mutate, ['src/dreaming/source-batch-run.ts']);
+  assert.deepEqual(MUTATION_SHARDS['source-batch'].tests, ['test/source-batch-run.test.mjs']);
+  assert.deepEqual(MUTATION_SHARDS['source-cycle'].mutate, ['src/dreaming/source-cycle.ts']);
+  assert.deepEqual(MUTATION_SHARDS['source-cycle'].tests, ['test/source-cycle.test.mjs']);
 });

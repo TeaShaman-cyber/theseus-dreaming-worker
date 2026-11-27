@@ -190,3 +190,26 @@ test('pooled cycle preserves snapshotted execution budget and metadata across ac
   assert.equal(r.attemptedPasses,0);
   assert.deepEqual(counts,{transport:12,store:2,inference:0});
 });
+
+test('cycle rejects a non-callable transport before acquisition', async () => {
+  for (const [run, factory] of [[runSourceCycle, setup], [runPooledSourceCycle, pooledSetup]]) {
+    const {options, counts} = factory();
+    const r = await run(input(), {...options, transport: null});
+    assert.deepEqual(r, {status:'INPUT_REJECTED', handoff:null, attemptedPasses:0, run:null});
+    assert.deepEqual(counts, {transport:0, store:0, inference:0});
+  }
+});
+test('cycle does not report a membership change for identical snapshots', async () => {
+  for (const [run, factory] of [[runSourceCycle, setup], [runPooledSourceCycle, pooledSetup]]) {
+    const {options, counts} = factory();
+    const x = changed(input(), c => {
+      c.current_membership = structuredClone(c.previous_membership);
+      c.selected = [];
+    });
+    x.indexes = [];
+    const r = await run(x, options);
+    assert.equal(r.status, 'NO_SELECTED_WORK');
+    assert.equal(r.handoff.membershipChanged, false);
+    assert.deepEqual(counts, {transport:0, store:0, inference:0});
+  }
+});

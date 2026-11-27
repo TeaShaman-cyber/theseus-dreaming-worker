@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { planMutation } from '../tools/ci/mutation-feedback.mjs';
 
 test('repository exposes one canonical development QA gate', () => {
   const gate = readFileSync('tools/dev/check', 'utf8');
@@ -171,4 +172,12 @@ test('ledger mutation receives a bounded extended runner deadline without weaken
   assert.ok(workflow.includes("timeout-minutes: ${{ matrix.shard == 'ledger' && 60 || 30 }}"));
   const config = readFileSync('stryker.config.mjs', 'utf8');
   assert.match(config, /break:\s*100/);
+});
+
+test('source orchestration mutation checks run on separate hosted matrix jobs', () => {
+  const workflow = readFileSync('.github/workflows/mutation.yml', 'utf8');
+  assert.match(workflow, /fromJSON\(needs\.plan\.outputs\.shards\)/);
+  const names = planMutation('push', {}).shards;
+  assert.equal(names.filter(name => name === 'source-batch').length, 1);
+  assert.equal(names.filter(name => name === 'source-cycle').length, 1);
 });

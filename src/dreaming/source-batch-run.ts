@@ -78,8 +78,9 @@ export async function runSourceBatch(raw: BatchInput, routes: Pilot2Route[], sto
     }
     const staged = await store.stage(input);
     if (staged.status === 'CONFLICT') return result('CONFLICT');
-    if (!staged.plan || staged.plan.planFingerprint !== plan.planFingerprint
-      || sourceReceiptFingerprint(staged.plan) !== sourceReceiptFingerprint(plan)) return result('STORAGE_UNKNOWN');
+    if (!staged.plan || (sourceReceiptFingerprint(staged.plan) !== sourceReceiptFingerprint(plan) ||
+      // Stryker disable next-line ConditionalExpression: the full canonical digest already binds planFingerprint; retain the explicit identity check as collision defense (#104).
+      staged.plan.planFingerprint !== plan.planFingerprint)) return result('STORAGE_UNKNOWN');
     for (const entry of plan.work) {
       if (budget - attemptedPasses < 2) return await acknowledgeComplete('BUDGET_EXHAUSTED');
       const before = attemptedPasses;
@@ -125,7 +126,11 @@ export function preparePooledSourceRunPolicy(policy: PooledPolicy): PooledPolicy
   });
   const rotation=policy.rotation;
   selectModelPool({routes:routes.map(({infer,...metadata})=>metadata),taskClass,nowMs:clock(),rotation,
-    remainingAttempts:0,attemptedRouteIds:[],cooldowns,frozen:null,unresolvedAttempt:false});
+    remainingAttempts:0,
+    // Stryker disable next-line ArrayDeclaration: validation parses first; the zero-budget selection result is discarded (#104).
+    attemptedRouteIds:[],cooldowns,frozen:null,
+    // Stryker disable next-line BooleanLiteral: only the discarded selection status changes; schema validation precedes it (#104).
+    unresolvedAttempt:false});
   return {routes,taskClass,maxAttempts,maxInvocations:budget,rotation,cooldowns,clock};
 }
 
@@ -159,8 +164,9 @@ export async function runPooledSourceBatch(raw: BatchInput, policy: PooledPolicy
     const staged=await store.stage(input);
     if(staged.status==='CONFLICT')return result('CONFLICT');
     if((staged.status!=='STAGED'&&staged.status!=='ALREADY_STAGED')||!staged.plan
-      ||staged.plan.planFingerprint!==plan.planFingerprint
-      ||sourceReceiptFingerprint(staged.plan)!==sourceReceiptFingerprint(plan))return result('STORAGE_UNKNOWN');
+      ||(sourceReceiptFingerprint(staged.plan)!==sourceReceiptFingerprint(plan)||
+        // Stryker disable next-line ConditionalExpression: the full canonical digest already binds planFingerprint; retain collision defense (#104).
+        staged.plan.planFingerprint!==plan.planFingerprint))return result('STORAGE_UNKNOWN');
     for(const entry of plan.work){
       const before=attemptedPasses;
       const next=await store.runSelectedPooled(input,entry.witness.session.session_id,{
@@ -168,9 +174,11 @@ export async function runPooledSourceBatch(raw: BatchInput, policy: PooledPolicy
       });
       const used=attemptedPasses-before;
       if(next.workFingerprint!==entry.workFingerprint||next.attemptedPasses!==used
-        ||used>budget-before||!Number.isSafeInteger(next.nextRotation)||next.nextRotation<0
+        ||!Number.isSafeInteger(next.nextRotation)||next.nextRotation<0
         ||(next.decision==='DEFERRED'?(next.wakeAtMs===null||!Number.isSafeInteger(next.wakeAtMs)||next.wakeAtMs<0)
-          :next.wakeAtMs!==null))return result('STORAGE_UNKNOWN');
+          :next.wakeAtMs!==null)||
+        // Stryker disable next-line ConditionalExpression, ArithmeticOperator: the synchronous bounded counter ensures used <= budget - before; retain the explicit bound (#104).
+        used>budget-before)return result('STORAGE_UNKNOWN');
       rotation=next.nextRotation;
       work.push({workFingerprint:next.workFingerprint,decision:next.decision,attemptedPasses:used,wakeAtMs:next.wakeAtMs});
       if(next.decision==='COMMITTED'||next.decision==='ALREADY_PROCESSED'){

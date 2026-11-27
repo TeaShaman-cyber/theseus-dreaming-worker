@@ -37,6 +37,8 @@ Heavy mutation QA is GitHub-runner-first. The governed exe.dev VM is the control
 
 The hosted mutation workflow runs the independent shards declared in `scripts/mutation-shards.mjs`. The repository wrapper requires an explicit shard name, so plain `npm run mutation` fails before Stryker starts instead of accidentally launching the whole heavy suite locally.
 
+The source-batch and source-cycle shards (#104) require classified baselines before promotion.
+
 Draft PR feedback selects every shard that directly runs a modified test entrypoint. Synchronize events compare the previous and new head only if the previous head is an ancestor; opening/reopening a draft compares against the base. Unmapped files, runtime/config/fixture edits, additions/deletions, missing or ambiguous diffs run the entire matrix as feedback. No source dependency inference is attempted. A manual workflow dispatch with an explicit `shard` is feedback only; empty input runs the full matrix. All mutation-relevant ready-for-review and non-draft PR events, and main pushes, run every declared shard. A draft is not acceptance, even if its feedback happens to include every shard. Feedback jobs and artifacts have distinct names. Before promotion, inspect the full matrix on the exact current PR head/base; focused results, skipped shards, stale receipts and a green `verify` alone cannot substitute for it. No branch-protection or mutation threshold changes.
 
 
