@@ -1,0 +1,12 @@
+{
+  "maple": {
+    "supportSets": [["A","B"],["A","C"]],
+    "premises": [{"id":"A","state":"T","refs":["E2"]},{"id":"B","state":"U","refs":["E3"]},{"id":"C","state":"T","refs":["E4"]}],
+    "decision": "ALLOW"
+  },
+  "linden": {
+    "supportSets": [["A","B","C"],["A","B","D"]],
+    "premises": [{"id":"A","state":"F","refs":["E2"]},{"id":"B","state":"T","refs":["E3"]},{"id":"C","state":"U","refs":["E4"]},{"id":"D","state":"T","refs":["E5"]}],
+    "decision": "DENIED"
+  }
+}
