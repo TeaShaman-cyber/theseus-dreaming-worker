@@ -1,0 +1,152 @@
+{
+  "producer_commit": "3b7b5360050cc2ecdcb60f485a657f2b763751e4",
+  "serving": "verified_bundles_simulated_catalog_readback",
+  "candidate": {
+    "schema": "theseus.session-search-recovery-handoff-candidate.v1",
+    "status": "HANDOFF_CANDIDATE",
+    "provider": "chatgpt",
+    "scope": "synthetic:chatgpt",
+    "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+    "delta_contract": "theseus.session-search-rederived-session-delta.v1",
+    "baseline_verification": "rederived_under_current_contract",
+    "previous_membership": {
+      "schema": "theseus.session-search-accepted-membership.v1",
+      "scope": "synthetic:chatgpt",
+      "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+      "verification_level": "projection_consistency",
+      "members": [
+        {
+          "artifact_sha256": "235756ff2427854165f4bb4f3e9f17c0e8948da07e1cb7c395f9bc2506460fda",
+          "ledger_sha256": "ed4b8d641ee21472d9478a7132c7000a1622e438eefa92c896c4a6131d4cd107"
+        },
+        {
+          "artifact_sha256": "6f0b01a06075bfdee5434fa8ee28bf1f0b219e15f6df25fe1f0309a979fe020f",
+          "ledger_sha256": "78050fe7eeb84054bd2c1d26db852ed8e86c707b40cb545e96e7e9f1782ef2f9"
+        },
+        {
+          "artifact_sha256": "8a034f9d1b14397950ff4419755fbec16fba2e7e5978d217492b185ed0036b0d",
+          "ledger_sha256": "221bbd73949a49ee373750149be67693843a60781db72403b907a40da08a957e"
+        },
+        {
+          "artifact_sha256": "9279bca06402d0e5f5af1c40d881edfa81f77ea2507f98ce0d9edd5b4a91a3ae",
+          "ledger_sha256": "9f96e253f7a80781f43e6477f669feb248a7f72915ef6f37f034f14d81e55c5a"
+        },
+        {
+          "artifact_sha256": "edd5059795c2649beaa9b25d33d1cb6b31b175ce9fc979582d92288875d0f5ee",
+          "ledger_sha256": "275506601b09116ce0895c20dda1c13aa227e10184d932d1043a4199b8d584d0"
+        },
+        {
+          "artifact_sha256": "ee9debcfd2e225147d83f03f48da2185045c7100ceb7e96e2bf9cb4a42d1c3e3",
+          "ledger_sha256": "2de85f86f8fdc5475a10855c4665c1db23f47c623dcc11ab9716a844043bdd89"
+        },
+        {
+          "artifact_sha256": "ff6c94d4c159787b9b5533f6e0990e68928dcc70e39250d38c5a8a285ed5ef7a",
+          "ledger_sha256": "c28c29905631e6fa90bcdb1fd6f1e995132d02467aa4a2b0da461b0c803538b4"
+        }
+      ],
+      "accepted_set_sha256": "6cfa2245461496c99db5130b814321ccc5dfcf08e1b1ba93dbc4e080a9aea607",
+      "snapshot_sha256": "0ca47d4f4a8c80938f16bbcdf01ad47a0aace1dec615daf3202d55a14c1f19d1"
+    },
+    "current_membership": {
+      "schema": "theseus.session-search-accepted-membership.v1",
+      "scope": "synthetic:chatgpt",
+      "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+      "verification_level": "projection_consistency",
+      "members": [
+        {
+          "artifact_sha256": "235756ff2427854165f4bb4f3e9f17c0e8948da07e1cb7c395f9bc2506460fda",
+          "ledger_sha256": "ed4b8d641ee21472d9478a7132c7000a1622e438eefa92c896c4a6131d4cd107"
+        },
+        {
+          "artifact_sha256": "34968b28244075bf1aaf089bd3bea0cde0cfae12186736ea28b0252793865a90",
+          "ledger_sha256": "29c538eeb7b91771be6e5a5750a9e4703d019826b24cc55fcb523b38907b09d3"
+        },
+        {
+          "artifact_sha256": "35247f1a99dee389430a86df2cf42e709385fb010fb297fac805df46bdf59a42",
+          "ledger_sha256": "096b416b57af18a6e227777fbf4d3485f4edd09bf52de702a5f602f2cf424b89"
+        },
+        {
+          "artifact_sha256": "6c8b02cc24738dd20192847adae5609e3f8cb8324a7a7bc9914acfd10fbeb6dd",
+          "ledger_sha256": "616f2247c077736b9fc07c139c40ed3e3ccbca641b7178b1534febada8af2862"
+        },
+        {
+          "artifact_sha256": "6f0b01a06075bfdee5434fa8ee28bf1f0b219e15f6df25fe1f0309a979fe020f",
+          "ledger_sha256": "78050fe7eeb84054bd2c1d26db852ed8e86c707b40cb545e96e7e9f1782ef2f9"
+        },
+        {
+          "artifact_sha256": "8a034f9d1b14397950ff4419755fbec16fba2e7e5978d217492b185ed0036b0d",
+          "ledger_sha256": "221bbd73949a49ee373750149be67693843a60781db72403b907a40da08a957e"
+        },
+        {
+          "artifact_sha256": "9279bca06402d0e5f5af1c40d881edfa81f77ea2507f98ce0d9edd5b4a91a3ae",
+          "ledger_sha256": "9f96e253f7a80781f43e6477f669feb248a7f72915ef6f37f034f14d81e55c5a"
+        },
+        {
+          "artifact_sha256": "ced9d1f9bd0ffba74ef1ae9cbd23cb61dd299166b5743e5012a532e3f676c141",
+          "ledger_sha256": "e2ad4856239056a42abc01d2fbe9225a3857679caf8a8a5d53b3b6e5326a8a62"
+        },
+        {
+          "artifact_sha256": "edd5059795c2649beaa9b25d33d1cb6b31b175ce9fc979582d92288875d0f5ee",
+          "ledger_sha256": "275506601b09116ce0895c20dda1c13aa227e10184d932d1043a4199b8d584d0"
+        },
+        {
+          "artifact_sha256": "ee9debcfd2e225147d83f03f48da2185045c7100ceb7e96e2bf9cb4a42d1c3e3",
+          "ledger_sha256": "2de85f86f8fdc5475a10855c4665c1db23f47c623dcc11ab9716a844043bdd89"
+        },
+        {
+          "artifact_sha256": "ff6c94d4c159787b9b5533f6e0990e68928dcc70e39250d38c5a8a285ed5ef7a",
+          "ledger_sha256": "c28c29905631e6fa90bcdb1fd6f1e995132d02467aa4a2b0da461b0c803538b4"
+        }
+      ],
+      "accepted_set_sha256": "17f142f2dcc0071c26b707035af79404e7481ab7f3556d6079748b1654631d61",
+      "snapshot_sha256": "89abb991026e7e3553a262b4526366e86d139bb2ee70753d7698aae77dcfc6da"
+    },
+    "promotion_receipt_sha256": "f9f3950bfe1aac49416fb7b6966c0ab2457de136ff849a602a0c853abcc053ea",
+    "catalog": [
+      {
+        "shard_id": "chatgpt-0001",
+        "provider": "chatgpt",
+        "generation_id": "3dcfd639b8752ca6a177e56400d5f95d2c1fcb5ea001ee0fbda8498c85e9b8a9"
+      },
+      {
+        "shard_id": "chatgpt-0002",
+        "provider": "chatgpt",
+        "generation_id": "8cbd9bdf5953e4c3666cf1f90a818c2854594e8b36ccb959eb042ec3de5fc194"
+      },
+      {
+        "shard_id": "xai-0001",
+        "provider": "xai",
+        "generation_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      }
+    ],
+    "selected": [],
+    "removed": [],
+    "checkpoint_advanced": false,
+    "candidate_sha256": "a597e99409f4acb83d9389668cc0119d0c4f37b35fecdc2f0661927fec75b632"
+  },
+  "expected": {
+    "provider": "chatgpt",
+    "scope": "synthetic:chatgpt",
+    "previousSnapshotSha256": "0ca47d4f4a8c80938f16bbcdf01ad47a0aace1dec615daf3202d55a14c1f19d1",
+    "catalog": [
+      {
+        "provider": "chatgpt",
+        "shard_id": "chatgpt-0001",
+        "generation_id": "3dcfd639b8752ca6a177e56400d5f95d2c1fcb5ea001ee0fbda8498c85e9b8a9",
+        "state": "READY"
+      },
+      {
+        "provider": "chatgpt",
+        "shard_id": "chatgpt-0002",
+        "generation_id": "8cbd9bdf5953e4c3666cf1f90a818c2854594e8b36ccb959eb042ec3de5fc194",
+        "state": "READY"
+      },
+      {
+        "provider": "xai",
+        "shard_id": "xai-0001",
+        "generation_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "state": "READY"
+      }
+    ]
+  }
+}

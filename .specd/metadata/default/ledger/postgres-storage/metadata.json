@@ -59,6 +59,12 @@
       ]
     },
     {
+      "requirement": "Explicit synthetic custody-only acknowledgement",
+      "rules": [
+        "A trusted synthetic caller MAY explicitly acknowledge an independently verified rederived handoff with changed append-only accepted membership, exact observed catalog, zero selected and zero removed sessions, and exact existing predecessor membership and analysis intent. A dedicated no-work receipt MUST preserve the handoff and reason, and use existing append-only transaction and exact readback. Any staged plan under that predecessor blocks this path; no pending work is discarded. Ordinary empty cycle, unavailable data, unchanged membership, unresolved removal and non-synthetic scope MUST NOT initiate this acknowledgement. No inference, work completion, source completeness or new access authority follows."
+      ]
+    },
+    {
       "requirement": "Pending source plan custody",
       "rules": [
         "The synthetic source store MUST support explicitly staging an immutable plan derived from the exact verified selected work under the existing predecessor and analysis intent. A plan MUST retain the complete handoff, original packet and request identities, work identities and source witnesses, but no evidence bodies. Staging MUST NOT advance the acknowledged source checkpoint or invoke inference.\n\nThe plan MUST be bound to the existing source chain and predecessor, use the existing ledger transaction lock, and be independently read back. Exact repeats MUST be idempotent. Distinct rederived witnesses MAY coexist for the same predecessor while it remains the tip; an acknowledged predecessor MUST NOT admit new plans. Restart lookup MUST validate stored digest and binding and MUST distinguish unavailable/corrupt storage from no plans. A plan alone is not permission to execute or replay stale evidence."
@@ -373,6 +379,20 @@
       ]
     },
     {
+      "requirement": "Explicit synthetic custody-only acknowledgement",
+      "name": "Verified recapture without semantic changes",
+      "given": [
+        "a rederived synthetic handoff with new accepted artifacts but no changed or removed sessions and exact trusted catalog"
+      ],
+      "when": [
+        "explicitly acknowledged under its existing predecessor"
+      ],
+      "then": [
+        "membership advances with a distinct no-work receipt and zero inference",
+        "AND replay is idempotent, a competing child conflicts, pending staged plans and invalid handoffs block advancement"
+      ]
+    },
+    {
       "requirement": "Pending source plan custody",
       "name": "Recovered pending witness",
       "given": [
@@ -520,8 +540,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:b3e02b3b3b67629bf02f4efece09f704e54eaa4e38a332f0ad6dab1155b143e2",
-    "verify.md": "sha256:c5d694f529435e5c408ca4846e2142cd05e6f1e4a55e6e70ceb9f5034a413aa0"
+    "spec.md": "sha256:4d963ab39c4f3c002a5e72e0ef3eca6f222c08d94f6864ce9207b3318c591008",
+    "verify.md": "sha256:e97d61fe723a3af796abaec4e490592fbf8065699e1622d242ea267d9586d64a"
   },
   "generatedBy": "core"
 }

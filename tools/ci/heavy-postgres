@@ -55,4 +55,8 @@ printf '%s\n' '== source cycle process loss =='
 LEDGER_DATABASE_URL="postgresql://dw_runtime_issue23:runtime-test@${PGHOST}:${PGPORT}/${PGDATABASE}" \
   node qa/postgres/source-process-loss.mjs
 
+printf '%s\n' '== explicit synthetic no-work acknowledgement =='
+LEDGER_DATABASE_URL="postgresql://dw_runtime_issue23:runtime-test@${PGHOST}:${PGPORT}/${PGDATABASE}" \
+  node qa/postgres/source-empty-ack.mjs
+
 printf '%s\n' 'HEAVY_POSTGRES_PASS substrate=postgresql-${PG_EXPECTED_MAJOR} migration=double-replay grants=append-only adapter=read-write-order-validation'

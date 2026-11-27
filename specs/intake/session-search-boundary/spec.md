@@ -100,6 +100,10 @@ One explicit synthetic cycle MUST validate the trusted handoff and execution pol
 
 The explicit pooled cycle MUST validate and snapshot its execution policy before bounded synthetic source acquisition. Invalid input, unresolved removal, no selected work or acquisition failure MUST NOT initiate ledger execution or inference. The cycle MUST delegate the exact acquired batch to the bounded pooled runner and preserve its observed invocation count and typed pending or unknown outcome. Exact completed replay MUST require zero inference. Existing fixed-pair composition remains available; neither path authorizes real source access or deployment.
 
+### Requirement: Explicit synthetic custody-only acknowledgement
+
+A trusted synthetic caller MAY explicitly acknowledge an independently verified rederived handoff with changed append-only accepted membership, exact observed catalog, zero selected and zero removed sessions, and exact existing predecessor membership and analysis intent. A dedicated no-work receipt MUST preserve the handoff and reason, and use existing append-only transaction and exact readback. Any staged plan under that predecessor blocks this path; no pending work is discarded. Ordinary empty cycle, unavailable data, unchanged membership, unresolved removal and non-synthetic scope MUST NOT initiate this acknowledgement. No inference, work completion, source completeness or new access authority follows.
+
 ### Requirement: Checkpoint advances only after bounded success
 
 The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.

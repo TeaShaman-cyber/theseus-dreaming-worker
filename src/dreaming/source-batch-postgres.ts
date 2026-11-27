@@ -36,7 +36,24 @@ type BoundReceipt = Omit<Receipt, 'schema'> & {
   currentPlanFingerprint: string;
   origins: OriginPointer[];
 };
-type Stored = Root | Receipt | BoundReceipt;
+type NoWorkReceipt = {
+  schema: 'theseus.dreaming-worker.source-no-work-receipt.v1';
+  previousCheckpoint: string;
+  task: string;
+  analysisVersion: string;
+  handoff: ReturnType<typeof decodeSourceHandoff>;
+  reason: 'VERIFIED_EMPTY_SESSION_DELTA';
+  attemptedPasses: 0;
+  receiptFingerprint: string;
+};
+type Stored = Root | Receipt | BoundReceipt | NoWorkReceipt;
+
+function requireEmptyDelta(handoff: ReturnType<typeof decodeSourceHandoff>) {
+  if (!handoff.scope.startsWith('synthetic:') || handoff.selected.length || handoff.removed.length
+    || handoff.previous_membership.snapshot_sha256 === handoff.current_membership.snapshot_sha256) {
+    throw Error('SOURCE_NO_WORK_DELTA');
+  }
+}
 type Plan = ReturnType<typeof prepareSourceBatchPlan>;
 type PlanRow = { plan_fingerprint: string; plan: unknown };
 type PlanResult =
@@ -77,7 +94,7 @@ type Row = { checkpoint_fingerprint: string; previous_checkpoint: string | null;
 
 function checkRow(row: Row, chain: string): Stored {
   const envelope = z.object({
-    schema: z.enum(['theseus.dreaming-worker.source-root.v1', 'theseus.dreaming-worker.source-batch-receipt.v1', 'theseus.dreaming-worker.source-batch-receipt.v2']),
+    schema: z.enum(['theseus.dreaming-worker.source-root.v1', 'theseus.dreaming-worker.source-batch-receipt.v1', 'theseus.dreaming-worker.source-batch-receipt.v2', 'theseus.dreaming-worker.source-no-work-receipt.v1']),
     task: text, analysisVersion: text, receiptFingerprint: fingerprint,
     previousCheckpoint: fingerprint.nullable(),
   }).passthrough().parse(row.receipt);
@@ -89,6 +106,25 @@ function checkRow(row: Row, chain: string): Stored {
   if (sourceReceiptFingerprint(['source-chain-v1', provider, scope, payload.task, payload.analysisVersion]) !== chain
     || (payload.schema === 'theseus.dreaming-worker.source-root.v1') !== (payload.previousCheckpoint === null)) {
     throw Error('SOURCE_STORE_CHAIN');
+  }
+  if (payload.schema === 'theseus.dreaming-worker.source-no-work-receipt.v1') {
+    const noWork = z.object({
+      schema: z.literal('theseus.dreaming-worker.source-no-work-receipt.v1'),
+      previousCheckpoint: fingerprint, task: text, analysisVersion: text,
+      handoff: z.object({
+        provider: text, scope: text,
+        previous_membership: z.object({ snapshot_sha256: z.string() }).passthrough(),
+        catalog: z.array(z.object({ provider: text, shard_id: text, generation_id: z.string() }).strict()),
+      }).passthrough(),
+      reason: z.literal('VERIFIED_EMPTY_SESSION_DELTA'), attemptedPasses: z.literal(0),
+      receiptFingerprint: fingerprint,
+    }).strict().parse(row.receipt);
+    const handoff = decodeSourceHandoff(noWork.handoff, {
+      provider: noWork.handoff.provider, scope: noWork.handoff.scope,
+      previousSnapshotSha256: noWork.handoff.previous_membership.snapshot_sha256,
+      catalog: noWork.handoff.catalog.map(r => ({ ...r, state: 'READY' as const })),
+    });
+    requireEmptyDelta(handoff);
   }
   // The full digest detects inconsistent storage; the producer is trusted,
   // not authenticated by this hash. New writes always derive from the builder.
@@ -384,6 +420,31 @@ export function createPostgresSourceBatchStore(options: {
     async initialize(raw: Intent): Promise<Result> {
       const { chain, root } = context(structuredClone(raw));
       return append(chain, null, async () => root);
+    },
+    /** Explicit trusted synthetic no-work disposition, never inferred from
+     * an empty retrieval. Existing handoff custody remains caller-owned. */
+    async acknowledgeNoWork(raw: Intent & { previousCheckpoint: string }): Promise<Result> {
+      const input = structuredClone(raw);
+      const { chain, handoff } = context(input);
+      requireEmptyDelta(handoff);
+      const previous = fingerprint.parse(input.previousCheckpoint);
+      return append(chain, previous, async client => {
+        const parent = await readParent(client, chain, previous);
+        if (!parent || sourceReceiptFingerprint(parentMembership(parent)) !== sourceReceiptFingerprint(handoff.previous_membership)) {
+          return 'CONFLICT';
+        }
+        const pending = await client.query(
+          'SELECT 1 FROM dw_ledger.source_plans WHERE chain_id=$1 AND previous_checkpoint=$2 LIMIT 1',
+          [chain, previous],
+        );
+        if (pending.rows.length) return 'PENDING';
+        const payload = {
+          schema: 'theseus.dreaming-worker.source-no-work-receipt.v1' as const,
+          previousCheckpoint: previous, task: input.task, analysisVersion: input.analysisVersion,
+          handoff, reason: 'VERIFIED_EMPTY_SESSION_DELTA' as const, attemptedPasses: 0 as const,
+        };
+        return { ...payload, receiptFingerprint: sourceReceiptFingerprint(payload) };
+      });
     },
     async acknowledge(raw: BatchInput): Promise<Result> {
       const input = structuredClone(raw);
