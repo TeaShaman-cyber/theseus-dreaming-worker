@@ -292,3 +292,170 @@ test('all required null row fields fail closed with exact field diagnostics', as
     }
   }
 });
+
+// Pool journal SQL boundary: independent scripted query receipts, including
+// inconsistent reads and lost acknowledgements that real PG cannot easily emit.
+const {createPostgresPoolJournalStore}=await import('../src/dreaming/proposal-ledger-postgres.ts');
+const {preparePoolJournal,poolJournalAdmission,makePoolJournalEntry,replayPoolJournal}=await import('../src/dreaming/pool-attempt-journal.ts');
+const poolInput={
+  acceptedSourceFingerprint:'sha256:'+'a'.repeat(64),analysisVersion:'pool-sql-test',
+  request:{scope:'SYNTHETIC_FIXTURE',task:'Analyze fixture.',packet:{
+    schema:'theseus-evidence-packet-v1',packetId:'pool-sql',acceptedNewEvidence:true,
+    coverage:{state:'COMPLETE',currentness:'CURRENT'},
+    evidence:[{sourceRef:'fixture:1',evidenceHash:'sha256:fixture',text:'Synthetic observation.'}],
+  }},
+};
+const poolContext=preparePoolJournal(poolInput);
+const poolOwner='00000000-0000-4000-8000-000000000001';
+const poolOther='00000000-0000-4000-8000-000000000002';
+const poolFirst=makePoolJournalEntry(null,poolJournalAdmission(poolContext,4));
+const poolDifferent=makePoolJournalEntry(null,poolJournalAdmission(poolContext,5));
+const poolStart={kind:'START',attemptId:'00000000-0000-4000-8000-000000000003',slot:0,route:routeA};
+const poolNext=makePoolJournalEntry(poolFirst,poolStart);
+const poolReadSQL=`SELECT r.owner_token, j.ordinal, j.entry,
+      EXISTS(SELECT 1 FROM dw_ledger.work_completions c WHERE c.work_fingerprint=r.work_fingerprint) AS completion_exists
+      FROM dw_ledger.work_reservations r
+      LEFT JOIN dw_ledger.work_pool_journal j
+        ON j.work_fingerprint=r.work_fingerprint AND j.owner_token=r.owner_token
+      WHERE r.work_fingerprint=$1 ORDER BY j.ordinal`;
+const poolReserveSQL='INSERT INTO dw_ledger.work_reservations (work_fingerprint, owner_token) VALUES ($1,$2) ON CONFLICT (work_fingerprint) DO NOTHING RETURNING owner_token';
+const poolAdmitSQL='INSERT INTO dw_ledger.work_pool_journal(work_fingerprint,owner_token,ordinal,entry) VALUES ($1,$2,0,$3::jsonb)';
+const poolAppendSQL='INSERT INTO dw_ledger.work_pool_journal(work_fingerprint,owner_token,ordinal,entry) VALUES ($1,$2,$3,$4::jsonb)';
+const poolLockSQL="SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))";
+const poolRows=(entries,completion=false)=>entries.map(entry=>({owner_token:poolOwner,ordinal:entry.ordinal,entry,completion_exists:completion}));
+const poolLegacy=completion=>[{owner_token:poolOwner,ordinal:null,entry:null,completion_exists:completion}];
+const poolQ=(sql,params=[],rows=[])=>({sql,params,rows});
+const poolRead=rows=>poolQ(poolReadSQL,[poolContext.workFingerprint],rows);
+const poolTx=steps=>[poolQ('BEGIN'),poolQ(poolLockSQL),...steps,poolQ('COMMIT')];
+const poolRollback=steps=>[poolQ('BEGIN'),poolQ(poolLockSQL),...steps,poolQ('ROLLBACK')];
+const poolReserve=rows=>poolQ(poolReserveSQL,[poolContext.workFingerprint,poolOwner],rows);
+const poolAdmit=poolQ(poolAdmitSQL,[poolContext.workFingerprint,poolOwner,JSON.stringify(poolFirst)]);
+const poolAppend=poolQ(poolAppendSQL,[poolContext.workFingerprint,poolOwner,1,JSON.stringify(poolNext)]);
+function poolScript(groups){
+  let opened=0,closed=0;
+  const unexpected=[];
+  const store=createPostgresPoolJournalStore({
+    connectionString:'postgresql://fixture.invalid/pool',
+    clientFactory(connectionString){
+      assert.equal(connectionString,'postgresql://fixture.invalid/pool');
+      const group=groups[opened++];assert.ok(group,'unexpected client');
+      let index=0;
+      return {
+        async connect(){if(group.connectError)throw group.connectError;},
+        async query(sql,params=[]){
+          const step=group.steps[index++];
+          // Preserve protocol errors independently of production catch/rollback.
+          try{assert.ok(step,'unexpected query');assert.equal(sql,step.sql);assert.deepEqual(params,step.params);}
+          catch(e){unexpected.push(e);throw e;}
+          if(step.error)throw step.error;
+          return {rows:structuredClone(step.rows)};
+        },
+        async end(){
+          closed++;
+          try{assert.equal(index,group.steps.length,'unconsumed query receipts');}
+          catch(e){unexpected.push(e);throw e;}
+        },
+      };
+    },
+  });
+  return {store,done(){assert.deepEqual(unexpected,[]);assert.equal(opened,groups.length);assert.equal(closed,opened);}};
+}
+const group=steps=>({steps});
+const poolState=entries=>replayPoolJournal(poolContext,entries);
+const poolView=(entries,completionExists=false)=>({status:'JOURNAL',ownerToken:poolOwner,completionExists,state:poolState(entries)});
+test('pool journal reads absent, legacy, completion, and exact ordered journal rows',async()=>{
+  for(const [rows,expected] of [
+    [[],{status:'ABSENT'}],[poolLegacy(false),{status:'LEGACY_UNRESOLVED'}],
+    [poolLegacy(true),{status:'COMPLETION_EXISTS'}],
+    [poolRows([poolFirst]),poolView([poolFirst])],
+    [poolRows([poolFirst,poolNext],true),poolView([poolFirst,poolNext],true)],
+    [poolRows([poolFirst,poolNext]),poolView([poolFirst,poolNext])],
+  ]){
+    const s=poolScript([group([poolRead(rows)])]);
+    assert.deepEqual(await s.store.read(poolInput),expected);s.done();
+  }
+});
+test('pool journal rejects each inconsistent storage row independently',async()=>{
+  const rows=poolRows([poolFirst,poolNext]);
+  const cases=[
+    [...poolLegacy(false),...rows],
+    [{...poolLegacy(false)[0],entry:poolFirst}],
+    [{...rows[0],ordinal:1}],
+    [rows[0],{...rows[1],ordinal:0}],
+    [rows[0],{...rows[1],entry:null}],
+    [rows[0],{...rows[1],owner_token:poolOther}],
+    [rows[0],{...rows[1],completion_exists:true}],
+  ];
+  for(const bad of cases){
+    const s=poolScript([group([poolRead(bad)])]);
+    await assert.rejects(s.store.read(poolInput),{message:'POOL_JOURNAL_ROW_INVALID'});s.done();
+  }
+});
+test('pool journal admission writes reservation and first entry atomically then reads back',async()=>{
+  const s=poolScript([group(poolTx([poolRead([]),poolReserve([{owner_token:poolOwner}]),poolAdmit])),
+    group([poolRead(poolRows([poolFirst]))])]);
+  assert.deepEqual(await s.store.admit(poolInput,4,poolOwner),poolView([poolFirst]));s.done();
+});
+test('pool journal admission never takes over an existing reservation',async()=>{
+  for(const [rows,expected] of [
+    [poolLegacy(false),{status:'LEGACY_UNRESOLVED'}],[poolLegacy(true),{status:'COMPLETION_EXISTS'}],
+    [poolRows([poolFirst]),poolView([poolFirst])],
+  ]){
+    const s=poolScript([group(poolTx([poolRead(rows)])),group([poolRead(rows)])]);
+    assert.deepEqual(await s.store.admit(poolInput,4,poolOther),expected);s.done();
+  }
+  const s=poolScript([group(poolRollback([poolRead(poolRows([poolDifferent]))]))]);
+  await assert.rejects(s.store.admit(poolInput,4,poolOwner),{message:'POOL_JOURNAL_ADMISSION_CONFLICT'});s.done();
+});
+test('pool journal admission rejects reservation conflicts and missing or changed readback',async()=>{
+  for(const rows of [[],[{owner_token:poolOther}],[{owner_token:poolOwner},{owner_token:poolOther}]]){
+    const s=poolScript([group(poolRollback([poolRead([]),poolReserve(rows)]))]);
+    await assert.rejects(s.store.admit(poolInput,4,poolOwner),{message:'POOL_JOURNAL_RESERVATION_CONFLICT'});s.done();
+  }
+  for(const rows of [[],poolRows([poolDifferent])]){
+    const s=poolScript([group(poolTx([poolRead([]),poolReserve([{owner_token:poolOwner}]),poolAdmit])),group([poolRead(rows)])]);
+    await assert.rejects(s.store.admit(poolInput,4,poolOwner),{message:'POOL_JOURNAL_ADMISSION_READBACK'});s.done();
+  }
+});
+test('pool journal append verifies exact tip, inserts exact next entry and reads back',async()=>{
+  const s=poolScript([group(poolTx([poolRead(poolRows([poolFirst])),poolAppend])),
+    group([poolRead(poolRows([poolFirst,poolNext]))])]);
+  assert.deepEqual(await s.store.append(poolInput,poolFirst.entryFingerprint,poolStart),poolState([poolFirst,poolNext]));s.done();
+});
+test('pool journal append rejects absent, completed, stale or invalid transition before insert',async()=>{
+  for(const [rows,tip] of [[[],poolFirst.entryFingerprint],[poolLegacy(false),poolFirst.entryFingerprint],
+    [poolRows([poolFirst],true),poolFirst.entryFingerprint],[poolRows([poolFirst]),poolNext.entryFingerprint]]){
+    const s=poolScript([group(poolRollback([poolRead(rows)]))]);
+    await assert.rejects(s.store.append(poolInput,tip,poolStart),{message:'POOL_JOURNAL_TIP_CONFLICT'});s.done();
+  }
+  const s=poolScript([group(poolRollback([poolRead(poolRows([poolFirst,poolNext]))]))]);
+  await assert.rejects(s.store.append(poolInput,poolNext.entryFingerprint,{...poolStart,attemptId:poolOther}),{message:'POOL_JOURNAL_START_REJECTED'});s.done();
+});
+test('pool journal append rejects missing, completed or stale post-commit readback',async()=>{
+  for(const rows of [[],poolLegacy(false),poolRows([poolFirst,poolNext],true),poolRows([poolFirst])]){
+    const s=poolScript([group(poolTx([poolRead(poolRows([poolFirst])),poolAppend])),group([poolRead(rows)])]);
+    await assert.rejects(s.store.append(poolInput,poolFirst.entryFingerprint,poolStart),{message:'POOL_JOURNAL_APPEND_READBACK'});s.done();
+  }
+});
+test('pool journal preserves original failure on insert, commit and rollback errors',async()=>{
+  const err=Error('fixture persistence error');
+  for(const steps of [
+    poolRollback([poolRead(poolRows([poolFirst])),{...poolAppend,error:err}]),
+    [poolQ('BEGIN'),poolQ(poolLockSQL),poolRead(poolRows([poolFirst])),poolAppend,{...poolQ('COMMIT'),error:err},poolQ('ROLLBACK')],
+    [poolQ('BEGIN'),poolQ(poolLockSQL),poolRead(poolRows([poolFirst])),{...poolAppend,error:err},{...poolQ('ROLLBACK'),error:Error('rollback failure')}],
+  ]){
+    const s=poolScript([group(steps)]);
+    await assert.rejects(s.store.append(poolInput,poolFirst.entryFingerprint,poolStart),err);s.done();
+  }
+  const s=poolScript([{steps:[],connectError:err}]);
+  await assert.rejects(s.store.read(poolInput),err);s.done();
+});
+test('pool journal default client uses exact connection and closes after read',async t=>{
+  const calls=[];
+  t.mock.method(Client.prototype,'connect',async function(){calls.push(['connect',this.connectionParameters.host]);});
+  t.mock.method(Client.prototype,'query',async function(sql,params){calls.push([sql,params]);return {rows:[]};});
+  t.mock.method(Client.prototype,'end',async function(){calls.push(['end']);});
+  const store=createPostgresPoolJournalStore({connectionString:'postgresql://fixture.invalid/pool'});
+  assert.deepEqual(await store.read(poolInput),{status:'ABSENT'});
+  assert.deepEqual(calls,[['connect','fixture.invalid'],[poolReadSQL,[poolContext.workFingerprint]],['end']]);
+});
