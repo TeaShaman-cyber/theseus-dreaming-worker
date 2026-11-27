@@ -330,3 +330,96 @@ test('replay owns snapshots and a rejected append cannot poison subsequent valid
   assert.throws(()=>replay.append(createSupersessionEvent({supersededRecordId:b.recordId,replacementRecordId:a.recordId,reason:'cycle'})),/LEDGER_SUPERSESSION_CYCLE/);
   assert.deepEqual(replay.snapshot(),[a,b,edge]);
 });
+
+test('historical reverse-chain replay performs linear graph work, preserving every record',()=>{
+  const n=160;
+  const records=Array.from({length:n},(_,i)=>createProposalRecord({proposal:{...hypothesisA,claim:'chain-'+i},origin:origin('route-a',routeA)}));
+  const edges=Array.from({length:n-1},(_,i)=>createSupersessionEvent({supersededRecordId:records[n-i-2].recordId,replacementRecordId:records[n-i-1].recordId,reason:'chain'}));
+  const history=[...records,...edges];
+  const get=Map.prototype.get;let reads=0;
+  try{
+    Map.prototype.get=function(key){if(typeof key==='string'&&key.startsWith('sha256:'))reads++;return get.call(this,key);};
+    assert.deepEqual(materializeLedger(history).events,history);
+  }finally{Map.prototype.get=get;}
+  assert.ok(reads<=20*history.length,'graph reads '+reads+' for '+history.length+' events');
+});
+
+test('batch replay preserves first error, duplicate-edge history, and future append safety',()=>{
+  const [a,b,c,d]=Array.from({length:4},(_,i)=>createProposalRecord({proposal:{...hypothesisA,claim:'batch-'+i},origin:origin('route-a',routeA)}));
+  const edge=(u,v,reason='synthetic')=>createSupersessionEvent({supersededRecordId:u.recordId,replacementRecordId:v.recordId,reason});
+  const history=[a,b,c,d,edge(a,b),edge(a,b,'another reason'),edge(b,c)];
+  const replay=createLedgerReplay(history);
+  assert.deepEqual(replay.snapshot(),history);
+  assert.throws(()=>createLedgerReplay([...history,edge(c,a),a]),/LEDGER_SUPERSESSION_CYCLE/);
+  assert.throws(()=>createLedgerReplay([...history,a,edge(c,a)]),/LEDGER_DUPLICATE_EVENT/);
+  assert.throws(()=>createLedgerReplay([a,edge(a,b),b]),/LEDGER_SUPERSESSION_REF_MISSING/);
+  assert.throws(()=>createLedgerReplay((function*(){yield* history;yield edge(c,a);throw Error('later parse');})()),/LEDGER_SUPERSESSION_CYCLE/);
+  assert.throws(()=>createLedgerReplay((function*(){yield* history;throw Error('later parse');})()),/later parse/);
+  replay.append(edge(c,d));
+  assert.throws(()=>replay.append(edge(d,a)),/LEDGER_SUPERSESSION_CYCLE/);
+  const reversed=createLedgerReplay([a,b,c,d]);
+  reversed.append(edge(d,a));
+  assert.throws(()=>reversed.append(edge(a,d)),/LEDGER_SUPERSESSION_CYCLE/);
+  reversed.append(edge(a,b));
+  assert.throws(()=>reversed.append(edge(b,d)),/LEDGER_SUPERSESSION_CYCLE/);
+  assert.deepEqual(reversed.snapshot(),[a,b,c,d,edge(d,a),edge(a,b)]);
+});
+
+test('a backward safe insertion prunes branches beyond the target rank',()=>{
+  const records=Array.from({length:128},(_,i)=>createProposalRecord({proposal:{...hypothesisA,claim:'rank-'+i},origin:origin('route-a',routeA)}));
+  const edge=(i,j)=>createSupersessionEvent({supersededRecordId:records[i].recordId,replacementRecordId:records[j].recordId,reason:'rank'});
+  const history=[...records,edge(0,2),...Array.from({length:125},(_,i)=>edge(i+2,i+3))];
+  const replay=createLedgerReplay(history);
+  const get=Map.prototype.get;let reads=0;
+  try{
+    Map.prototype.get=function(key){if(typeof key==='string'&&key.startsWith('sha256:'))reads++;return get.call(this,key);};
+    replay.append(edge(1,0));
+  }finally{Map.prototype.get=get;}
+  assert.ok(reads<=20,'rank-pruned append read '+reads+' keys');
+  assert.deepEqual(replay.snapshot(),[...history,edge(1,0)]);
+  assert.throws(()=>replay.append(edge(127,1)),/LEDGER_SUPERSESSION_CYCLE/);
+});
+
+test('batch replay matches sequential replay on every directed graph of three vertices',()=>{
+  const records=Array.from({length:3},(_,i)=>createProposalRecord({proposal:{...hypothesisA,claim:'small-'+i},origin:origin('route-a',routeA)}));
+  const edges=records.flatMap((a,i)=>records.filter((_,j)=>i!==j).map(b=>createSupersessionEvent({supersededRecordId:a.recordId,replacementRecordId:b.recordId,reason:'small'})));
+  for(let mask=0;mask<1<<edges.length;mask++){
+    const selected=edges.filter((_,i)=>mask&(1<<i));
+    for(const ordered of [selected,[...selected].reverse()]){
+      const history=[...records,...ordered];const sequential=createLedgerReplay();
+      let expected;
+      try{for(const event of history)sequential.append(event);expected=sequential.snapshot();}
+      catch(error){assert.throws(()=>createLedgerReplay(history),{message:error.message});continue;}
+      assert.deepEqual(createLedgerReplay(history).snapshot(),expected);
+    }
+  }
+});
+
+test('forward inserts and fresh proposals retain the rank certificate for later bounded searches',()=>{
+  const records=Array.from({length:128},(_,i)=>createProposalRecord({proposal:{...hypothesisA,claim:'retain-rank-'+i},origin:origin('route-a',routeA)}));
+  const edge=(i,j)=>createSupersessionEvent({supersededRecordId:records[i].recordId,replacementRecordId:records[j].recordId,reason:'retain-rank'});
+  const history=[...records.slice(0,127),...Array.from({length:125},(_,i)=>edge(i+1,i+2))];
+  const replay=createLedgerReplay(history);
+  const get=Map.prototype.get;let reads=0;
+  try{
+    Map.prototype.get=function(key){if(typeof key==='string'&&key.startsWith('sha256:'))reads++;return get.call(this,key);};
+    replay.append(records[127]);
+    replay.append(edge(0,1));
+    replay.append(edge(126,127));
+    assert.throws(()=>replay.append(edge(127,0)),/LEDGER_SUPERSESSION_CYCLE/);
+    // A forward edge into a long existing chain must not traverse the chain.
+    // The cycle query above is intentionally excluded from the operation bound.
+  }finally{Map.prototype.get=get;}
+  assert.deepEqual(replay.snapshot(),[...history,records[127],edge(0,1),edge(126,127)]);
+  // A fresh forward insertion into a long chain independently tests fast-path
+  // retention after the preceding successful proposal and forward appends.
+  const extra=createProposalRecord({proposal:{...hypothesisA,claim:'retain-rank-extra'},origin:origin('route-a',routeA)});
+  const fresh=createSupersessionEvent({supersededRecordId:records[0].recordId,replacementRecordId:records[2].recordId,reason:'transitively redundant'});
+  reads=0;
+  try{
+    Map.prototype.get=function(key){if(typeof key==='string'&&key.startsWith('sha256:'))reads++;return get.call(this,key);};
+    replay.append(extra);replay.append(fresh);
+  }finally{Map.prototype.get=get;}
+  assert.ok(reads<=12,'forward append lost rank certificate: '+reads+' map reads');
+  assert.deepEqual(replay.snapshot(),[...history,records[127],edge(0,1),edge(126,127),extra,fresh]);
+});

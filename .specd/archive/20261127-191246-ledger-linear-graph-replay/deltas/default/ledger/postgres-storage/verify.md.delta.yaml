@@ -1,0 +1,2 @@
+- op: no-op
+  description: Preserve ordered identity and reference checks, DAG and append-only custody; change graph traversal only.

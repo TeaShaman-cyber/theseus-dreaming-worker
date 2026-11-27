@@ -128,9 +128,9 @@ function rowToEvent(row: LedgerRow): ProposalLedgerEvent {
 
 async function readEventsWithClient(client: LedgerPgClient) {
   const result = await client.query<LedgerRow>(READ_EVENTS_SQL);
-  const replay = createLedgerReplay();
-  for (const row of result.rows) replay.append(rowToEvent(row));
-  return replay;
+  return createLedgerReplay((function* () {
+    for (const row of result.rows) yield rowToEvent(row);
+  })());
 }
 
 async function insertEvent(client: LedgerPgClient, event: ProposalLedgerEvent): Promise<void> {
