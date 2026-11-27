@@ -158,6 +158,16 @@
 - **THEN** only remaining calls execute, known shared wait is respected and acknowledgement follows verified completion
 - **AND** exact completed replay consumes zero inference
 
+### Requirement: Read-only synthetic cycle inspection
+
+#### Scenario: Observe without dispatch
+
+- **GIVEN** an exact synthetic batch witness and existing durable work
+- **WHEN** the diagnostic reads the tip, plan, journal and completion
+- **THEN** missing, unresolved, completed and failed or inconsistent observations remain distinguishable
+- **AND** the report omits source and proposal bodies and owner tokens, and confers no resume authority
+- **AND** no writes or inference follow
+
 ### Requirement: Checkpoint advances only after bounded success
 
 #### Scenario: Evidence is read but provider analysis fails

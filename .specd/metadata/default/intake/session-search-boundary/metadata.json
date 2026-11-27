@@ -81,6 +81,12 @@
       ]
     },
     {
+      "requirement": "Read-only synthetic cycle inspection",
+      "rules": [
+        "An explicit diagnostic MAY observe an existing synthetic batch using its exact supplied witness, verified source tip, staged plan and per-work journal and completion readers. It MUST reject non-synthetic scope before storage access, distinguish missing state, unresolved attempts and failed or inconsistent readback, and omit evidence bodies, proposal bodies and owner tokens. Independent reads MUST NOT be represented as an atomic snapshot, source completeness, authorization to resume, or proof of source custody merely from matching work identity. The diagnostic MUST NOT initialize, stage, reserve, acknowledge, invoke inference or retry work."
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "rules": [
         "The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.\n\nA timestamp alone is insufficient as the durable checkpoint.\n\nThe checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope."
@@ -385,6 +391,21 @@
       ]
     },
     {
+      "requirement": "Read-only synthetic cycle inspection",
+      "name": "Observe without dispatch",
+      "given": [
+        "an exact synthetic batch witness and existing durable work"
+      ],
+      "when": [
+        "the diagnostic reads the tip, plan, journal and completion"
+      ],
+      "then": [
+        "missing, unresolved, completed and failed or inconsistent observations remain distinguishable",
+        "AND the report omits source and proposal bodies and owner tokens, and confers no resume authority",
+        "AND no writes or inference follow"
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "name": "Evidence is read but provider analysis fails",
       "given": [
@@ -482,8 +503,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:f9e1c39927031eb424a97022babb6f0c864f3b24520eedd4de22ecba47d0e454",
-    "verify.md": "sha256:5a4360a73ff3a882c1182e6f0f17edd292672f1309eed89540bf91e932f6bb98"
+    "spec.md": "sha256:94b817bb58c7677f8482aaee81ece057130b0581a2c8e541ce010036ea8fa55f",
+    "verify.md": "sha256:350d52318eedbb929ec5f8a912536275ea2ac6d69bf92f3112a29e6d9560d353"
   },
   "generatedBy": "core"
 }

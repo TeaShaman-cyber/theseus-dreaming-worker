@@ -284,3 +284,7 @@ deltas for behavior-preserving runtime refactors. Local explicit diff check:
 Without an explicit base, local QA checks structure and active change state
 only. Hosted canonical QA fails if its base is missing. Path coverage is not
 proof of semantic adequacy, truthful lifecycle claims, or review acceptance.
+
+### Inspect an interrupted synthetic cycle
+
+Run `node tools/agent/inspect-source-cycle.mjs <batch.json>` with an explicitly supplied existing `LEDGER_DATABASE_URL` in the environment. The batch is the exact synthetic batch witness (including pages and previous checkpoint), not an acquisition request. The report observes source tip, exact plan, and per-work journal/completion metadata; it never writes, runs models or retries. Separate reads are not an atomic snapshot; matching work identity does not establish source custody or permission to resume. UNKNOWN and READ_INCONSISTENT require investigation, not automatic recovery. No new credentials or database grants are created.
