@@ -63,6 +63,12 @@
       ]
     },
     {
+      "requirement": "Completed pooled work reuse across source witnesses",
+      "rules": [
+        "A staged equivalent synthetic source witness MAY reuse already committed work only after verified original source-plan linkage and readback of the original completion. For pooled work, the original journal MUST replay against the original packet and request identity reconstructed from the current verified equivalent evidence and reproduce the committed completion. Reuse MUST consume zero inference and retain the original origin. Incomplete, unknown, inconsistent or unbound work MUST NOT be adopted from another plan. Current plan and predecessor validation remain mandatory."
+      ]
+    },
+    {
       "requirement": "Bounded synthetic source acquisition",
       "rules": [
         "The synthetic acquisition adapter MUST validate the exact selected set and source indexes before requesting pages. It MUST pin each read to the selected session, shard and generation, and only follow a nonrepeated cursor bound to that exact read position. It MUST bound request count, response bytes per page and in aggregate, character and message admission, and each request deadline. Failed, incomplete or inconsistent acquisition MUST NOT return a batch ready for analysis.\n\nThe adapter MUST use injected explicitly supplied transport; no default network credential, real history access or implicit fallback is permitted. Complete acquired pages MUST pass the existing verified batch admission. The adapter MUST NOT reserve work, invoke inference or advance checkpoints."
@@ -305,6 +311,21 @@
       ]
     },
     {
+      "requirement": "Completed pooled work reuse across source witnesses",
+      "name": "Refresh after completed pooled work",
+      "given": [
+        "committed pooled work and a newly staged equivalent synthetic witness with changed generation"
+      ],
+      "when": [
+        "the current cycle resumes"
+      ],
+      "then": [
+        "the original journal and completion match and the work is reused without inference",
+        "AND the original plan linkage remains intact",
+        "AND incomplete or inconsistent alternative custody is rejected"
+      ]
+    },
+    {
       "requirement": "Bounded synthetic source acquisition",
       "name": "Exact pinned read",
       "given": [
@@ -482,8 +503,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:f9e1c39927031eb424a97022babb6f0c864f3b24520eedd4de22ecba47d0e454",
-    "verify.md": "sha256:5a4360a73ff3a882c1182e6f0f17edd292672f1309eed89540bf91e932f6bb98"
+    "spec.md": "sha256:5a3da67ae6e7f6a2d6d71715a11eb1a5b725ed942326aed3c58a8d84a15a0de9",
+    "verify.md": "sha256:ffdfb6c96238f3b70fc98d5fac8b7ec8222412b159ae5492712932c4c081087f"
   },
   "generatedBy": "core"
 }

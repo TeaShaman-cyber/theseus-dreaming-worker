@@ -86,6 +86,10 @@ The run MUST stop on uncertain or incomplete work and MUST NOT acknowledge a par
 
 An explicitly selected pooled synthetic batch MUST preserve the exact validated source plan and the existing checkpoint acknowledgement boundary. It MUST pass the remaining invocation budget and rotation to each selected work once, retain known pending outcomes and stop on unknown custody. The existing fixed-pair entry point remains separate. A pooled batch MUST NOT grant real-source permission or advance a checkpoint without verified complete work.
 
+### Requirement: Completed pooled work reuse across source witnesses
+
+A staged equivalent synthetic source witness MAY reuse already committed work only after verified original source-plan linkage and readback of the original completion. For pooled work, the original journal MUST replay against the original packet and request identity reconstructed from the current verified equivalent evidence and reproduce the committed completion. Reuse MUST consume zero inference and retain the original origin. Incomplete, unknown, inconsistent or unbound work MUST NOT be adopted from another plan. Current plan and predecessor validation remain mandatory.
+
 ### Requirement: Bounded synthetic source acquisition
 
 The synthetic acquisition adapter MUST validate the exact selected set and source indexes before requesting pages. It MUST pin each read to the selected session, shard and generation, and only follow a nonrepeated cursor bound to that exact read position. It MUST bound request count, response bytes per page and in aggregate, character and message admission, and each request deadline. Failed, incomplete or inconsistent acquisition MUST NOT return a batch ready for analysis.

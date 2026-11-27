@@ -114,6 +114,16 @@
 - **THEN** the validated perspective is not repeated and all callbacks remain bounded
 - **AND** the source checkpoint advances only after all work is verified; exact replay needs no model call
 
+### Requirement: Completed pooled work reuse across source witnesses
+
+#### Scenario: Refresh after completed pooled work
+
+- **GIVEN** committed pooled work and a newly staged equivalent synthetic witness with changed generation
+- **WHEN** the current cycle resumes
+- **THEN** the original journal and completion match and the work is reused without inference
+- **AND** the original plan linkage remains intact
+- **AND** incomplete or inconsistent alternative custody is rejected
+
 ### Requirement: Bounded synthetic source acquisition
 
 #### Scenario: Exact pinned read
