@@ -2,13 +2,23 @@ name: Targeted mutation test
 
 on:
   workflow_dispatch:
+    inputs:
+      shard:
+        description: Optional single shard for feedback only; empty runs full acceptance matrix
+        type: string
+        required: false
+        default: ""
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - 'src/dreaming/**'
       - 'src/mastra/observability-routing.ts'
       - 'src/mastra/pilot1-tracing.ts'
       - 'test/**'
       - 'scripts/mutation-shards.mjs'
+      - 'tools/ci/mutation-feedback.mjs'
+      - '.github/workflows/mutation.yml'
+      - 'tsconfig.json'
       - 'tools/ci/mutation-test'
       - 'stryker.config.mjs'
       - 'package.json'
@@ -22,6 +32,9 @@ on:
       - 'src/mastra/pilot1-tracing.ts'
       - 'test/**'
       - 'scripts/mutation-shards.mjs'
+      - 'tools/ci/mutation-feedback.mjs'
+      - '.github/workflows/mutation.yml'
+      - 'tsconfig.json'
       - 'tools/ci/mutation-test'
       - 'stryker.config.mjs'
       - 'package.json'
@@ -32,14 +45,30 @@ permissions:
   contents: read
 
 jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      mode: ${{ steps.select.outputs.mode }}
+      shards: ${{ steps.select.outputs.shards }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - id: select
+        run: node tools/ci/mutation-feedback.mjs
   mutation:
-    name: mutation (${{ matrix.shard }})
+    needs: plan
+    name: ${{ needs.plan.outputs.mode == 'full' && 'mutation' || 'mutation feedback' }} (${{ matrix.shard }})
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ matrix.shard == 'ledger' && 60 || 30 }}
     strategy:
       fail-fast: false
       matrix:
-        shard: [pilot0-1, pilot2, checkpoint, serializer, critique, critique-live, ledger, observability, source-batch, source-cycle]
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -57,9 +86,16 @@ jobs:
         run: npm run mutation -- ${{ matrix.shard }}
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        if: always()
+        if: always() && needs.plan.outputs.mode == 'full'
         with:
           name: mutation-receipt-${{ matrix.shard }}-${{ github.sha }}
+          path: reports/mutation/receipt.json
+          if-no-files-found: warn
+          retention-days: 14
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always() && needs.plan.outputs.mode == 'feedback'
+        with:
+          name: mutation-feedback-receipt-${{ matrix.shard }}-${{ github.sha }}
           path: reports/mutation/receipt.json
           if-no-files-found: warn
           retention-days: 14

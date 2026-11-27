@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { planMutation } from '../tools/ci/mutation-feedback.mjs';
 
 test('repository exposes one canonical development QA gate', () => {
   const gate = readFileSync('tools/dev/check', 'utf8');
@@ -86,12 +87,8 @@ test('hosted mutation uses parallel named shards instead of one monolithic job',
   const wrapper = readFileSync('tools/ci/mutation-test', 'utf8');
 
   assert.match(workflow, /matrix:/);
-  assert.match(workflow, /pilot0-1/);
-  assert.match(workflow, /pilot2/);
-  assert.match(workflow, /critique/);
-  assert.match(workflow, /critique-live/);
-  assert.match(workflow, /ledger/);
-  assert.match(workflow, /observability/);
+  assert.match(workflow, /fromJSON\(needs\.plan\.outputs\.shards\)/);
+  assert.match(workflow, /node tools\/ci\/mutation-feedback\.mjs/);
   assert.match(workflow, /npm run mutation -- \$\{\{ matrix\.shard \}\}/);
   assert.match(workflow, /mutation-receipt-\$\{\{ matrix\.shard \}\}-\$\{\{ github\.sha \}\}/);
   assert.match(wrapper, /MUTATION_SHARD_REQUIRED/);
@@ -179,9 +176,8 @@ test('ledger mutation receives a bounded extended runner deadline without weaken
 
 test('source orchestration mutation checks run on separate hosted matrix jobs', () => {
   const workflow = readFileSync('.github/workflows/mutation.yml', 'utf8');
-  const matrix = workflow.match(/shard: \[([^\]]+)\]/);
-  assert.ok(matrix);
-  const names = matrix[1].split(',').map(name => name.trim());
+  assert.match(workflow, /fromJSON\(needs\.plan\.outputs\.shards\)/);
+  const names = planMutation('push', {}).shards;
   assert.equal(names.filter(name => name === 'source-batch').length, 1);
   assert.equal(names.filter(name => name === 'source-cycle').length, 1);
 });
