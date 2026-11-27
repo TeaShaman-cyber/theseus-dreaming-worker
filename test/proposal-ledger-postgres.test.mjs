@@ -520,6 +520,9 @@ test('pool journal checks active shared wait under lock, before any START write'
   const s=poolScript([group(poolRollback(steps))],cooldownBinding(()=>100));
   await assert.rejects(s.store.append(poolInput,poolFirst.entryFingerprint,poolStart),e=>e instanceof PoolStartDeferred&&e.wakeAtMs===5100);
   s.done();
+  const epoch=poolScript([group(poolRollback(steps))],cooldownBinding(()=>0));
+  await assert.rejects(epoch.store.append(poolInput,poolFirst.entryFingerprint,poolStart),e=>e instanceof PoolStartDeferred&&e.wakeAtMs===5100);
+  epoch.done();
   for(const bad of [-1,0.5,Number.NaN]){
     const invalid=poolScript([group(poolRollback(steps))],cooldownBinding(()=>bad));
     await assert.rejects(invalid.store.append(poolInput,poolFirst.entryFingerprint,poolStart),/POOL_EXECUTION_CLOCK/);invalid.done();
