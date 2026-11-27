@@ -1,0 +1,68 @@
+{
+  "schema": "pool-allocation-synthetic-v1",
+  "scenarios": 13500,
+  "results": [
+    {
+      "name": "distinct-unit",
+      "capacity": {
+        "a": 1,
+        "b": 1,
+        "c": 1,
+        "d": 1
+      },
+      "scenarios": 3375,
+      "optimalCompletions": 5124,
+      "greedyCompletions": 4631,
+      "scarcityCompletions": 4968,
+      "greedySuboptimal": 493,
+      "scarcitySuboptimal": 156,
+      "greedyPartial": 0
+    },
+    {
+      "name": "distinct-mixed",
+      "capacity": {
+        "a": 2,
+        "b": 1,
+        "c": 2,
+        "d": 1
+      },
+      "scenarios": 3375,
+      "optimalCompletions": 6288,
+      "greedyCompletions": 5769,
+      "scarcityCompletions": 6240,
+      "greedySuboptimal": 519,
+      "scarcitySuboptimal": 48,
+      "greedyPartial": 0
+    },
+    {
+      "name": "shared-provider-family",
+      "capacity": {
+        "p": 2,
+        "q": 1,
+        "r": 2
+      },
+      "scenarios": 3375,
+      "optimalCompletions": 5437,
+      "greedyCompletions": 5221,
+      "scarcityCompletions": 5320,
+      "greedySuboptimal": 216,
+      "scarcitySuboptimal": 117,
+      "greedyPartial": 331
+    },
+    {
+      "name": "shared-tight",
+      "capacity": {
+        "p": 1,
+        "q": 1,
+        "r": 1
+      },
+      "scenarios": 3375,
+      "optimalCompletions": 3159,
+      "greedyCompletions": 3049,
+      "scarcityCompletions": 3159,
+      "greedySuboptimal": 110,
+      "scarcitySuboptimal": 0,
+      "greedyPartial": 449
+    }
+  ]
+}
