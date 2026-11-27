@@ -1,0 +1,120 @@
+{
+  "fixtureSha256": "f328422d67be4f318ee1398fc8f9da183d5ac97994a78721fa9d3f6616dcc84f",
+  "observationsSha256": "ba3f35fa68d992525b720aa7bd14f0d3aa43f16badc2b60bbf14f6c88bc1709f",
+  "retrospectiveCases": [
+    {
+      "id": "decision",
+      "obligations": [
+        {
+          "obligation": 1,
+          "proposal": 1,
+          "packetCoverage": true,
+          "claimCoverage": true,
+          "typeAllowed": true,
+          "missing": []
+        },
+        {
+          "obligation": 2,
+          "proposal": 2,
+          "packetCoverage": true,
+          "claimCoverage": true,
+          "typeAllowed": true,
+          "missing": []
+        }
+      ],
+      "manualAdditionalIssue": "Third proposal/why_unknown incorrectly casts doubt on already signed supersession because an old document was imported later. Actual deployment could remain unknown, but current approved decision is explicit."
+    },
+    {
+      "id": "authority",
+      "obligations": [
+        {
+          "obligation": 1,
+          "proposal": 2,
+          "packetCoverage": true,
+          "claimCoverage": true,
+          "typeAllowed": true,
+          "missing": []
+        },
+        {
+          "obligation": 2,
+          "proposal": 3,
+          "packetCoverage": true,
+          "claimCoverage": true,
+          "typeAllowed": true,
+          "missing": []
+        }
+      ],
+      "manualAdditionalIssue": null
+    },
+    {
+      "id": "absence",
+      "obligations": [
+        {
+          "obligation": 1,
+          "proposal": 1,
+          "packetCoverage": true,
+          "claimCoverage": true,
+          "typeAllowed": true,
+          "missing": []
+        },
+        {
+          "obligation": 2,
+          "proposal": 1,
+          "packetCoverage": true,
+          "claimCoverage": true,
+          "typeAllowed": true,
+          "missing": []
+        }
+      ],
+      "manualAdditionalIssue": null
+    },
+    {
+      "id": "long",
+      "obligations": [
+        {
+          "obligation": 1,
+          "proposal": 1,
+          "packetCoverage": true,
+          "claimCoverage": false,
+          "typeAllowed": true,
+          "missing": [
+            "synthetic:long:list"
+          ]
+        },
+        {
+          "obligation": 2,
+          "proposal": 2,
+          "packetCoverage": true,
+          "claimCoverage": true,
+          "typeAllowed": true,
+          "missing": []
+        }
+      ],
+      "manualAdditionalIssue": "First FACT states names from the register but cites start/end, not list; later INFERENCE/HYPOTHESIS do not replace the required FACT with both refs. Extra assumption says later reply supersedes the exception although reply preserves it."
+    }
+  ],
+  "summary": {
+    "packetCoverage": 8,
+    "claimCoverage": 7,
+    "obligations": 8
+  },
+  "controls": {
+    "syntheticAddedRegisterPass": true,
+    "removeRegisterDetectedDespiteUnion": true,
+    "falseClaimWithValidRefsStillPasses": true,
+    "minimalSupports": [
+      "AB",
+      "BC"
+    ],
+    "minimalCuts": [
+      "AC",
+      "B"
+    ],
+    "truthAssignments": 27,
+    "currentSensitivity": [
+      "DEFER",
+      "DENIED",
+      "DENIED"
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+{"kind":"catalog","route":"bothub-ultra","model":"nemotron-3-ultra-550b-a55b:free","pricing":null,"priceEvidence":{"id":"nemotron-3-ultra-550b-a55b:free","prices":[],"allowedPlanType":"BASIC","providerType":"PRO"},"entitlement":"EXPLICIT_FREE_VARIANT_HISTORICAL_AND_PUBLIC_PRICE_EVIDENCE","fixtureSha":"1caf99dbd40a7409a41731dc61edcc9bd812e14c6d861ec01d1e1441dcb417c1","goldSha":"d1e593fcebe9c43576f6887727e98559beb82296c61c99245ee4d002bfee84f7"}
+{"kind":"attempt","id":"maple","wireSha":"e00e2faf8599036548be25c1f07ad39ff977f9cdbc0f6381c27d95c34f809863","maxOutputTokens":3072,"timeoutMs":60000,"reasoningBudget":null}
+{"kind":"case","id":"maple","status":"FAILED","error":"Provider rate limited the request","code":"RATE_LIMITED","providerState":"RESPONDED","transport":{"status":429,"model":null,"provider":null,"cost":null,"finish":null},"rawFinal":null,"usage":null,"latencyMs":1860}
+{"kind":"case","id":"linden","status":"NOT_ATTEMPTED"}
+{"kind":"end","attempts":1,"stopped":true}
