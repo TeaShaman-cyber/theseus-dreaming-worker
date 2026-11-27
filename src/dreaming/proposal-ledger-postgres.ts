@@ -4,7 +4,7 @@ import { validateWorkCompletion, type DurablePilot2Input, type WorkCompletion, t
 import { PoolStartDeferred, makePoolJournalEntry, poolJournalAdmission, preparePoolJournal, replayPoolJournal, type PoolJournalEvent } from './pool-attempt-journal.ts';
 
 import {
-  appendLedgerEvent,
+  createLedgerReplay,
   proposalLedgerEventSchema,
   type ProposalLedgerEvent,
 } from './proposal-ledger.ts';
@@ -126,13 +126,11 @@ function rowToEvent(row: LedgerRow): ProposalLedgerEvent {
   });
 }
 
-async function readEventsWithClient(client: LedgerPgClient): Promise<ProposalLedgerEvent[]> {
+async function readEventsWithClient(client: LedgerPgClient) {
   const result = await client.query<LedgerRow>(READ_EVENTS_SQL);
-  let validated: ProposalLedgerEvent[] = [];
-  for (const row of result.rows) {
-    validated = appendLedgerEvent(validated, rowToEvent(row));
-  }
-  return validated;
+  const replay = createLedgerReplay();
+  for (const row of result.rows) replay.append(rowToEvent(row));
+  return replay;
 }
 
 async function insertEvent(client: LedgerPgClient, event: ProposalLedgerEvent): Promise<void> {
@@ -180,7 +178,7 @@ export function createPostgresProposalLedger(options: PostgresProposalLedgerOpti
       const client = clientFactory(options.connectionString);
       try {
         await client.connect();
-        return await readEventsWithClient(client);
+        return (await readEventsWithClient(client)).snapshot();
       } finally {
         await client.end();
       }
@@ -196,7 +194,7 @@ export function createPostgresProposalLedger(options: PostgresProposalLedgerOpti
         transactionStarted = true;
         await client.query("SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))");
         const existing = await readEventsWithClient(client);
-        appendLedgerEvent(existing, event);
+        existing.append(event);
 
         await insertEvent(client, event);
 
@@ -273,9 +271,9 @@ function createWorkStore(options: PostgresProposalLedgerOptions, poolInput: Dura
             const exact = buildPoolCompletion(poolInput, current.state.entries);
             if (exact.projectionFingerprint !== projectionFingerprint) throw Error('POOL_COMPLETION_PROJECTION_MISMATCH');
           }
-          let existing = await readEventsWithClient(client);
+          const existing = await readEventsWithClient(client);
           for (const record of records) {
-            existing = appendLedgerEvent(existing, record);
+            existing.append(record);
             await insertEvent(client, record);
           }
           await client.query(

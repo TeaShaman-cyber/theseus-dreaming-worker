@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   appendLedgerEvent,
+  createLedgerReplay,
   createProposalRecord,
   createSupersessionEvent,
   materializeLedger,
@@ -289,4 +290,43 @@ test('cycle detection keeps every outgoing branch from the same superseded recor
     () => appendLedgerEvent(ledger, createSupersessionEvent({ supersededRecordId: c.recordId, replacementRecordId: a.recordId, reason: 'C -> A closes only the second branch' })),
     /LEDGER_SUPERSESSION_CYCLE/,
   );
+});
+
+test('materialization validates a proposal-only history with linear snapshot work',()=>{
+  const records=Array.from({length:64},(_,i)=>createProposalRecord({proposal:{...hypothesisA,claim:`linear-${i}`},origin:origin('route-a',routeA)}));
+  const clone=globalThis.structuredClone;let copies=0;
+  try {
+    globalThis.structuredClone=(value,...args)=>{copies++;return clone(value,...args);};
+    assert.deepEqual(materializeLedger(records).events,records);
+  } finally {globalThis.structuredClone=clone;}
+  assert.ok(copies<=4*records.length,`replay copies ${copies} objects for ${records.length} records`);
+});
+
+test('ordered replay matches legacy append on branching histories and rejects invalid prefixes',()=>{
+  const records=Array.from({length:4},(_,i)=>createProposalRecord({proposal:{...hypothesisA,claim:`replay-${i}`},origin:origin('route-a',routeA)}));
+  const edge=(a,b,reason='synthetic')=>createSupersessionEvent({supersededRecordId:records[a].recordId,replacementRecordId:records[b].recordId,reason});
+  const valid=[...records,edge(0,1),edge(0,2),edge(1,3),edge(2,3)];
+  for(let n=0;n<=valid.length;n++){
+    const prefix=valid.slice(0,n);const expected=prefix.reduce((ledger,event)=>appendLedgerEvent(ledger,event),[]);
+    assert.deepEqual(materializeLedger(prefix).events,expected);
+  }
+  for(const [history,code] of [[[...valid,edge(3,0)],/LEDGER_SUPERSESSION_CYCLE/],[[...valid,valid[4]],/LEDGER_DUPLICATE_EVENT/],[[records[0],edge(0,1),records[1]],/LEDGER_SUPERSESSION_REF_MISSING/],[[{...records[0],recordId:'forged'},records[1]],/LEDGER_EVENT_ID_MISMATCH/],[[...records,records[0]],/LEDGER_DUPLICATE_EVENT/]])assert.throws(()=>materializeLedger(history),code);
+});
+
+
+test('replay owns snapshots and a rejected append cannot poison subsequent validation',()=>{
+  const a=createProposalRecord({proposal:{...hypothesisA,claim:'isolated-a'},origin:origin('route-a',routeA)});
+  const b=createProposalRecord({proposal:{...hypothesisB,claim:'isolated-b'},origin:origin('route-b',routeB)});
+  const replay=createLedgerReplay(),input=structuredClone(a);
+  replay.append(input);input.proposal.claim='changed input';
+  const exported=replay.snapshot();exported[0].proposal.claim='changed output';exported.push(b);
+  assert.deepEqual(replay.snapshot(),[a]);
+  const edge=createSupersessionEvent({supersededRecordId:a.recordId,replacementRecordId:b.recordId,reason:'synthetic'});
+  assert.throws(()=>replay.append(edge),/LEDGER_SUPERSESSION_REF_MISSING/);
+  assert.throws(()=>replay.append({...b,recordId:'forged'}),/LEDGER_EVENT_ID_MISMATCH/);
+  assert.deepEqual(replay.snapshot(),[a]);
+  replay.append(b);replay.append(edge);
+  assert.deepEqual(replay.snapshot(),[a,b,edge]);
+  assert.throws(()=>replay.append(createSupersessionEvent({supersededRecordId:b.recordId,replacementRecordId:a.recordId,reason:'cycle'})),/LEDGER_SUPERSESSION_CYCLE/);
+  assert.deepEqual(replay.snapshot(),[a,b,edge]);
 });

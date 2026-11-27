@@ -1,0 +1,2 @@
+- op: no-op
+  description: Preserve full ordered replay, content identity, reference and cycle validation and transaction custody; remove repeated prefix work only.

@@ -549,3 +549,17 @@ test('pooled completion rejects wrong input or ordinary projection before insert
     assert.equal(client.closed,true);
   }
 });
+
+test('completion rejects a candidate record already in validated ledger before commit',async()=>{
+  for(const [candidate,makeStore] of [[await completedFixture(),asStore],[pooledCandidate,scopedPoolStore]]){
+    for(const duplicate of candidate.records){
+      const row={...completionRows(candidate).find(r=>r.record.record_id===duplicate.recordId).record,event_type:'PROPOSAL',event_seq:1};
+      const client=clientWith(sql=>sql===pooledSQL?pooledRows():sql.includes('UNION ALL')?[row]:[]);
+      await assert.rejects(makeStore(client).complete(token,candidate),{message:'LEDGER_DUPLICATE_EVENT: '+duplicate.recordId});
+      assert.equal(client.calls.at(-1).sql,'ROLLBACK');
+      assert.equal(client.calls.some(c=>c.sql.includes('INSERT INTO dw_ledger.work_completions')),false);
+      assert.equal(client.calls.some(c=>c.sql==='COMMIT'),false);
+      assert.equal(client.closed,true);
+    }
+  }
+});
