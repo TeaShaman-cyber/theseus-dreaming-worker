@@ -105,6 +105,15 @@
 - **THEN** the existing verified acknowledgement may confirm the complete batch without reserving work or invoking inference
 - **AND** missing completion leaves the checkpoint unchanged and uncertainty is not budget exhaustion
 
+### Requirement: Pooled batch orchestration preserves source boundary
+
+#### Scenario: Bounded pooled batch recovery
+
+- **GIVEN** a verified staged synthetic batch and a partially validated work after a known provider failure
+- **WHEN** a new explicit pooled invocation supplies a remaining-call budget
+- **THEN** the validated perspective is not repeated and all callbacks remain bounded
+- **AND** the source checkpoint advances only after all work is verified; exact replay needs no model call
+
 ### Requirement: Bounded synthetic source acquisition
 
 #### Scenario: Exact pinned read

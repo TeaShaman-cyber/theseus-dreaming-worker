@@ -82,6 +82,10 @@ A synthetic batch run MUST derive the complete verified plan and require explici
 
 The run MUST stop on uncertain or incomplete work and MUST NOT acknowledge a partial batch. Before a possible new two-pass work it MUST have at least two remaining attempted-pass budget units. Already completed work consumes no inference budget. Exact already acknowledged replay MUST perform no inference. Returned summaries MUST distinguish verified acknowledgement, budget exhaustion, conflict and uncertainty without retaining evidence bodies or treating unknown currentness as absence.
 
+### Requirement: Pooled batch orchestration preserves source boundary
+
+An explicitly selected pooled synthetic batch MUST preserve the exact validated source plan and the existing checkpoint acknowledgement boundary. It MUST pass the remaining invocation budget and rotation to each selected work once, retain known pending outcomes and stop on unknown custody. The existing fixed-pair entry point remains separate. A pooled batch MUST NOT grant real-source permission or advance a checkpoint without verified complete work.
+
 ### Requirement: Bounded synthetic source acquisition
 
 The synthetic acquisition adapter MUST validate the exact selected set and source indexes before requesting pages. It MUST pin each read to the selected session, shard and generation, and only follow a nonrepeated cursor bound to that exact read position. It MUST bound request count, response bytes per page and in aggregate, character and message admission, and each request deadline. Failed, incomplete or inconsistent acquisition MUST NOT return a batch ready for analysis.

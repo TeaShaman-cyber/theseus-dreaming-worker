@@ -57,6 +57,12 @@
       ]
     },
     {
+      "requirement": "Pooled batch orchestration preserves source boundary",
+      "rules": [
+        "An explicitly selected pooled synthetic batch MUST preserve the exact validated source plan and the existing checkpoint acknowledgement boundary. It MUST pass the remaining invocation budget and rotation to each selected work once, retain known pending outcomes and stop on unknown custody. The existing fixed-pair entry point remains separate. A pooled batch MUST NOT grant real-source permission or advance a checkpoint without verified complete work."
+      ]
+    },
+    {
       "requirement": "Bounded synthetic source acquisition",
       "rules": [
         "The synthetic acquisition adapter MUST validate the exact selected set and source indexes before requesting pages. It MUST pin each read to the selected session, shard and generation, and only follow a nonrepeated cursor bound to that exact read position. It MUST bound request count, response bytes per page and in aggregate, character and message admission, and each request deadline. Failed, incomplete or inconsistent acquisition MUST NOT return a batch ready for analysis.\n\nThe adapter MUST use injected explicitly supplied transport; no default network credential, real history access or implicit fallback is permitted. Complete acquired pages MUST pass the existing verified batch admission. The adapter MUST NOT reserve work, invoke inference or advance checkpoints."
@@ -279,6 +285,20 @@
       ]
     },
     {
+      "requirement": "Pooled batch orchestration preserves source boundary",
+      "name": "Bounded pooled batch recovery",
+      "given": [
+        "a verified staged synthetic batch and a partially validated work after a known provider failure"
+      ],
+      "when": [
+        "a new explicit pooled invocation supplies a remaining-call budget"
+      ],
+      "then": [
+        "the validated perspective is not repeated and all callbacks remain bounded",
+        "AND the source checkpoint advances only after all work is verified; exact replay needs no model call"
+      ]
+    },
+    {
       "requirement": "Bounded synthetic source acquisition",
       "name": "Exact pinned read",
       "given": [
@@ -429,8 +449,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:e7b4ba62c72a58a345aaf718759a8c11fa7d246aa6e63ca9ae602baca70fe217",
-    "verify.md": "sha256:a6fb0cfc239de87dee3092e89f8bf5262105548869a191a7e858ac447397ec91"
+    "spec.md": "sha256:5fca86c45a31bef63ed83d9eb72df50bc05b72d64d07bfb353faaf00c68de255",
+    "verify.md": "sha256:da5a9809915efb3cdfdd03aa61d7000e750c1fd1baa557dc2f6cc0980440f64c"
   },
   "generatedBy": "core"
 }
