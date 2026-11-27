@@ -48,7 +48,7 @@ async function composeSourceCycle<Run extends {status:string;attemptedPasses:num
     execute = prepare();
     candidate = decodeSourceHandoff(input.candidate, input.expected);
     if (!candidate.scope.startsWith('synthetic:') || !Array.isArray(input.indexes)
-      || typeof transport !== 'function') throw Error('SOURCE_CYCLE_INPUT');
+      || typeof transport !== 'function') throw Error();
     handoff = {
       candidateSha256: candidate.candidate_sha256,
       currentness: candidate.currentness,
