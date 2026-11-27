@@ -1,0 +1,17 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Same-plan pooled source admission$'
+  content: |
+    ### Requirement: Read-only completed pooled reuse
+
+    #### Scenario: Alternative completed witness
+
+    - **GIVEN** committed pooled work and a staged equivalent alternative witness
+    - **WHEN** the original plan, request and journal are independently verified
+    - **THEN** the exact completion is reused without inference or custody mutation
+    - **AND** unstaged, unbound, incomplete or corrupt alternative custody remains blocked

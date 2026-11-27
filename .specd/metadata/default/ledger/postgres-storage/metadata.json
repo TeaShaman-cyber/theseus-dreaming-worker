@@ -77,6 +77,12 @@
       ]
     },
     {
+      "requirement": "Read-only completed pooled reuse",
+      "rules": [
+        "The same-plan admission rule forbids adoption or mutation of a differently bound reservation or journal. It does not forbid read-only reuse of an already committed completion from another verified source witness. Such reuse MUST verify the exact current staged plan and original source origin, replay the original journal against reconstructed original request identity and compare the exact committed completion. It MUST NOT create an origin, mutate the journal, dispatch inference, adopt unfinished custody, or advance source progress."
+      ]
+    },
+    {
       "requirement": "Same-plan finite provider cooldown",
       "rules": [
         "Within an exact staged synthetic source plan, the pooled selector MUST incorporate known finite provider-scoped HTTP 429 Retry-After deadlines from journal events of source-bound work. It MUST use the maximum deadline for each applicable provider and MUST NOT infer account-wide quotas or propagate indefinite or unknown outcomes as finite waits. Before a new START is inserted, the same ledger lock MUST protect a fresh check of the applicable deadline; a newly active restriction MUST defer without recording START or dispatching inference. An already admitted START is not revoked. Provider identities MUST be stable caller-provided keys within this plan. Other plans MUST NOT supply these restrictions. Expired waits MUST NOT prevent otherwise eligible selection."
@@ -449,6 +455,20 @@
       ]
     },
     {
+      "requirement": "Read-only completed pooled reuse",
+      "name": "Alternative completed witness",
+      "given": [
+        "committed pooled work and a staged equivalent alternative witness"
+      ],
+      "when": [
+        "the original plan, request and journal are independently verified"
+      ],
+      "then": [
+        "the exact completion is reused without inference or custody mutation",
+        "AND unstaged, unbound, incomplete or corrupt alternative custody remains blocked"
+      ]
+    },
+    {
       "requirement": "Same-plan finite provider cooldown",
       "name": "Known wait across selected work",
       "given": [
@@ -520,8 +540,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:b3e02b3b3b67629bf02f4efece09f704e54eaa4e38a332f0ad6dab1155b143e2",
-    "verify.md": "sha256:c5d694f529435e5c408ca4846e2142cd05e6f1e4a55e6e70ceb9f5034a413aa0"
+    "spec.md": "sha256:7858407aa3c1820cf05784097f3590ca1154b3bd8f9f3d528bb13a174374be5d",
+    "verify.md": "sha256:ca4b0c927bfaa91aacdc9cd5c4f61e41d71b2740639bc12df4493c6a02e002ea"
   },
   "generatedBy": "core"
 }
