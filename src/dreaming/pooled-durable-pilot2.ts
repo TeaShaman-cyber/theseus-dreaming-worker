@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { prepareCheckpointedPilot2 } from './checkpoint-pilot2.ts';
-import { readVerifiedCompletion, recoverDurableCompletion, validateWorkCompletion,
+import { readVerifiedCompletion, recoverDurableCompletion,
   type DurablePilot2Input, type WorkCompletion, type WorkStore } from './durable-pilot2.ts';
 import { selectModelPool, type ModelPoolInput } from './model-pool.ts';
 import { ProviderAdapterError } from './openai-provider-adapter.ts';
 import { runPilot1, type Pilot1Inference, type Pilot1InferenceResult } from './pilot1-runner.ts';
-import { preparePoolJournal, replayPoolJournal, type PoolJournalEvent, type PoolJournalEntry } from './pool-attempt-journal.ts';
+import { preparePoolJournal, replayPoolJournal, type PoolJournalEvent } from './pool-attempt-journal.ts';
+import { buildPoolCompletion } from './pool-completion.ts';
 import type { createPostgresPoolJournalStore } from './proposal-ledger-postgres.ts';
-import { createProposalRecord } from './proposal-ledger.ts';
-import { fingerprintProposal, sha256Fingerprint } from './proposal-schema.ts';
+import { fingerprintProposal } from './proposal-schema.ts';
 
 type Candidate = ModelPoolInput['routes'][number] & { infer: Pilot1Inference };
 type Policy = {
@@ -23,24 +23,6 @@ type Failure = Extract<PoolJournalEvent, {kind:'KNOWN_FAILURE'}>;
 type Decision = 'NO_DATA' | 'INTAKE_UNKNOWN' | 'CHECKPOINT_UNAVAILABLE' | 'ALREADY_PROCESSED'
   | 'COMMITTED' | 'LEGACY_UNRESOLVED' | 'BLOCKED_UNKNOWN' | 'STORAGE_UNKNOWN'
   | 'BUDGET_EXHAUSTED' | 'INSUFFICIENT_ELIGIBILITY' | 'DEFERRED' | 'POLICY_CONFLICT';
-
-export function buildPoolCompletion(input: DurablePilot2Input, entries: PoolJournalEntry[]): WorkCompletion {
-  const ctx = preparePoolJournal(input);
-  const state = replayPoolJournal(ctx, entries);
-  if (state.unresolved || state.validated.length !== 2) throw Error('POOL_COMPLETION_INCOMPLETE');
-  const observed = state.validated.map(({start,result}) => ({
-    perspectiveId: ctx.workFingerprint + ':pass-' + (start.slot+1),
-    provider: result.receipt.provider, model: result.receipt.model, finishReason: result.receipt.finishReason,
-  }));
-  const records = state.validated.flatMap(({start,result},i) => result.proposalSet.proposals.map(proposal =>
-    createProposalRecord({proposal,origin:{packetId:result.receipt.packetId,
-      evidenceFingerprint:ctx.evidenceFingerprint,requestFingerprint:ctx.requestFingerprint,
-      perspectiveId:observed[i].perspectiveId,route:start.route}})));
-  const payload = {schema:'theseus.dreaming-worker.work-completion.v1' as const,
-    checkpoint:{schema:'theseus.dreaming-worker.checkpoint.v1' as const,workFingerprint:ctx.workFingerprint,
-      requestFingerprint:ctx.requestFingerprint,resultFingerprint:state.tip},observed,records};
-  return validateWorkCompletion({...payload,projectionFingerprint:sha256Fingerprint(JSON.stringify(payload))});
-}
 
 function failureFromError(start: Start, error: unknown, response: Pilot1InferenceResult | null, now: number): PoolJournalEvent {
   const unknown = (code: 'TIMEOUT' | 'TRANSPORT_UNKNOWN' | 'EXECUTION_UNKNOWN'): PoolJournalEvent =>

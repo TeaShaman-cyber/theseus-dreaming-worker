@@ -1,0 +1,12 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Explicit resumable pooled execution$'
+  content: |
+    ### Requirement: Pooled completion custody
+
+    The ordinary completion writer MUST refuse work with a pooled attempt journal. The explicit pooled completion writer MUST bind the original exact input, reservation owner and complete journal to the candidate projection under the existing ledger transaction lock, before inserting any derived records. Missing, unresolved, mismatched or incomplete journal custody MUST NOT create completion. The writer MUST recompute the exact projection using the same deterministic builder as the executor. Existing ordinary completion and source acknowledgement boundaries remain unchanged. This is a trusted application-writer invariant, not a new ACL.

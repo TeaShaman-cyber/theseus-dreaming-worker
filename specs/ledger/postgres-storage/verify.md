@@ -125,6 +125,22 @@
 - **THEN** it does not dispatch another inference
 - **AND** it does not advance source progress
 
+### Requirement: Pooled completion custody
+
+#### Scenario: Ordinary or incomplete pooled completion
+
+- **GIVEN** a pooled work journal with a pending attempt and no validated perspectives
+- **WHEN** an ordinary or explicit pooled completion is attempted using a structurally valid candidate
+- **THEN** no derived record or completion is inserted
+- **AND** the original journal remains unresolved
+
+#### Scenario: Exact complete pooled projection
+
+- **GIVEN** two validated distinct perspectives in an exact journal
+- **WHEN** completion is attempted under the original reservation and input
+- **THEN** only the recomputed exact projection may commit
+- **AND** wrong owner, input or projection is rejected before insertion
+
 ### Requirement: Durable source batch acknowledgement
 
 #### Scenario: Explicit root and exact successor

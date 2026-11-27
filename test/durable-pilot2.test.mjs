@@ -277,13 +277,15 @@ test('PostgreSQL completion uses one transaction with exact records, receipt and
   assert.deepEqual(client.calls.map(({ sql }) => {
     if (sql.includes('pg_advisory_xact_lock')) return 'LOCK';
     if (sql.includes('UNION ALL')) return 'READ';
+    if (sql === 'SELECT 1 FROM dw_ledger.work_pool_journal WHERE work_fingerprint=$1 LIMIT 1') return 'POOL_GUARD';
     if (sql.includes('INSERT INTO dw_ledger.proposal_records')) return 'RECORD';
     if (sql.includes('INSERT INTO dw_ledger.work_completions')) return 'COMPLETION';
     if (sql.includes('INSERT INTO dw_ledger.work_membership')) return 'MEMBER';
     return sql;
-  }), ['BEGIN', 'LOCK', 'READ', 'RECORD', 'RECORD', 'COMPLETION', 'MEMBER', 'MEMBER', 'COMMIT']);
-  assert.deepEqual(client.calls[5].values, [checkpoint.workFingerprint, token, checkpoint.requestFingerprint, checkpoint.resultFingerprint, projectionFingerprint, JSON.stringify(observed)]);
-  assert.deepEqual(client.calls.slice(6, 8).map(call => call.values), records.map((record, i) => [checkpoint.workFingerprint, i, record.recordId]));
+  }), ['BEGIN', 'LOCK', 'POOL_GUARD', 'READ', 'RECORD', 'RECORD', 'COMPLETION', 'MEMBER', 'MEMBER', 'COMMIT']);
+  assert.deepEqual(client.calls[2].values,[checkpoint.workFingerprint]);
+  assert.deepEqual(client.calls[6].values, [checkpoint.workFingerprint, token, checkpoint.requestFingerprint, checkpoint.resultFingerprint, projectionFingerprint, JSON.stringify(observed)]);
+  assert.deepEqual(client.calls.slice(7, 9).map(call => call.values), records.map((record, i) => [checkpoint.workFingerprint, i, record.recordId]));
   for (const sql of ['INSERT INTO dw_ledger.proposal_records', 'INSERT INTO dw_ledger.work_completions', 'INSERT INTO dw_ledger.work_membership', 'COMMIT']) {
     const faulty = clientWith(query => {
       if (query.includes(sql)) throw Error('fixture write failed');
@@ -460,4 +462,90 @@ test('shared verified readback distinguishes wrong work identity from absent res
   assert.deepEqual(await readVerifiedCompletion({ readCompletion: async () => valid }, valid.checkpoint.workFingerprint), valid);
   await assert.rejects(readVerifiedCompletion({ readCompletion: async () => valid }, 'sha256:' + '0'.repeat(64)), /WORK_READBACK_IDENTITY_MISMATCH/);
   assert.equal(await readVerifiedCompletion({ readCompletion: async () => null }, valid.checkpoint.workFingerprint), null);
+});
+test('ordinary completion rejects any pooled journal before inserting derived records',async()=>{
+  const completion=await completedFixture();
+  const client=clientWith((sql,values)=>{
+    if(sql==='SELECT 1 FROM dw_ledger.work_pool_journal WHERE work_fingerprint=$1 LIMIT 1'){
+      assert.deepEqual(values,[completion.checkpoint.workFingerprint]);return [{'exists':1}];
+    }
+    return [];
+  });
+  await assert.rejects(asStore(client).complete(token,completion),{message:'WORK_POOL_CUSTODY_REQUIRED'});
+  assert.deepEqual(client.calls.map(c=>c.sql),['BEGIN',"SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))",'SELECT 1 FROM dw_ledger.work_pool_journal WHERE work_fingerprint=$1 LIMIT 1','ROLLBACK']);
+  assert.equal(client.closed,true);
+});
+
+const {createPostgresPooledCompletionStore}=await import('../src/dreaming/proposal-ledger-postgres.ts');
+const {preparePoolJournal,poolJournalAdmission,makePoolJournalEntry}=await import('../src/dreaming/pool-attempt-journal.ts');
+const {buildPoolCompletion}=await import('../src/dreaming/pool-completion.ts');
+const pooledContext=preparePoolJournal(input);
+const journalEntries=[makePoolJournalEntry(null,poolJournalAdmission(pooledContext,4))];
+for(const [i,id] of ['a','b'].entries()){
+  const attemptId='00000000-0000-4000-8000-00000000000'+(i+1);
+  const route={id,provider:'provider-'+id,model:'model-'+id,modelFamily:id};
+  journalEntries.push(makePoolJournalEntry(journalEntries.at(-1),{kind:'START',attemptId,slot:i,route}));
+  journalEntries.push(makePoolJournalEntry(journalEntries.at(-1),{kind:'VALIDATED',attemptId,receipt:{
+    packetId:pooledContext.request.packet.packetId,evidenceFingerprint:pooledContext.evidenceFingerprint,
+    requestFingerprint:pooledContext.requestFingerprint,provider:route.provider,model:route.model,finishReason:'stop',
+    externalModelCalls:1,toolsUsed:0,memoryUsed:false,canonicalWrites:0,
+  },proposalSet:{schema:'theseus.dreaming-worker.proposals.v1',proposals:[proposal]}}));
+}
+const pooledCandidate=buildPoolCompletion(input,journalEntries);
+const pooledRows=(entries=journalEntries,owner=token,completed=false)=>entries.map(entry=>({owner_token:owner,ordinal:entry.ordinal,entry,completion_exists:completed}));
+const pooledSQL=`SELECT r.owner_token, j.ordinal, j.entry,
+      EXISTS(SELECT 1 FROM dw_ledger.work_completions c WHERE c.work_fingerprint=r.work_fingerprint) AS completion_exists
+      FROM dw_ledger.work_reservations r
+      LEFT JOIN dw_ledger.work_pool_journal j
+        ON j.work_fingerprint=r.work_fingerprint AND j.owner_token=r.owner_token
+      WHERE r.work_fingerprint=$1 ORDER BY j.ordinal`;
+function scopedPoolStore(client,raw=input){
+  return createPostgresPooledCompletionStore({connectionString,clientFactory:url=>{assert.equal(url,connectionString);return client;}},raw);
+}
+test('pooled completion reads exact immutable input and journal under lock before writing',async()=>{
+  const client=clientWith((sql,values)=>{
+    if(sql===pooledSQL){assert.deepEqual(values,[pooledContext.workFingerprint]);return pooledRows();}
+    return [];
+  });
+  const raw=structuredClone(input);
+  const store=scopedPoolStore(client,raw);
+  raw.analysisVersion='different after constructor';
+  await store.complete(token,pooledCandidate);
+  assert.equal(client.closed,true);
+  assert.deepEqual(client.calls.slice(0,3).map(c=>c.sql),['BEGIN',"SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))",pooledSQL]);
+  assert.match(client.calls[3].sql,/UNION ALL/);
+  const insert=client.calls.find(c=>c.sql.includes('INSERT INTO dw_ledger.work_completions'));
+  assert.deepEqual(insert.values,[pooledContext.workFingerprint,token,pooledContext.requestFingerprint,journalEntries.at(-1).entryFingerprint,pooledCandidate.projectionFingerprint,JSON.stringify(pooledCandidate.observed)]);
+  assert.equal(client.calls.at(-1).sql,'COMMIT');
+});
+test('pooled completion rejects missing, legacy, wrong owner, completed or partial journal',async()=>{
+  for(const [rows,message] of [
+    [[], 'POOL_COMPLETION_CUSTODY'],
+    [[{owner_token:token,ordinal:null,entry:null,completion_exists:false}],'POOL_COMPLETION_CUSTODY'],
+    [pooledRows(journalEntries,'other-owner'),'POOL_COMPLETION_CUSTODY'],
+    [pooledRows(journalEntries,token,true),'POOL_COMPLETION_CUSTODY'],
+    [pooledRows(journalEntries.slice(0,2)),'POOL_COMPLETION_INCOMPLETE'],
+    [pooledRows(journalEntries.slice(0,3)),'POOL_COMPLETION_INCOMPLETE'],
+  ]){
+    const client=clientWith((sql,values)=>{
+      if(sql===pooledSQL){assert.deepEqual(values,[pooledContext.workFingerprint]);return rows;}
+      return [];
+    });
+    await assert.rejects(scopedPoolStore(client).complete(token,pooledCandidate),{message});
+    assert.deepEqual(client.calls.map(c=>c.sql),['BEGIN',"SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))",pooledSQL,'ROLLBACK']);
+    assert.equal(client.closed,true);
+  }
+});
+test('pooled completion rejects wrong input or ordinary projection before inserting records',async()=>{
+  const ordinary=await completedFixture();
+  const cases=[
+    [{...input,analysisVersion:'other'},pooledCandidate,'POOL_COMPLETION_WORK_MISMATCH',false],
+    [input,ordinary,'POOL_COMPLETION_PROJECTION_MISMATCH',true],
+  ];
+  for(const [raw,candidate,message,readExpected] of cases){
+    const client=clientWith(sql=>sql===pooledSQL?pooledRows():[]);
+    await assert.rejects(scopedPoolStore(client,raw).complete(token,candidate),{message});
+    assert.deepEqual(client.calls.map(c=>c.sql),['BEGIN',"SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))",...(readExpected?[pooledSQL]:[]),'ROLLBACK']);
+    assert.equal(client.closed,true);
+  }
 });

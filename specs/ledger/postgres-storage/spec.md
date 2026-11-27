@@ -54,6 +54,10 @@ Known responded failures MAY allow replacement; unknown outcome or uncertain sto
 
 The completed pooled projection MUST use the existing validated work completion and atomic recovery boundary, bind its result fingerprint to the final immutable journal entry, and independently verify exact readback. Completed replay of a pooled work MUST agree with its journal. No-data, incomplete, blocked or deferred states MUST NOT manufacture completion. This API MUST NOT alter the existing source-plan admission, fixed-pair source batch or production deployment; caller-supplied route admission and cross-work cooldown evidence remain external.
 
+### Requirement: Pooled completion custody
+
+The ordinary completion writer MUST refuse work with a pooled attempt journal. The explicit pooled completion writer MUST bind the original exact input, reservation owner and complete journal to the candidate projection under the existing ledger transaction lock, before inserting any derived records. Missing, unresolved, mismatched or incomplete journal custody MUST NOT create completion. The writer MUST recompute the exact projection using the same deterministic builder as the executor. Existing ordinary completion and source acknowledgement boundaries remain unchanged. This is a trusted application-writer invariant, not a new ACL.
+
 ### Requirement: Durable source batch acknowledgement
 
 The synthetic source store MUST initialize a root only explicitly from a trusted predecessor membership. Acknowledgement MUST bind one existing predecessor and its exact membership, provider, scope, task and analysis version. It MUST derive the receipt using the existing verified batch builder and read completions within the existing transaction/lock boundary. No caller-provided work list or receipt may bypass this derivation.

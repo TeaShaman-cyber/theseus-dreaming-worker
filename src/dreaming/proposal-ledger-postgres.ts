@@ -1,4 +1,5 @@
 import { Client } from 'pg';
+import { buildPoolCompletion } from './pool-completion.ts';
 import { validateWorkCompletion, type DurablePilot2Input, type WorkCompletion, type WorkStore } from './durable-pilot2.ts';
 import { makePoolJournalEntry, poolJournalAdmission, preparePoolJournal, replayPoolJournal, type PoolJournalEvent } from './pool-attempt-journal.ts';
 
@@ -219,6 +220,15 @@ export function createPostgresProposalLedger(options: PostgresProposalLedgerOpti
 // Work completion shares the existing ledger validation and insert path.
 // The work key admits a single caller; its token is correlation, not an ACL.
 export function createPostgresWorkStore(options: PostgresProposalLedgerOptions): WorkStore {
+  return createWorkStore(options, null);
+}
+
+/** Exact original input is required; no generic completion can adopt a pool journal. */
+export function createPostgresPooledCompletionStore(options: PostgresProposalLedgerOptions, raw: DurablePilot2Input): Pick<WorkStore, 'complete' | 'readCompletion'> {
+  return createWorkStore(options, structuredClone(raw));
+}
+
+function createWorkStore(options: PostgresProposalLedgerOptions, poolInput: DurablePilot2Input | null): WorkStore {
   const clientFactory = options.clientFactory ?? defaultClientFactory;
   async function withClient<T>(action: (client: LedgerPgClient) => Promise<T>): Promise<T> {
     const client = clientFactory(options.connectionString);
@@ -250,6 +260,19 @@ export function createPostgresWorkStore(options: PostgresProposalLedgerOptions):
         await client.query('BEGIN');
         try {
           await client.query("SELECT pg_advisory_xact_lock(hashtext('dw_ledger:v1'))");
+          if (poolInput === null) {
+            const { rows } = await client.query('SELECT 1 FROM dw_ledger.work_pool_journal WHERE work_fingerprint=$1 LIMIT 1', [checkpoint.workFingerprint]);
+            if (rows.length) throw Error('WORK_POOL_CUSTODY_REQUIRED');
+          } else {
+            const context = preparePoolJournal(poolInput);
+            if (context.workFingerprint !== checkpoint.workFingerprint) throw Error('POOL_COMPLETION_WORK_MISMATCH');
+            const current = await readPoolWithClient(client, context);
+            if (current.status !== 'JOURNAL' || current.ownerToken !== ownerToken || current.completionExists) {
+              throw Error('POOL_COMPLETION_CUSTODY');
+            }
+            const exact = buildPoolCompletion(poolInput, current.state.entries);
+            if (exact.projectionFingerprint !== projectionFingerprint) throw Error('POOL_COMPLETION_PROJECTION_MISMATCH');
+          }
           let existing = await readEventsWithClient(client);
           for (const record of records) {
             existing = appendLedgerEvent(existing, record);
@@ -315,6 +338,27 @@ type PoolJournalRead =
   | { status: 'ABSENT' | 'LEGACY_UNRESOLVED' | 'COMPLETION_EXISTS' }
   | { status: 'JOURNAL'; ownerToken: string; completionExists: boolean; state: ReturnType<typeof replayPoolJournal> };
 
+async function readPoolWithClient(client: LedgerPgClient, context: PoolJournalContext): Promise<PoolJournalRead> {
+  const { rows } = await client.query<{
+    owner_token: string; ordinal: number | null; entry: unknown | null; completion_exists: boolean;
+  }>(`SELECT r.owner_token, j.ordinal, j.entry,
+      EXISTS(SELECT 1 FROM dw_ledger.work_completions c WHERE c.work_fingerprint=r.work_fingerprint) AS completion_exists
+      FROM dw_ledger.work_reservations r
+      LEFT JOIN dw_ledger.work_pool_journal j
+        ON j.work_fingerprint=r.work_fingerprint AND j.owner_token=r.owner_token
+      WHERE r.work_fingerprint=$1 ORDER BY j.ordinal`, [context.workFingerprint]);
+  if (!rows.length) return { status: 'ABSENT' };
+  const first = rows[0];
+  if (first.ordinal === null) {
+    if (rows.length !== 1 || first.entry !== null) throw Error('POOL_JOURNAL_ROW_INVALID');
+    return { status: first.completion_exists ? 'COMPLETION_EXISTS' : 'LEGACY_UNRESOLVED' };
+  }
+  if (rows.some((r,i) => r.ordinal !== i || r.entry === null || r.owner_token !== first.owner_token
+    || r.completion_exists !== first.completion_exists)) throw Error('POOL_JOURNAL_ROW_INVALID');
+  return { status: 'JOURNAL', ownerToken: first.owner_token, completionExists: first.completion_exists,
+    state: replayPoolJournal(context, rows.map(r => r.entry)) };
+}
+
 /** Append-only partial custody. No model invocation, takeover or completion. */
 export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOptions) {
   const clientFactory = options.clientFactory ?? defaultClientFactory;
@@ -341,34 +385,14 @@ export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOp
       }
     });
   }
-  async function readWithClient(client: LedgerPgClient, context: PoolJournalContext): Promise<PoolJournalRead> {
-    const { rows } = await client.query<{
-      owner_token: string; ordinal: number | null; entry: unknown | null; completion_exists: boolean;
-    }>(`SELECT r.owner_token, j.ordinal, j.entry,
-      EXISTS(SELECT 1 FROM dw_ledger.work_completions c WHERE c.work_fingerprint=r.work_fingerprint) AS completion_exists
-      FROM dw_ledger.work_reservations r
-      LEFT JOIN dw_ledger.work_pool_journal j
-        ON j.work_fingerprint=r.work_fingerprint AND j.owner_token=r.owner_token
-      WHERE r.work_fingerprint=$1 ORDER BY j.ordinal`, [context.workFingerprint]);
-    if (!rows.length) return { status: 'ABSENT' };
-    const first = rows[0];
-    if (first.ordinal === null) {
-      if (rows.length !== 1 || first.entry !== null) throw Error('POOL_JOURNAL_ROW_INVALID');
-      return { status: first.completion_exists ? 'COMPLETION_EXISTS' : 'LEGACY_UNRESOLVED' };
-    }
-    if (rows.some((r,i) => r.ordinal !== i || r.entry === null || r.owner_token !== first.owner_token
-      || r.completion_exists !== first.completion_exists)) throw Error('POOL_JOURNAL_ROW_INVALID');
-    return { status: 'JOURNAL', ownerToken: first.owner_token, completionExists: first.completion_exists,
-      state: replayPoolJournal(context, rows.map(r => r.entry)) };
-  }
-  const readContext = (context: PoolJournalContext) => withClient(client => readWithClient(client, context));
+  const readContext = (context: PoolJournalContext) => withClient(client => readPoolWithClient(client, context));
   return {
     async read(raw: DurablePilot2Input) { return readContext(preparePoolJournal(raw)); },
     async admit(raw: DurablePilot2Input, maxAttempts: number, ownerToken: string) {
       const context = preparePoolJournal(raw);
       const first = makePoolJournalEntry(null, poolJournalAdmission(context, maxAttempts));
       await transaction(async client => {
-        const existing = await readWithClient(client, context);
+        const existing = await readPoolWithClient(client, context);
         if (existing.status === 'JOURNAL') {
           if (existing.state.entries[0].entryFingerprint !== first.entryFingerprint) throw Error('POOL_JOURNAL_ADMISSION_CONFLICT');
           return;
@@ -390,7 +414,7 @@ export function createPostgresPoolJournalStore(options: PostgresProposalLedgerOp
     async append(raw: DurablePilot2Input, expectedTip: string, event: PoolJournalEvent) {
       const context = preparePoolJournal(raw);
       const entry = await transaction(async client => {
-        const current = await readWithClient(client, context);
+        const current = await readPoolWithClient(client, context);
         if (current.status !== 'JOURNAL' || current.completionExists || current.state.tip !== expectedTip) {
           throw Error('POOL_JOURNAL_TIP_CONFLICT');
         }

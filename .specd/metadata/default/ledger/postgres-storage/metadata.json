@@ -47,6 +47,12 @@
       ]
     },
     {
+      "requirement": "Pooled completion custody",
+      "rules": [
+        "The ordinary completion writer MUST refuse work with a pooled attempt journal. The explicit pooled completion writer MUST bind the original exact input, reservation owner and complete journal to the candidate projection under the existing ledger transaction lock, before inserting any derived records. Missing, unresolved, mismatched or incomplete journal custody MUST NOT create completion. The writer MUST recompute the exact projection using the same deterministic builder as the executor. Existing ordinary completion and source acknowledgement boundaries remain unchanged. This is a trusted application-writer invariant, not a new ACL."
+      ]
+    },
+    {
       "requirement": "Durable source batch acknowledgement",
       "rules": [
         "The synthetic source store MUST initialize a root only explicitly from a trusted predecessor membership. Acknowledgement MUST bind one existing predecessor and its exact membership, provider, scope, task and analysis version. It MUST derive the receipt using the existing verified batch builder and read completions within the existing transaction/lock boundary. No caller-provided work list or receipt may bypass this derivation.\n\nSource checkpoints MUST be append-only with one root and at most one successor per predecessor and chain. A missing or conflicting predecessor, incomplete work, corrupt storage or unresolved removal MUST NOT advance the chain. An ambiguous write MUST be resolved by independent exact readback or remain UNKNOWN. Acknowledgement MUST NOT invoke inference, enable real history access or imply source completeness."
@@ -280,6 +286,34 @@
       ]
     },
     {
+      "requirement": "Pooled completion custody",
+      "name": "Ordinary or incomplete pooled completion",
+      "given": [
+        "a pooled work journal with a pending attempt and no validated perspectives"
+      ],
+      "when": [
+        "an ordinary or explicit pooled completion is attempted using a structurally valid candidate"
+      ],
+      "then": [
+        "no derived record or completion is inserted",
+        "AND the original journal remains unresolved"
+      ]
+    },
+    {
+      "requirement": "Pooled completion custody",
+      "name": "Exact complete pooled projection",
+      "given": [
+        "two validated distinct perspectives in an exact journal"
+      ],
+      "when": [
+        "completion is attempted under the original reservation and input"
+      ],
+      "then": [
+        "only the recomputed exact projection may commit",
+        "AND wrong owner, input or projection is rejected before insertion"
+      ]
+    },
+    {
       "requirement": "Durable source batch acknowledgement",
       "name": "Explicit root and exact successor",
       "given": [
@@ -370,8 +404,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:e566a5781b87cdbf0ae89dbcd7432d0a54a51843c19d472ad067d16dfcd19380",
-    "verify.md": "sha256:4a4b76cf070a27d64b0ff1fa8dfa0bcbfbe1b1b45981a068b930147ff2dfbe01"
+    "spec.md": "sha256:ed89315b08e97f66dcf09b6c21c8ccaa25b90f2519ecdd32a975b6ea5dbd152a",
+    "verify.md": "sha256:5cc019c01c2818e04cad6b113aff096ec356a025794ee4c522833901ef339b80"
   },
   "generatedBy": "core"
 }

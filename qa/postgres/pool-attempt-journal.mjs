@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
-import { createPostgresPoolJournalStore, createPostgresWorkStore } from '../../src/dreaming/proposal-ledger-postgres.ts';
+import { createPostgresPoolJournalStore, createPostgresPooledCompletionStore, createPostgresWorkStore } from '../../src/dreaming/proposal-ledger-postgres.ts';
 import { preparePoolJournal } from '../../src/dreaming/pool-attempt-journal.ts';
 import { runPilot1 } from '../../src/dreaming/pilot1-runner.ts';
 import { selectModelPool } from '../../src/dreaming/model-pool.ts';
@@ -129,7 +129,7 @@ const candidate=(id,fail=false)=>({...route(id),admission:'FREE_RESEARCH',qualif
 });
 const policy={routes:[candidate('a'),candidate('b',true),candidate('c')],taskClass:'analysis',
   maxAttempts:4,maxInvocations:2,rotation:0,cooldowns:[],clock:()=>100};
-const invoke=p=>runPooledDurablePilot2(composed,p,createPostgresPoolJournalStore(options),createPostgresWorkStore(options));
+const invoke=p=>runPooledDurablePilot2(composed,p,createPostgresPoolJournalStore(options),createPostgresPooledCompletionStore(options,composed));
 const partial=await invoke(policy);
 assert.equal(partial.decision,'BUDGET_EXHAUSTED');
 assert.deepEqual(dispatched,['a','b']);
@@ -149,3 +149,42 @@ assert.equal(replay.attemptedPasses,0);
 assert.deepEqual(replay.completion,done.completion);
 assert.deepEqual(dispatched,['a','b','c']);
 console.log('POOLED_EXECUTOR_PG_PASS attempts=3 valid=2 restart_calls=1 replay_calls=0 completion=verified');
+
+// Regression: a structurally valid ordinary completion is not proof of
+// pooled custody, even with the original trusted reservation correlation.
+const {runDurablePilot2}=await import('../../src/dreaming/durable-pilot2.ts');
+const {buildPoolCompletion}=await import('../../src/dreaming/pool-completion.ts');
+const custody=requestFor('pool-completion-custody');
+const custodyJournal=createPostgresPoolJournalStore(options);
+const ordinaryStore=createPostgresWorkStore(options);
+const owner=randomUUID();
+const admission=await custodyJournal.admit(custody,4,owner);
+const firstStart=start('custody-a',0);
+let heldState=await custodyJournal.append(custody,admission.state.tip,firstStart);
+let fakeCompletion=null;
+const legacyCandidate=await runDurablePilot2(custody,['legacy-a','legacy-b'].map(id=>({...route(id),async infer(){
+  return {provider:route(id).provider,model:route(id).model,finishReason:'stop',
+    text:JSON.stringify({schema:'theseus.dreaming-worker.proposals.v1',proposals:[{
+      type:'FACT',claim:'Synthetic observation.',source_refs:[{source_ref:'fixture:pool',evidence_hash:'sha256:fixture'}],
+    }]})};
+}})),{async reserve(){return true;},async readCompletion(){return fakeCompletion;},async complete(_,value){fakeCompletion=structuredClone(value);}});
+assert.equal(legacyCandidate.decision,'COMMITTED');
+const pooledStore=createPostgresPooledCompletionStore(options,custody);
+const work=preparePoolJournal(custody).workFingerprint;
+await assert.rejects(ordinaryStore.complete(owner,fakeCompletion),/WORK_POOL_CUSTODY_REQUIRED/);
+await assert.rejects(pooledStore.complete(owner,fakeCompletion),/POOL_COMPLETION_INCOMPLETE/);
+assert.equal(await ordinaryStore.readCompletion(work),null);
+assert.equal((await custodyJournal.read(custody)).state.tip,heldState.tip);
+heldState=await custodyJournal.append(custody,heldState.tip,await validate(custody,firstStart));
+const secondStart=start('custody-b',1);
+heldState=await custodyJournal.append(custody,heldState.tip,secondStart);
+heldState=await custodyJournal.append(custody,heldState.tip,await validate(custody,secondStart));
+const exact=buildPoolCompletion(custody,heldState.entries);
+await assert.rejects(pooledStore.complete(randomUUID(),exact),/POOL_COMPLETION_CUSTODY/);
+await assert.rejects(pooledStore.complete(owner,fakeCompletion),/POOL_COMPLETION_PROJECTION_MISMATCH/);
+await assert.rejects(ordinaryStore.complete(owner,exact),/WORK_POOL_CUSTODY_REQUIRED/);
+assert.equal(await ordinaryStore.readCompletion(work),null);
+await pooledStore.complete(owner,exact);
+assert.deepEqual(await ordinaryStore.readCompletion(work),exact);
+assert.equal((await custodyJournal.read(custody)).state.tip,exact.checkpoint.resultFingerprint);
+console.log('POOL_COMPLETION_CUSTODY_PG_PASS ordinary_rejected=true pending_rejected=true wrong_owner_rejected=true wrong_projection_rejected=true exact_commit=true');
