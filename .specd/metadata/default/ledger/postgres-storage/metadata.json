@@ -83,6 +83,12 @@
       ]
     },
     {
+      "requirement": "Bounded pooled source batch",
+      "rules": [
+        "An explicit synthetic pooled batch MUST validate its caller policy and exact staged plan before inference. It MUST visit each selected work at most once per invocation, preserve rotation and enforce a batch-wide actual inference callback budget, including zero-call replay and completion recovery. Known budget exhaustion, insufficient eligibility or deferral MAY leave work pending while other selected work is considered once; unknown or conflicting custody MUST stop. The result MUST retain work identity, observed attempts and applicable wake deadlines. Source acknowledgement MUST require all selected completions verified through existing receipt custody; incomplete work MUST NOT advance the source. No automatic retries, waiting or real-source permission follows."
+      ]
+    },
+    {
       "requirement": "Source acknowledgement retains original plan",
       "rules": [
         "A durable source acknowledgement MUST require the exact current staged plan and verify each completion against its immutable original reservation plan under the existing transaction lock. An unbound completion MUST NOT advance source progress. The durable receipt MUST bind both the current plan and each original plan pointer, and verify the original packet, request and evidence identities against the completion. A later witness MUST NOT relabel the original work origin."
@@ -471,6 +477,34 @@
       ]
     },
     {
+      "requirement": "Bounded pooled source batch",
+      "name": "Recover partial work within a batch-wide budget",
+      "given": [
+        "an exact staged synthetic batch and a successful first perspective followed by known failure"
+      ],
+      "when": [
+        "a bounded pooled batch restarts"
+      ],
+      "then": [
+        "only remaining required calls execute within the new invocation budget",
+        "AND source acknowledgement follows all verified completions and exact replay uses zero calls"
+      ]
+    },
+    {
+      "requirement": "Bounded pooled source batch",
+      "name": "Deferral and unknown custody",
+      "given": [
+        "a known deferred work and other selected work"
+      ],
+      "when": [
+        "the batch is traversed once"
+      ],
+      "then": [
+        "a finite wake deadline is retained and remaining eligible work may be considered",
+        "AND unknown custody stops subsequent inference and no incomplete batch advances the source"
+      ]
+    },
+    {
       "requirement": "Source acknowledgement retains original plan",
       "name": "Distinct original and current plans",
       "given": [
@@ -486,8 +520,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:e531250d610570928ec5b1fa55c0689472b75aafac5c943c6140fbdcf78c468a",
-    "verify.md": "sha256:ba9e54aeca88a6b747dc7dbf5601b1e5f4a1747f6866014fa959acca205ffd76"
+    "spec.md": "sha256:b3e02b3b3b67629bf02f4efece09f704e54eaa4e38a332f0ad6dab1155b143e2",
+    "verify.md": "sha256:c5d694f529435e5c408ca4846e2142cd05e6f1e4a55e6e70ceb9f5034a413aa0"
   },
   "generatedBy": "core"
 }

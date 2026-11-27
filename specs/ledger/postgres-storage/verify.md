@@ -226,6 +226,22 @@
 - **THEN** it defers with no new START and no inference
 - **AND** unrelated plans and indefinite per-work refusals do not supply a shared deadline
 
+### Requirement: Bounded pooled source batch
+
+#### Scenario: Recover partial work within a batch-wide budget
+
+- **GIVEN** an exact staged synthetic batch and a successful first perspective followed by known failure
+- **WHEN** a bounded pooled batch restarts
+- **THEN** only remaining required calls execute within the new invocation budget
+- **AND** source acknowledgement follows all verified completions and exact replay uses zero calls
+
+#### Scenario: Deferral and unknown custody
+
+- **GIVEN** a known deferred work and other selected work
+- **WHEN** the batch is traversed once
+- **THEN** a finite wake deadline is retained and remaining eligible work may be considered
+- **AND** unknown custody stops subsequent inference and no incomplete batch advances the source
+
 ### Requirement: Source acknowledgement retains original plan
 
 #### Scenario: Distinct original and current plans

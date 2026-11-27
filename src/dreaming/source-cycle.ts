@@ -1,6 +1,6 @@
 import { decodeSourceHandoff, type SourceHandoffCandidate } from './source-handoff.ts';
 import { acquireSourceBatch } from './source-batch-acquire.ts';
-import { prepareSourceRunPolicy, runSourceBatch } from './source-batch-run.ts';
+import { prepareSourceRunPolicy, runSourceBatch, preparePooledSourceRunPolicy, runPooledSourceBatch } from './source-batch-run.ts';
 
 type CycleInput = Parameters<typeof acquireSourceBatch>[0];
 type CycleOptions = {
@@ -18,25 +18,34 @@ type HandoffSummary = {
   removedCount: number;
 };
 type BatchRun = Awaited<ReturnType<typeof runSourceBatch>>;
-type CycleResult =
+type CycleResult<Run extends {status:string;attemptedPasses:number}> =
   | { status: 'INPUT_REJECTED' | 'REMOVAL_PENDING' | 'NO_SELECTED_WORK' | 'ACQUISITION_BLOCKED';
       handoff: HandoffSummary | null; attemptedPasses: 0; run: null }
   | { status: 'EXECUTION_UNKNOWN'; handoff: HandoffSummary; attemptedPasses: null; run: null }
-  | { status: BatchRun['status']; handoff: HandoffSummary; attemptedPasses: number; run: BatchRun };
+  | { status: Run['status']; handoff: HandoffSummary; attemptedPasses: number; run: Run };
 
-/** One explicit synthetic invocation. The caller owns trusted source custody,
- * transport, route authorization and the existing ledger. No default runtime. */
-export async function runSourceCycle(raw: CycleInput, options: CycleOptions): Promise<CycleResult> {
+type AcquisitionOptions = Pick<CycleOptions,'limits'|'transport'>;
+type Acquired = Awaited<ReturnType<typeof acquireSourceBatch>>;
+type PooledCycleOptions = AcquisitionOptions & {
+  policy: Parameters<typeof runPooledSourceBatch>[1];
+  store: Parameters<typeof runPooledSourceBatch>[2];
+};
+type PooledBatchRun = Awaited<ReturnType<typeof runPooledSourceBatch>>;
+
+async function composeSourceCycle<Run extends {status:string;attemptedPasses:number}>(
+  raw: CycleInput, options: AcquisitionOptions,
+  prepare: () => (batch:Acquired)=>Promise<Run>,
+): Promise<CycleResult<Run>> {
   let input: CycleInput;
   let limits: CycleOptions['limits'];
-  let policy: ReturnType<typeof prepareSourceRunPolicy>;
+  let execute: (batch:Acquired)=>Promise<Run>;
   let handoff: HandoffSummary;
   let candidate: SourceHandoffCandidate;
-  const { transport, store } = options;
+  const { transport } = options;
   try {
     input = structuredClone(raw);
     limits = structuredClone(options.limits);
-    policy = prepareSourceRunPolicy(options.routes, options.maxPasses);
+    execute = prepare();
     candidate = decodeSourceHandoff(input.candidate, input.expected);
     if (!candidate.scope.startsWith('synthetic:') || !Array.isArray(input.indexes)
       || typeof transport !== 'function') throw Error('SOURCE_CYCLE_INPUT');
@@ -59,9 +68,27 @@ export async function runSourceCycle(raw: CycleInput, options: CycleOptions): Pr
   try { batch = await acquireSourceBatch(input, limits, transport); }
   catch { return { status: 'ACQUISITION_BLOCKED', handoff, attemptedPasses: 0, run: null }; }
   try {
-    const run = await runSourceBatch(batch, policy.routes, store, policy.budget);
+    const run = await execute(batch);
     return { status: run.status, handoff, attemptedPasses: run.attemptedPasses, run };
   } catch {
     return { status: 'EXECUTION_UNKNOWN', handoff, attemptedPasses: null, run: null };
   }
+}
+
+/** Explicit synthetic fixed-pair composition, with caller-owned transport and custody. */
+export function runSourceCycle(raw: CycleInput, options: CycleOptions): Promise<CycleResult<BatchRun>> {
+  return composeSourceCycle(raw,options,()=>{
+    const policy=prepareSourceRunPolicy(options.routes,options.maxPasses);
+    const {store}=options;
+    return batch=>runSourceBatch(batch,policy.routes,store,policy.budget);
+  });
+}
+
+/** Explicit synthetic pooled composition; no default runtime or real-source permission. */
+export function runPooledSourceCycle(raw: CycleInput, options: PooledCycleOptions): Promise<CycleResult<PooledBatchRun>> {
+  return composeSourceCycle(raw,options,()=>{
+    const policy=preparePooledSourceRunPolicy(options.policy);
+    const {store}=options;
+    return batch=>runPooledSourceBatch(batch,policy,store);
+  });
 }

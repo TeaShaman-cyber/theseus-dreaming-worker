@@ -912,6 +912,64 @@ try {
     assert.equal(independent.decision,'COMMITTED');
     assert.deepEqual(pooledCalls.slice(-3),['b','b','a']);
     console.log('SOURCE_POOLED_COOLDOWN_PG_PASS finite_wait=deferred alternative=selected different_plan=isolated start_race=no_dispatch expired=allowed indefinite=local_only');
+    const {runPooledSourceBatch}=await import('../../src/dreaming/source-batch-run.ts');
+    const batchPoolInput={...pooledInput,analysisVersion:'source-pooled-batch-v1'};
+    const batchPoolRoot=await sourceStore.initialize(batchPoolInput);
+    assert.equal(batchPoolRoot.status,'ACKNOWLEDGED');
+    batchPoolInput.previousCheckpoint=batchPoolRoot.receipt.receiptFingerprint;
+    const beforeBatch=pooledCalls.length;
+    const partialBatch=await runPooledSourceBatch(batchPoolInput,policy,sourceStore);
+    assert.equal(partialBatch.status,'BUDGET_EXHAUSTED');
+    assert.equal(partialBatch.attemptedPasses,2);
+    assert.deepEqual(partialBatch.work.map(w=>w.decision),['BUDGET_EXHAUSTED','BUDGET_EXHAUSTED']);
+    assert.deepEqual(pooledCalls.slice(beforeBatch),['a','b']);
+    assert.deepEqual(await sourceStore.readTip(batchPoolInput),batchPoolRoot.receipt);
+    const finishedBatch=await runPooledSourceBatch(batchPoolInput,{...policy,maxInvocations:3,rotation:partialBatch.nextRotation},restartPool);
+    assert.equal(finishedBatch.status,'ACKNOWLEDGED');
+    assert.equal(finishedBatch.attemptedPasses,3);
+    assert.deepEqual(finishedBatch.work.map(w=>w.decision),['COMMITTED','COMMITTED']);
+    assert.deepEqual(pooledCalls.slice(beforeBatch),['a','b','c','a','c']);
+    assert.deepEqual(await restartPool.readTip(batchPoolInput),finishedBatch.receipt);
+    const replayBatch=await runPooledSourceBatch(batchPoolInput,{...policy,maxInvocations:0},restartPool);
+    assert.equal(replayBatch.status,'ALREADY_ACKNOWLEDGED');
+    assert.equal(replayBatch.attemptedPasses,0);
+    assert.deepEqual(replayBatch.receipt,finishedBatch.receipt);
+    assert.equal(pooledCalls.length,beforeBatch+5);
+    console.log('SOURCE_POOLED_BATCH_PG_PASS first_budget=2 restart_budget=3 prior_pass_repeated=0 shared_wait=honored exact_replay=0 source_ack=verified');
+    const {runPooledSourceCycle}=await import('../../src/dreaming/source-cycle.ts');
+    const cyclePoolInput={...batchRunInput,analysisVersion:'source-pooled-cycle-v1'};
+    const cyclePoolRoot=await sourceStore.initialize(cyclePoolInput);
+    assert.equal(cyclePoolRoot.status,'ACKNOWLEDGED');
+    cyclePoolInput.previousCheckpoint=cyclePoolRoot.receipt.receiptFingerprint;
+    const cycleBefore=pooledCalls.length;
+    const cycleOptions={limits,transport,store:sourceStore,policy};
+    const blockedCycle=await runPooledSourceCycle(cyclePoolInput,{...cycleOptions,limits:{...limits,maxRequests:1}});
+    assert.equal(blockedCycle.status,'ACQUISITION_BLOCKED');
+    assert.equal(blockedCycle.attemptedPasses,0);
+    assert.equal(pooledCalls.length,cycleBefore);
+    assert.deepEqual(await sourceStore.readTip(cyclePoolInput),cyclePoolRoot.receipt);
+    acquiredPages=0;
+    const firstCycle=await runPooledSourceCycle(cyclePoolInput,cycleOptions);
+    assert.equal(firstCycle.status,'BUDGET_EXHAUSTED');
+    assert.equal(firstCycle.attemptedPasses,2);
+    assert.equal(acquiredPages,12);
+    assert.deepEqual(await sourceStore.readTip(cyclePoolInput),cyclePoolRoot.receipt);
+    const resumeCycle=await runPooledSourceCycle(cyclePoolInput,{...cycleOptions,store:restartPool,
+      policy:{...policy,maxInvocations:3,rotation:firstCycle.run.nextRotation}});
+    assert.equal(resumeCycle.status,'ACKNOWLEDGED');
+    assert.equal(resumeCycle.attemptedPasses,3);
+    assert.deepEqual(pooledCalls.slice(cycleBefore),['a','b','c','a','c']);
+    assert.deepEqual(await restartPool.readTip(cyclePoolInput),resumeCycle.run.receipt);
+    const replayCycle=await runPooledSourceCycle(cyclePoolInput,{...cycleOptions,store:restartPool,
+      policy:{...policy,maxInvocations:0}});
+    assert.equal(replayCycle.status,'ALREADY_ACKNOWLEDGED');
+    assert.equal(replayCycle.attemptedPasses,0);
+    assert.deepEqual(replayCycle.run.receipt,resumeCycle.run.receipt);
+    assert.equal(acquiredPages,36);
+    assert.equal(pooledCalls.length,cycleBefore+5);
+    console.log('SOURCE_POOLED_CYCLE_PG_PASS pages_per_run=12 acquisition_blocked=true partial_recovered=true replay_calls=0 source_ack=verified');
+
+
 
   }
   console.log('SOURCE_CHECKPOINT_REFERENCE_PASS partial=blocked restart=zero_duplicate_calls competing_successors=one ack_loss=readback scope=isolated append_only=verified corrupt_completion=rejected orphan=rejected empty=blocked');

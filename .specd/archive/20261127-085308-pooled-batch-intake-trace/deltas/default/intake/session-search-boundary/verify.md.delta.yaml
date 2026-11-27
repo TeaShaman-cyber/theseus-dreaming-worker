@@ -1,0 +1,17 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Bounded synthetic source batch run$'
+  content: |
+    ### Requirement: Pooled batch orchestration preserves source boundary
+
+    #### Scenario: Bounded pooled batch recovery
+
+    - **GIVEN** a verified staged synthetic batch and a partially validated work after a known provider failure
+    - **WHEN** a new explicit pooled invocation supplies a remaining-call budget
+    - **THEN** the validated perspective is not repeated and all callbacks remain bounded
+    - **AND** the source checkpoint advances only after all work is verified; exact replay needs no model call

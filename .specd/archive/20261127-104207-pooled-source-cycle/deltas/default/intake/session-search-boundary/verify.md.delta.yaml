@@ -1,0 +1,23 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Bounded synthetic source cycle$'
+  content: |
+    ### Requirement: Explicit pooled synthetic source cycle
+
+    #### Scenario: Pooled source cycle rejects before execution
+
+    - **GIVEN** invalid policy, disallowed scope, removal, empty selection or failed bounded acquisition
+    - **WHEN** the explicit pooled cycle is invoked
+    - **THEN** no model call or ledger execution follows
+
+    #### Scenario: Pooled source cycle recovers exact batch
+
+    - **GIVEN** a verified synthetic paginated source and known partial pooled failure
+    - **WHEN** the same cycle resumes with a new finite invocation budget
+    - **THEN** only remaining calls execute, known shared wait is respected and acknowledgement follows verified completion
+    - **AND** exact completed replay consumes zero inference

@@ -105,6 +105,15 @@
 - **THEN** the existing verified acknowledgement may confirm the complete batch without reserving work or invoking inference
 - **AND** missing completion leaves the checkpoint unchanged and uncertainty is not budget exhaustion
 
+### Requirement: Pooled batch orchestration preserves source boundary
+
+#### Scenario: Bounded pooled batch recovery
+
+- **GIVEN** a verified staged synthetic batch and a partially validated work after a known provider failure
+- **WHEN** a new explicit pooled invocation supplies a remaining-call budget
+- **THEN** the validated perspective is not repeated and all callbacks remain bounded
+- **AND** the source checkpoint advances only after all work is verified; exact replay needs no model call
+
 ### Requirement: Bounded synthetic source acquisition
 
 #### Scenario: Exact pinned read
@@ -133,6 +142,21 @@
 - **WHEN** the cycle is invoked
 - **THEN** it returns an explicit stop without store access or inference and without advancing the source checkpoint
 - **AND** a validated empty selection or removal retains the candidate identity and unknown currentness
+
+### Requirement: Explicit pooled synthetic source cycle
+
+#### Scenario: Pooled source cycle rejects before execution
+
+- **GIVEN** invalid policy, disallowed scope, removal, empty selection or failed bounded acquisition
+- **WHEN** the explicit pooled cycle is invoked
+- **THEN** no model call or ledger execution follows
+
+#### Scenario: Pooled source cycle recovers exact batch
+
+- **GIVEN** a verified synthetic paginated source and known partial pooled failure
+- **WHEN** the same cycle resumes with a new finite invocation budget
+- **THEN** only remaining calls execute, known shared wait is respected and acknowledgement follows verified completion
+- **AND** exact completed replay consumes zero inference
 
 ### Requirement: Checkpoint advances only after bounded success
 

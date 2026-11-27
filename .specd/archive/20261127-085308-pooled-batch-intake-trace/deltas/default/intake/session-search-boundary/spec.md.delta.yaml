@@ -1,0 +1,12 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Bounded synthetic source batch run$'
+  content: |
+    ### Requirement: Pooled batch orchestration preserves source boundary
+
+    An explicitly selected pooled synthetic batch MUST preserve the exact validated source plan and the existing checkpoint acknowledgement boundary. It MUST pass the remaining invocation budget and rotation to each selected work once, retain known pending outcomes and stop on unknown custody. The existing fixed-pair entry point remains separate. A pooled batch MUST NOT grant real-source permission or advance a checkpoint without verified complete work.

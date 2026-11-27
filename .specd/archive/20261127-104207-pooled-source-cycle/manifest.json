@@ -1,0 +1,229 @@
+{
+  "name": "pooled-source-cycle",
+  "createdAt": "2026-11-27T10:42:07.078Z",
+  "description": "Explicit bounded synthetic pooled source cycle (#89)",
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "specIds": [
+    "default:intake/session-search-boundary"
+  ],
+  "specDependsOn": {
+    "default:intake/session-search-boundary": [
+      "default:worker/core-contract"
+    ]
+  },
+  "artifacts": [
+    {
+      "type": "proposal",
+      "optional": false,
+      "requires": [],
+      "state": "complete",
+      "files": [
+        {
+          "key": "proposal",
+          "filename": "proposal.md",
+          "state": "complete",
+          "validatedHash": "sha256:27875f4b2253fd8c0a7be34e3d78e5d43030f3c60eea6bd5094a153459555a62"
+        }
+      ]
+    },
+    {
+      "type": "specs",
+      "optional": false,
+      "requires": [
+        "proposal"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:intake/session-search-boundary",
+          "filename": "deltas/default/intake/session-search-boundary/spec.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:edca9b37dfc28bb669815d4f7130ef1955c0b7eddd6de48e1d31cfd73228d5b9"
+        }
+      ]
+    },
+    {
+      "type": "verify",
+      "optional": false,
+      "requires": [
+        "specs"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:intake/session-search-boundary",
+          "filename": "deltas/default/intake/session-search-boundary/verify.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:71fb4e4aa2d48935fdc0eda2ee9d1c2478f9a82ec8a702a1261b30a1fa84c4cb"
+        }
+      ]
+    },
+    {
+      "type": "design",
+      "optional": false,
+      "requires": [
+        "proposal",
+        "specs",
+        "verify"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "design",
+          "filename": "design.md",
+          "state": "complete",
+          "validatedHash": "sha256:72b38dbca6344a90e4ac23725cd7a3c50b1254638224a238cf636c2e60b5e03f"
+        }
+      ]
+    },
+    {
+      "type": "tasks",
+      "optional": false,
+      "requires": [
+        "specs",
+        "design"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "tasks",
+          "filename": "tasks.md",
+          "state": "complete",
+          "validatedHash": "sha256:a5afbf14bfff156c6d351d7a1e7808c285a8ea50d0fe48a84a6d5616fbca07cf"
+        }
+      ]
+    }
+  ],
+  "history": [
+    {
+      "type": "created",
+      "at": "2026-11-27T10:42:07.078Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "specIds": [
+        "default:intake/session-search-boundary"
+      ],
+      "schemaName": "schema-std",
+      "schemaVersion": 1
+    },
+    {
+      "type": "artifacts-synced",
+      "at": "2026-11-27T10:42:07.104Z",
+      "by": {
+        "name": "specd",
+        "email": "system@getspecd.dev"
+      },
+      "typesAdded": [
+        "proposal",
+        "specs",
+        "verify",
+        "design",
+        "tasks"
+      ],
+      "typesRemoved": [],
+      "filesAdded": [
+        {
+          "type": "proposal",
+          "key": "proposal"
+        },
+        {
+          "type": "specs",
+          "key": "default:intake/session-search-boundary"
+        },
+        {
+          "type": "verify",
+          "key": "default:intake/session-search-boundary"
+        },
+        {
+          "type": "design",
+          "key": "design"
+        },
+        {
+          "type": "tasks",
+          "key": "tasks"
+        }
+      ],
+      "filesRemoved": []
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T10:42:07.468Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "drafting",
+      "to": "designing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T10:42:28.362Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "designing",
+      "to": "ready"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T10:42:28.777Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "ready",
+      "to": "implementing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T10:44:09.181Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "implementing",
+      "to": "verifying"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T10:44:09.527Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "verifying",
+      "to": "done"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T10:44:09.908Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "done",
+      "to": "archivable"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-27T10:44:10.257Z",
+      "by": {
+        "name": "exe.dev user",
+        "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+      },
+      "from": "archivable",
+      "to": "archiving"
+    }
+  ],
+  "archivedAt": "2026-11-27T10:44:10.373Z",
+  "archivedBy": {
+    "name": "exe.dev user",
+    "email": "exedev@theseus-exe-shell-probe.exe.xyz"
+  }
+}
