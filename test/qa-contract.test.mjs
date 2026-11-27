@@ -176,3 +176,12 @@ test('ledger mutation receives a bounded extended runner deadline without weaken
   const config = readFileSync('stryker.config.mjs', 'utf8');
   assert.match(config, /break:\s*100/);
 });
+
+test('source orchestration mutation checks run on separate hosted matrix jobs', () => {
+  const workflow = readFileSync('.github/workflows/mutation.yml', 'utf8');
+  const matrix = workflow.match(/shard: \[([^\]]+)\]/);
+  assert.ok(matrix);
+  const names = matrix[1].split(',').map(name => name.trim());
+  assert.equal(names.filter(name => name === 'source-batch').length, 1);
+  assert.equal(names.filter(name => name === 'source-cycle').length, 1);
+});
