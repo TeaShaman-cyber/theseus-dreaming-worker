@@ -314,6 +314,19 @@
       ]
     },
     {
+      "requirement": "Pooled completion custody",
+      "name": "Shared projection builder trace",
+      "given": [
+        "the exact committed pooled completion implementation"
+      ],
+      "when": [
+        "the repository's SpecD diff gate runs"
+      ],
+      "then": [
+        "the native design covers the shared projection builder and both its executor and storage callers"
+      ]
+    },
+    {
       "requirement": "Durable source batch acknowledgement",
       "name": "Explicit root and exact successor",
       "given": [
@@ -405,7 +418,7 @@
   ],
   "contentHashes": {
     "spec.md": "sha256:ed89315b08e97f66dcf09b6c21c8ccaa25b90f2519ecdd32a975b6ea5dbd152a",
-    "verify.md": "sha256:5cc019c01c2818e04cad6b113aff096ec356a025794ee4c522833901ef339b80"
+    "verify.md": "sha256:d2b0180acef6dbf227d1ee0ca5864f4b1f6f5f89c531a6934f414d5a36037646"
   },
   "generatedBy": "core"
 }

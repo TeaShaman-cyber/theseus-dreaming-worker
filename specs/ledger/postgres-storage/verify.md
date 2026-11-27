@@ -141,6 +141,12 @@
 - **THEN** only the recomputed exact projection may commit
 - **AND** wrong owner, input or projection is rejected before insertion
 
+#### Scenario: Shared projection builder trace
+
+- **GIVEN** the exact committed pooled completion implementation
+- **WHEN** the repository's SpecD diff gate runs
+- **THEN** the native design covers the shared projection builder and both its executor and storage callers
+
 ### Requirement: Durable source batch acknowledgement
 
 #### Scenario: Explicit root and exact successor
