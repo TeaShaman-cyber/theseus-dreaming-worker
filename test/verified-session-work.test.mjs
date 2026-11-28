@@ -161,3 +161,109 @@ test('codepoint-split Unicode and changed content produce a distinct work identi
   assert.equal(next.input.request.packet.evidence[0].text, '🍵чай');
   assert.notEqual(workKey(first), workKey(next));
 });
+
+test('index custody independently binds provider, shard, generation and manifest',()=>{
+  for(const [field,value] of [
+    ['provider','other-provider'],['shard_id','other-shard'],
+    ['generation_id','f'.repeat(64)],['source_manifest_sha256','e'.repeat(64)],
+    ['membership_snapshot_sha256','d'.repeat(64)],
+  ]){
+    const x=input();x.index[field]=value;
+    assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_INDEX_BINDING/,field);
+  }
+});
+
+test('index rejects duplicated sessions, wrong shard selection and duplicated message provenance',()=>{
+  const duplicate=input();duplicate.index.sessions.push(structuredClone(duplicate.index.sessions[0]));
+  assert.throws(()=>prepareVerifiedSessionWork(duplicate),/VERIFIED_SESSION_INDEX_SELECTION/);
+  const foreign=input();foreign.index.sessions.push(structuredClone(fixture.entries[1].index.sessions[0]));
+  assert.throws(()=>prepareVerifiedSessionWork(foreign),/VERIFIED_SESSION_INDEX_SELECTION/);
+  const absent=input();absent.index.sessions[0].session_id='unknown';
+  assert.throws(()=>prepareVerifiedSessionWork(absent),/VERIFIED_SESSION_INDEX_SELECTION/);
+  const duplicateMessage=input();
+  duplicateMessage.index.sessions[0].messages[1].message_id=duplicateMessage.index.sessions[0].messages[0].message_id;
+  assert.throws(()=>prepareVerifiedSessionWork(duplicateMessage),/VERIFIED_SESSION_MESSAGE_ORDER/);
+  const equalOrdinal=input();
+  equalOrdinal.index.sessions[0].messages[1].ordinal=equalOrdinal.index.sessions[0].messages[0].ordinal;
+  assert.throws(()=>prepareVerifiedSessionWork(equalOrdinal),/VERIFIED_SESSION_MESSAGE_ORDER/);
+  const duplicateSource=input(),sources=duplicateSource.index.sessions[0].messages[0].sources;
+  sources.push(structuredClone(sources[0]));
+  assert.throws(()=>prepareVerifiedSessionWork(duplicateSource),/VERIFIED_SESSION_SOURCE_MEMBERSHIP/);
+});
+
+test('page independently binds provider, shard, session and exposed coverage',()=>{
+  for(const [field,value] of [
+    ['provider','other-provider'],['shard_id','other-shard'],['session_id','other-session'],
+    ['session_coverage','COMPLETE_EXPOSED_CONVERSATION'],['queried_shards',['other-shard']],
+    ['has_more',false],
+  ]){
+    const x=input();x.pages[0][field]=value;
+    assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_PAGE_BINDING/,field);
+  }
+});
+
+test('message segments independently bind ordinal, ID, class, timestamp and declared length',()=>{
+  for(const [field,value] of [
+    ['ordinal',7],['message_id','other-message'],['search_class','trace'],['create_time',123456],
+  ]){
+    const x=input();x.pages[0].messages[0][field]=value;
+    assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_MESSAGE_BINDING/,field);
+  }
+  const changedLength=input();changedLength.pages[1].messages[0].text_total_chars++;
+  assert.throws(()=>prepareVerifiedSessionWork(changedLength),/VERIFIED_SESSION_MESSAGE_BINDING/);
+  const premature=input();premature.pages[0].messages[0].complete_message=true;
+  assert.throws(()=>prepareVerifiedSessionWork(premature),/VERIFIED_SESSION_TEXT_BUDGET_OR_SEGMENT/);
+  const zero=input();zero.pages[0].messages[0].text='';
+  assert.throws(()=>prepareVerifiedSessionWork(zero),/VERIFIED_SESSION_TEXT_BUDGET_OR_SEGMENT/);
+  const overflow=input();overflow.pages[0].messages[0].text='123456789';
+  assert.throws(()=>prepareVerifiedSessionWork(overflow),/VERIFIED_SESSION_TEXT_BUDGET_OR_SEGMENT/);
+});
+
+test('cursor must bind exact segment position; final page cannot expose a continuation',()=>{
+  for(const [field,value] of [['ordinal',7],['message_id','other-message'],['offset',4]]){
+    const x=input();x.pages[0].next_position[field]=value;
+    assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_CURSOR/,field);
+  }
+  for(const field of ['next_cursor','next_position']){
+    const x=input();x.pages.at(-1)[field]=structuredClone(x.pages[0][field]);
+    assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_INCOMPLETE/,field);
+    const missing=input();missing.pages[0][field]=null;
+    assert.throws(()=>prepareVerifiedSessionWork(missing),/VERIFIED_SESSION_CURSOR/,field);
+  }
+  const repeated=input();repeated.pages[1].next_cursor=repeated.pages[0].next_cursor;
+  assert.throws(()=>prepareVerifiedSessionWork(repeated),/VERIFIED_SESSION_CURSOR/);
+  const empty=input();empty.pages[0].messages=[];
+  assert.throws(()=>prepareVerifiedSessionWork(empty),/VERIFIED_SESSION_EMPTY_PAGE/);
+});
+
+test('exact admission budgets accept all verified text and preserve provenance identity',()=>{
+  const x=input();
+  x.bounds={maxPages:x.pages.length,maxMessages:x.index.sessions[0].messages.length,
+    maxChars:x.pages.flatMap(p=>p.messages).reduce((n,m)=>n+Array.from(m.text).length,0)};
+  const r=prepareVerifiedSessionWork(x);
+  assert.equal(r.status,'PREPARED');
+  const selected=x.index.sessions[0];
+  assert.deepEqual(r.input.request.packet.evidence,selected.messages.map(m=>({
+    sourceRef:'ss-message-v1:'+JSON.stringify([x.candidate.scope,x.candidate.provider,x.sessionId,m.message_id,m.role,m.search_class]),
+    evidenceHash:'sha256:'+m.text_sha256,
+    text:x.pages.flatMap(p=>p.messages).filter(part=>part.message_id===m.message_id).map(part=>part.text).join(''),
+  })));
+  assert.deepEqual(r.provenance.session,selected);
+  assert.equal(r.input.request.packet.packetId,sha256Fingerprint(JSON.stringify([x.candidate.candidate_sha256,x.sessionId])));
+  assert.equal(r.input.acceptedSourceFingerprint,sha256Fingerprint(JSON.stringify([
+    'theseus.session-search-scoped-content-work.v1',x.candidate.scope,x.candidate.provider,x.sessionId,selected.title,selected.coverage_state,
+    selected.messages.map(m=>[m.ordinal,m.message_id,m.role,m.search_class,m.create_time,m.text_sha256,m.canonical_message_sha256]),
+  ])));
+});
+
+test('complete exposed session is admitted only with final coverage flag',()=>{
+  const x=input();
+  x.index.sessions[0].coverage_state='COMPLETE_EXPOSED_CONVERSATION';
+  for(const p of x.pages)p.session_coverage='COMPLETE_EXPOSED_CONVERSATION';
+  x.pages.at(-1).coverage_complete=true;
+  const r=prepareVerifiedSessionWork(x);
+  assert.equal(r.status,'PREPARED');
+  assert.equal(r.input.request.packet.coverage.state,'COMPLETE');
+  x.pages.at(-1).coverage_complete=false;
+  assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_PAGE_BINDING/);
+});

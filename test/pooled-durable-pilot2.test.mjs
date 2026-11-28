@@ -161,3 +161,99 @@ test('shared cooldown is merged with local and caller restrictions; alternative 
   assert.equal(next.decision,'COMMITTED');
   assert.deepEqual(calls,['c','d']);
 });
+
+test('rejects each invalid execution bound before journal admission or inference',async()=>{
+  for(const invalid of [
+    {maxAttempts:1},{maxAttempts:201},{maxAttempts:2.5},
+    {maxInvocations:-1},{maxInvocations:201},{maxInvocations:2.5},{clock:null},
+  ]){
+    const calls=[],store=fake();
+    await assert.rejects(store.run(policy([route('a',calls),route('b',calls)],invalid)),/POOL_EXECUTION_BUDGET/);
+    assert.equal((await store.journal.read(request)).status,'ABSENT');
+    assert.deepEqual(calls,[]);
+  }
+  for(const n of [-1,0.5,Number.MAX_SAFE_INTEGER+1]){
+    const calls=[],store=fake();
+    await assert.rejects(store.run(policy([route('a',calls),route('b',calls)],{clock:()=>n})),/POOL_EXECUTION_CLOCK/);
+    assert.deepEqual(calls,[]);
+  }
+  const calls=[],store=fake();
+  await assert.rejects(store.run(policy([route('a',calls,'success',{infer:null}),route('b',calls)])),/POOL_EXECUTION_ADAPTER/);
+  assert.deepEqual(calls,[]);
+});
+
+test('exact valid attempt limits and zero clock do not exclude admissible work',async()=>{
+  for(const n of [2,200]){
+    const calls=[],store=fake();
+    const p=policy([route('a',calls),route('b',calls)],{maxAttempts:n,maxInvocations:n,clock:()=>0});
+    assert.equal((await store.run(p)).decision,'COMMITTED');
+    assert.deepEqual(calls,['a','b']);
+  }
+});
+
+test('provider failure classification preserves actual status, retry hint and provider restriction',async()=>{
+  for(const [code,status,wait,wake] of [
+    ['RATE_LIMITED',429,undefined,Number.MAX_SAFE_INTEGER],
+    ['RATE_LIMITED',429,0,100],
+    ['HTTP_ERROR',500,undefined,Number.MAX_SAFE_INTEGER],
+    ['HTTP_ERROR',500,12.5,113],
+    ['HTTP_ERROR',400,undefined,null],
+    ['HTTP_ERROR',401,0,Number.MAX_SAFE_INTEGER],
+    ['HTTP_ERROR',403,undefined,Number.MAX_SAFE_INTEGER],
+    ['MALFORMED_RESPONSE',undefined,undefined,null],
+  ]){
+    const calls=[],store=fake();
+    const a=route('a',calls,'success',{async infer(){
+      calls.push('a');
+      throw new ProviderAdapterError(code,'injected transport failure',{status,retryAfterMs:wait,providerState:'RESPONDED'});
+    }});
+    const out=await store.run(policy([a,route('b',calls),route('c',calls)]));
+    assert.equal(out.decision,'COMMITTED');
+    assert.deepEqual(calls,['a','b','c']);
+    const f=store.state.failures[0].result;
+    assert.equal(f.code,code);assert.equal(f.httpStatus,status);assert.equal(f.retryAfterMs,wait);
+    assert.deepEqual(f.cooldown,wake===null?null:{scope:'provider',key:'provider-a',notBeforeMs:wake});
+  }
+});
+
+test('timeout remains unresolved even if adapter reports a response',async()=>{
+  for(const [code,providerState,expected] of [
+    ['TIMEOUT','RESPONDED','TIMEOUT'],['TIMEOUT','UNKNOWN','TIMEOUT'],['HTTP_ERROR','UNKNOWN','TRANSPORT_UNKNOWN'],
+  ]){
+    const calls=[],store=fake();
+    const a=route('a',calls,'success',{async infer(){
+      calls.push('a');
+      throw new ProviderAdapterError(code,'injected uncertain outcome',{providerState});
+    }});
+    const p=policy([a,route('b',calls),route('c',calls)]);
+    assert.equal((await store.run(p)).decision,'BLOCKED_UNKNOWN');
+    assert.equal(store.state.entries.at(-1).event.code,expected);
+    assert.equal((await store.run(p)).attemptedPasses,0);
+    assert.deepEqual(calls,['a']);
+  }
+});
+
+test('malformed or policy-invalid final responses are classified without committing a perspective',async()=>{
+  for(const [patch,expected] of [
+    [{text:'not JSON'},'INVALID_JSON'],
+    [{text:'{}'},'INVALID_SCHEMA'],
+    [{text:body.replace('sha256:fixture','sha256:invented')},'PROVENANCE_REJECTED'],
+    [{finishReason:'length'},'OUTPUT_BUDGET_EXHAUSTED'],
+    [{model:'other-model'},'MODEL_IDENTITY_MISMATCH'],
+    [{finishReason:'tool_calls'},'MALFORMED_RESPONSE'],
+    [{text:'   '},'EMPTY_FINAL_CONTENT'],
+    [{toolCalls:[{}]},'POLICY_VIOLATION'],
+  ]){
+    const calls=[],store=fake();
+    const a=route('a',calls,'success',{async infer(){
+      calls.push('a');
+      return {provider:'provider-a',model:'model-a',finishReason:'stop',text:body,...patch};
+    }});
+    assert.equal((await store.run(policy([a,route('b',calls),route('c',calls)]))).decision,'COMMITTED',expected);
+    assert.deepEqual(calls,['a','b','c']);
+    const f=store.state.failures[0].result;
+    assert.equal(f.code,expected);
+    assert.deepEqual(f.observed,{provider:'provider-a',model:patch.model??'model-a',finishReason:patch.finishReason??'stop'});
+    assert.deepEqual(store.state.validated.map(v=>v.start.route.id),['b','c']);
+  }
+});

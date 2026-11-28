@@ -59,3 +59,87 @@ test('tampered chain, changed request, invented evidence and invalid cooldown re
   assert.throws(()=>replay([a,f]),/COOLDOWN_SCOPE/);
   assert.throws(()=>preparePoolJournal({...input,request:{...input.request,packet:{...input.request.packet,acceptedNewEvidence:false}}}),/NO_ADMISSIBLE_WORK/);
 });
+
+test('journal rejects each independently substituted receipt identity',()=>{
+  const a=start('a',0);
+  for(const [field,value] of [
+    ['requestFingerprint','sha256:'+'f'.repeat(64)],
+    ['evidenceFingerprint','sha256:'+'e'.repeat(64)],
+    ['packetId','different-packet'],
+    ['model','different-model'],
+  ]){
+    const bad=success(a);bad.receipt[field]=value;
+    assert.throws(()=>replay([a,bad]),/POOL_JOURNAL_VALIDATED_IDENTITY/,field);
+  }
+});
+
+test('start admission rejects wrong slot, reused attempt identity and reused provider/model pair',()=>{
+  const a=start('a',0);
+  assert.throws(()=>replay([start('a',1)]),/POOL_JOURNAL_START_REJECTED/);
+  const reused={...start('b',0),attemptId:a.attemptId};
+  assert.throws(()=>replay([a,failed(a),reused]),/POOL_JOURNAL_START_REJECTED/);
+  const alias=start('alias',0);
+  alias.route.provider=a.route.provider;alias.route.model=a.route.model;
+  assert.throws(()=>replay([a,failed(a),alias]),/POOL_JOURNAL_START_REJECTED/);
+  const reusedRoute=start('a',0);reusedRoute.route.provider='different-provider';reusedRoute.route.model='different-model';
+  assert.throws(()=>replay([a,failed(a),reusedRoute]),/POOL_JOURNAL_START_REJECTED/);
+  const sameProvider=start('b',0);sameProvider.route.provider=a.route.provider;
+  assert.equal(replay([a,failed(a),sameProvider]).pending.attemptId,sameProvider.attemptId);
+  const sameModel=start('c',0);sameModel.route.model=a.route.model;
+  assert.equal(replay([a,failed(a),sameModel]).pending.attemptId,sameModel.attemptId);
+});
+
+test('successful perspectives must use distinct observed provider/model pairs',()=>{
+  const a=start('a',0),b=start('b',1);
+  b.route.model=a.route.model;
+  const second=success(b);second.receipt.provider=a.route.provider;
+  assert.throws(()=>replay([a,success(a),b,second]),/POOL_JOURNAL_VALIDATED_IDENTITY/);
+  assert.equal(replay([a,success(a),b,success(b)]).validated.length,2);
+  const c=start('c',1);c.route.provider=a.route.provider;
+  assert.equal(replay([a,success(a),c,success(c)]).validated.length,2);
+});
+
+test('journal rejects duplicate proposals and enforces route-scoped cooldown identity',()=>{
+  const a=start('a',0),bad=success(a);
+  bad.proposalSet.proposals.push(structuredClone(bad.proposalSet.proposals[0]));
+  assert.throws(()=>replay([a,bad]),/POOL_JOURNAL_DUPLICATE_PROPOSAL/);
+  const f=failed(a);f.cooldown.scope='route';f.cooldown.key=a.route.id;
+  assert.equal(replay([a,f]).failures[0].result.cooldown.key,a.route.id);
+  f.cooldown.key=a.route.provider;
+  assert.throws(()=>replay([a,f]),/POOL_JOURNAL_COOLDOWN_SCOPE/);
+});
+
+test('journal rejects blank or padded routes and malformed fingerprint boundaries',()=>{
+  const a=start('a',0);
+  for(const value of ['',' a','a ']){
+    const b=structuredClone(a);b.route.id=value;
+    assert.throws(()=>journal([b]));
+  }
+  for(const value of ['prefix'+ctx.requestFingerprint,ctx.requestFingerprint+'suffix']){
+    const admission=poolJournalAdmission(ctx,4);admission.requestFingerprint=value;
+    assert.throws(()=>makePoolJournalEntry(null,admission));
+  }
+});
+
+test('journal rejects empty, oversized and duplicate-admission sequences',()=>{
+  assert.throws(()=>replayPoolJournal(ctx,[]),/POOL_JOURNAL_LENGTH/);
+  const admission=journal([])[0];
+  assert.throws(()=>replayPoolJournal(ctx,Array(402).fill(admission)),/POOL_JOURNAL_LENGTH/);
+  assert.throws(()=>replay([poolJournalAdmission(ctx,4)]),/POOL_JOURNAL_TERMINAL_OR_DUPLICATE_ADMISSION/);
+  const a=start('a',0,'family'),b=start('b',1,'FAMILY');
+  assert.throws(()=>replay([a,success(a),b]),/POOL_JOURNAL_START_REJECTED/);
+});
+
+test('the exact maximum-length journal of 200 known failures is still replayable',()=>{
+  const events=[];
+  for(let i=0;i<200;i++){
+    const a=start('route-'+i,0);
+    events.push(a,{...failed(a),cooldown:null});
+  }
+  const state=replay(events,200);
+  assert.equal(state.entries.length,401);
+  assert.equal(state.attempts.length,200);
+  assert.equal(state.failures.length,200);
+  assert.equal(state.remainingAttempts,0);
+  assert.equal(state.unresolved,false);
+});

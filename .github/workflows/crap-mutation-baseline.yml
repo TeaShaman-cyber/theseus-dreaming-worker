@@ -4,6 +4,16 @@ on:
     paths:
       - 'stryker.crap-baseline.config.mjs'
       - '.github/workflows/crap-mutation-baseline.yml'
+      - 'src/dreaming/**'
+      - 'test/verified-session-work.test.mjs'
+      - 'test/pooled-durable-pilot2.test.mjs'
+      - 'test/pool-attempt-journal.test.mjs'
+      - 'test/source-batch-run.test.mjs'
+      - 'test/source-cycle.test.mjs'
+      - 'test/fixtures/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.json'
   workflow_dispatch:
 permissions:
   contents: read
