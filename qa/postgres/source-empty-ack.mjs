@@ -67,6 +67,18 @@ try {
  assert.equal((await store.acknowledgeNoWork(emptyAlternative)).status,'PENDING');
  assert.deepEqual(await store.readTip(pending),pendingRoot.receipt);
  await assert.rejects(()=>store.acknowledgeNoWork(pending),/SOURCE_NO_WORK_DELTA/);
+ // Historical plans remain append-only after normal acknowledgement.
+ let normalCalls=0;
+ const routes=['a','b'].map(id=>({id,provider:'fixture-'+id,model:'fixture-'+id,modelFamily:id,async infer(request){
+   normalCalls++;
+   return {provider:'fixture-'+id,model:'fixture-'+id,finishReason:'stop',text:JSON.stringify({schema:'theseus.dreaming-worker.proposals.v1',proposals:[{type:'FACT',claim:'Synthetic observation '+id,source_refs:request.packet.evidence.map(e=>({source_ref:e.sourceRef,evidence_hash:e.evidenceHash}))}]})};
+ }}));
+ for(const entry of pending.entries)assert.equal((await store.runSelected(pending,entry.sessionId,routes)).decision,'COMMITTED');
+ const normal=await store.acknowledge(pending);
+ assert.equal(normal.status,'ACKNOWLEDGED');
+ assert.equal(normalCalls,4);
+ assert.equal((await store.acknowledgeNoWork(emptyAlternative)).status,'CONFLICT');
+ assert.deepEqual(await store.readTip(pending),normal.receipt);
  // A committed write with a lost acknowledgement is recovered by exact readback.
  const lost={...input,task:'Synthetic empty ack loss.'};
  const lostRoot=await store.initialize(lost);
@@ -92,5 +104,5 @@ try {
  const outcomes=await Promise.all([store.acknowledgeNoWork(race),restarted.acknowledgeNoWork(competitor)]);
  assert.deepEqual(outcomes.map(r=>r.status).sort(),['ACKNOWLEDGED','CONFLICT']);
  assert.deepEqual(await store.readTip(race),outcomes.find(r=>r.status==='ACKNOWLEDGED').receipt);
- console.log('SOURCE_EMPTY_ACK_PG_PASS membership=7_to_11 calls=0 work_rows=unchanged replay=verified fork=blocked pending=blocked lost_ack=readback concurrent_fork=blocked');
+ console.log('SOURCE_EMPTY_ACK_PG_PASS membership=7_to_11 calls=0 work_rows=unchanged replay=verified fork=blocked pending=blocked lost_ack=readback concurrent_fork=blocked stale_plan=conflict');
 }finally{await db.end();}

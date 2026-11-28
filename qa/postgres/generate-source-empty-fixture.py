@@ -9,7 +9,7 @@ import zipfile
 ss=Path(sys.argv[1]).resolve()
 commit=subprocess.check_output(["git","-C",str(ss),"rev-parse","HEAD"],text=True).strip()
 assert commit=="3b7b5360050cc2ecdcb60f485a657f2b763751e4"
-assert not subprocess.check_output(["git","-C",str(ss),"status","--porcelain","--untracked-files=no"])
+assert not subprocess.check_output(["git","-C",str(ss),"status","--porcelain","--untracked-files=all"])
 sys.path[:0]=[str(ss),str(ss/"tests"),str(ss/"arcade/session-search-materializer/src")]
 from test_refresh_handoff_candidate import RefreshHandoffCandidateTest
 from test_chatgpt_export import ChatGPTExportAdapterTest

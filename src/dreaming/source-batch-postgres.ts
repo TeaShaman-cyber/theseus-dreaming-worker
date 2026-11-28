@@ -433,11 +433,15 @@ export function createPostgresSourceBatchStore(options: {
         if (!parent || sourceReceiptFingerprint(parentMembership(parent)) !== sourceReceiptFingerprint(handoff.previous_membership)) {
           return 'CONFLICT';
         }
-        const pending = await client.query(
-          'SELECT 1 FROM dw_ledger.source_plans WHERE chain_id=$1 AND previous_checkpoint=$2 LIMIT 1',
-          [chain, previous],
-        );
-        if (pending.rows.length) return 'PENDING';
+        // A durable child is terminal. Let append compare exact identity
+        // before considering any historical (append-only) plan as pending.
+        if (!await readChild(client, chain, previous)) {
+          const pending = await client.query(
+            'SELECT 1 FROM dw_ledger.source_plans WHERE chain_id=$1 AND previous_checkpoint=$2 LIMIT 1',
+            [chain, previous],
+          );
+          if (pending.rows.length) return 'PENDING';
+        }
         const payload = {
           schema: 'theseus.dreaming-worker.source-no-work-receipt.v1' as const,
           previousCheckpoint: previous, task: input.task, analysisVersion: input.analysisVersion,
