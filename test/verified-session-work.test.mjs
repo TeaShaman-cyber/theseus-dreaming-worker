@@ -267,3 +267,54 @@ test('complete exposed session is admitted only with final coverage flag',()=>{
   x.pages.at(-1).coverage_complete=false;
   assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_PAGE_BINDING/);
 });
+
+test('empty admitted session yields no work, and cannot have continuation',()=>{
+  const x=input();
+  x.index.sessions[0].messages=[];
+  x.pages=[{...x.pages[0],messages:[],has_more:false,next_position:null,next_cursor:null}];
+  const r=prepareVerifiedSessionWork(x);
+  assert.equal(r.status,'NO_USABLE_EVIDENCE');
+  assert.equal(r.input,null);
+  assert.deepEqual(r.provenance.session.messages,[]);
+  x.pages[0].has_more=true;
+  x.pages[0].next_position={ordinal:0,message_id:'m-u',offset:0};
+  x.pages[0].next_cursor='synthetic-continuation';
+  x.pages.push({...x.pages[0],has_more:false,next_position:null,next_cursor:null});
+  assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_EMPTY_PAGE/);
+});
+
+test('verified empty and whitespace messages do not create evidence work',()=>{
+  for(const text of ['', '   ']){
+    const x=input();
+    const session=x.index.sessions[0];
+    session.messages=[{...session.messages[0],text_sha256:hash(text)}];
+    x.pages=[{...x.pages[0],messages:[{...x.pages[0].messages[0],text,text_offset:0,text_total_chars:text.length,complete_message:true}],has_more:false,next_position:null,next_cursor:null}];
+    const r=prepareVerifiedSessionWork(x);
+    assert.equal(r.status,'NO_USABLE_EVIDENCE');
+    assert.equal(r.input,null);
+  }
+});
+
+test('partial segment cannot be followed by another segment on the same page',()=>{
+  const x=input();
+  x.pages[0].messages.push(structuredClone(x.pages[1].messages[0]));
+  assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_PARTIAL_NOT_LAST/);
+});
+
+test('synthetic reader refuses a correctly rehashed non-synthetic custody scope',()=>{
+  const x=input(),scope='ordinary-fixture';
+  x.candidate.scope=scope;x.expected.scope=scope;
+  for(const m of [x.candidate.previous_membership,x.candidate.current_membership]){
+    m.scope=scope;delete m.snapshot_sha256;m.snapshot_sha256=hash(canonical(m));
+  }
+  x.expected.previousSnapshotSha256=x.candidate.previous_membership.snapshot_sha256;
+  x.index.membership_snapshot_sha256=x.candidate.current_membership.snapshot_sha256;
+  rehash(x.candidate);
+  assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_SCOPE_UNSUPPORTED/);
+});
+
+test('empty final page cannot discard indexed messages',()=>{
+  const x=input();
+  x.pages=[{...x.pages[0],messages:[],has_more:false,next_position:null,next_cursor:null}];
+  assert.throws(()=>prepareVerifiedSessionWork(x),/VERIFIED_SESSION_EMPTY_PAGE/);
+});
