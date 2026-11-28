@@ -75,6 +75,7 @@ assert.equal(canonicalPlan.planFingerprint,readback.plan.planFingerprint);
 assert.equal(canonicalPlan.previousCheckpoint,readback.plan.previousCheckpoint);
 assert.equal(canonicalPlan.work.length,1);
 assert.equal(canonicalPlan.work[0].workFingerprint,readback.plan.workFingerprint);
+readback.journal.forEach((row,i)=>assert.equal(row.ordinal,i));
 const journalEntries=readback.journal.map(x=>JSON.parse(x.entryJson));
 const journalState=replayPoolJournal(preparePoolJournal(prepared[0].input),journalEntries);
 assert.equal(journalState.unresolved,false);
@@ -175,4 +176,4 @@ for(const relation of successResult.artifact.relations){
   for(const ref of relation.proposal_refs)assert.ok(proposalFingerprints.has(ref.proposal_fingerprint));
   for(const ref of relation.evidence_refs)assert.ok(evidenceHashes.has(ref.evidence_hash));
 }
-console.log('HELDOUT_LIVE_REPLAY_PASS live_calls=4 validated=2 proposals=9 replay_calls=0 raw_critique_controls=2 completion_reconstructed=true');
+console.log('HELDOUT_LIVE_V3_PARTIAL_EVIDENCE_PASS live_calls=4 validated=2 replay_calls=0 raw_critique_controls=2 completion_reconstructed=true source_receipt_payload=NOT_RETAINED full_proposal_rows=NOT_RETAINED');
