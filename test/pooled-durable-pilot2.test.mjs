@@ -257,3 +257,16 @@ test('malformed or policy-invalid final responses are classified without committ
     assert.deepEqual(store.state.validated.map(v=>v.start.route.id),['b','c']);
   }
 });
+
+test('unclassified failure after receiving malformed adapter value remains unknown',async()=>{
+  const calls=[],store=fake();
+  const a=route('a',calls,'success',{async infer(){
+    calls.push('a');
+    return {provider:'provider-a',model:'model-a',finishReason:'stop',text:123};
+  }});
+  const p=policy([a,route('b',calls),route('c',calls)]);
+  assert.equal((await store.run(p)).decision,'BLOCKED_UNKNOWN');
+  assert.equal(store.state.entries.at(-1).event.code,'EXECUTION_UNKNOWN');
+  assert.equal((await store.run(p)).attemptedPasses,0);
+  assert.deepEqual(calls,['a']);
+});
