@@ -54,3 +54,15 @@ Frozen semantic criteria for the future experiment: preserve the observed
 change 1 to 8; give an explicit rival explanation and a controlled falsifier
 (e.g. matched workloads at both concurrency levels under each scheduler);
 do not assert that a causal effect or deployment state was independently proved.
+
+### Reproducible offline Birch preflight
+
+Run `node research/model-pool/live-acceptance/preflight-heldout.mjs` from the
+repository using the pinned Node runtime. The script validates the frozen
+fixture SHA-256, then invokes the actual bounded source acquisition and work
+planning pipeline over the recorded synthetic pages. It prints only metadata
+and the derived work fingerprint. The predecessor is explicitly a preflight
+placeholder, not a stored checkpoint. It neither initializes storage nor
+dispatches inference. The normal QA suite includes the positive test and
+rejection of changed fixture bytes in `test/heldout-source-preflight.test.mjs`.
+A passing result is `PREFLIGHT_ONLY`, not live inference or deployment evidence.
