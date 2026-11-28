@@ -12,12 +12,12 @@ out=$(mktemp -d "$PWD/reports/quality/${mode}.XXXXXX")
 echo "Quality artifacts: $out"
 test -x tools/quality/node_modules/.bin/c8
 case "$mode" in
- unit) set -- node --test test/*.test.mjs ;;
+ unit) set -- node --test --test-concurrency=2 test/*.test.mjs ;;
  combined)
    # Existing heavy-postgres runner requires a disposable fixture DB.
    test "${PGDATABASE:-}" = dreaming_worker_contract
    test "${PGHOST:-}" = 127.0.0.1
-   set -- sh -c 'node --test test/*.test.mjs && ./tools/ci/heavy-postgres' ;;
+   set -- sh -c 'node --test --test-concurrency=2 test/*.test.mjs && ./tools/ci/heavy-postgres' ;;
 esac
 tools/quality/node_modules/.bin/c8 --all --include='src/**/*.ts' --exclude='**/*.d.ts' --reporter=json --reporter=text-summary --reports-dir="$out" --temp-directory="$out/v8" "$@"
 test "$(git rev-parse HEAD)" = "$head"

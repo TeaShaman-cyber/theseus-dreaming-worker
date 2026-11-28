@@ -16,6 +16,9 @@ Do not use a persistent database. The existing heavy-postgres version check
 and runtime fixture apply. The unit and combined reports are not interchangeable.
 
 The runner creates a new reports/quality directory for each measurement.
+Native test concurrency is bounded at two for coverage: a real 40 ms
+HTTP timeout test failed under the initial instrumented concurrent run.
+No test or timeout assertion is disabled. Failed runs do not produce CRAP reports.
 The report builder accepts an existing coverage JSON, and is intended for
 the runner, not arbitrary historical coverage files. Do not assign a source
 commit to coverage collected on a different checkout. The report includes
