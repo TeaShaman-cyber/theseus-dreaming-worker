@@ -32,3 +32,9 @@ The existing mutation matrix measures a different property. For main
 runPooledSourceBatch among the five highest-CRAP methods is directly in that
 matrix (source-batch-pooled); the other four require scope review.
 A shard result is not a per-function mutation result. See #128.
+
+GitHub Actions: Advisory code quality report runs on relevant pull requests,
+main pushes and manual dispatch. It uses the existing runner PostgreSQL
+fixture and uploads the combined JSON coverage and per-function report for
+14 days, keyed by the measured commit. High CRAP scores do not fail the job.
+Existing required test and mutation gates are unchanged.

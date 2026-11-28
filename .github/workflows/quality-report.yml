@@ -1,0 +1,79 @@
+name: Advisory code quality report
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'qa/postgres/**'
+      - 'infra/postgres/**'
+      - 'tools/quality/**'
+      - 'tools/ci/heavy-postgres'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/quality-report.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PG_EXPECTED_MAJOR: '18'
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Install locked dependencies
+        run: npx --yes pnpm@11.3.0 install --frozen-lockfile
+
+      - name: Install and calibrate quality tools
+        run: |
+          npm ci --prefix tools/quality --ignore-scripts --no-audit --no-fund
+          node tools/quality/calibrate.mjs
+
+      - name: Start runner PostgreSQL service
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -X -v ON_ERROR_STOP=1 -c "ALTER ROLE postgres PASSWORD 'postgres';"
+          if ! sudo -u postgres psql -X -Atqc "SELECT 1 FROM pg_database WHERE datname = 'dreaming_worker_contract'" | grep -qx 1; then
+            sudo -u postgres createdb dreaming_worker_contract
+          fi
+          for attempt in $(seq 1 30); do
+            if PGPASSWORD=postgres pg_isready -h 127.0.0.1 -p 5432 -U postgres -d dreaming_worker_contract >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          sudo systemctl status postgresql.service --no-pager >&2 || true
+          exit 1
+
+      - name: Measure combined native and PostgreSQL coverage
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: dreaming_worker_contract
+        run: tools/quality/run combined
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: quality-report-${{ github.event.pull_request.head.sha || github.sha }}
+          path: reports/quality/
+          if-no-files-found: error
+          retention-days: 14
