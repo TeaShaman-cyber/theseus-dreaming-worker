@@ -1,0 +1,37 @@
+name: CRAP hotspot mutation baseline
+on:
+  pull_request:
+    paths:
+      - 'stryker.crap-baseline.config.mjs'
+      - '.github/workflows/crap-mutation-baseline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        scope: [verified-session-work, pooled-durable-pilot2, pool-attempt-journal]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npx --yes pnpm@11.3.0 install --frozen-lockfile
+      - name: Measure candidate scope
+        env:
+          CRAP_MUTATION_SCOPE: ${{ matrix.scope }}
+        run: ./node_modules/.bin/stryker run stryker.crap-baseline.config.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: crap-mutation-${{ matrix.scope }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: reports/crap-mutation/${{ matrix.scope }}/mutation.json
+          if-no-files-found: error
+          retention-days: 14
