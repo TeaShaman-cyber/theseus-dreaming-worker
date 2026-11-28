@@ -22,6 +22,8 @@ None.
 
 - `default:intake/session-search-boundary`: completed pooled work reuse.
   - Depends on (added): none
+- `default:ledger/postgres-storage`: read-only completed original custody.
+  - Depends on (added): none
 
 ## Impact
 

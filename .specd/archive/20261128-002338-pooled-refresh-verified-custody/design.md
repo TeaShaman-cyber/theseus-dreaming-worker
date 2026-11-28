@@ -21,3 +21,5 @@ RED observed on isolated PG17. Repeat native probe and existing hosted PostgreSQ
 ## Spec impact
 
 Completed-work reuse only; original custody unchanged.
+
+The storage rule explicitly preserves same-plan admission and permits only completed read-only reuse. Cheap origin existence probe and repeatable-read snapshot reject advanced predecessors.
