@@ -72,27 +72,20 @@ A passing result is `PREFLIGHT_ONLY`, not live inference or deployment evidence.
 The earlier host-blocked attempt above remains historical evidence only. A later
 versioned runner completed the same frozen synthetic Birch source-cycle through
 the real Dreaming Worker pooled source runner, Postgres store and provider
-adapter on isolated Neon branches. The source transport still replays the
+adapter on an isolated Neon branch. The source transport still replays the
 recorded, independently verified synthetic page; this is not live Session Search
 network serving and does not authorize private history.
 
-The first live attempt used exact runner commit
-`4c020d85bf5000666403169ddd4f64a8f77be40f` on isolated branch
-`live-birch-124-v2`. An outer shell watchdog of 90 seconds was too short for the
-bounded multi-model sequence. It terminated the process after the durable
-`START` for HY4 but before a terminal journal event. Independent Neon readback
-showed no completion or proposals and the exact durable prefix:
+One earlier live attempt left a process-loss-shaped partial journal after the
+third dispatch. Its outer termination receipt was not retained in repository
+evidence, so that attempt is deliberately excluded from this acceptance bundle
+and is not used to attribute a watchdog cause.
 
-`ADMIT -> START(step) -> KNOWN_FAILURE(output budget) -> START(ernie) ->
-VALIDATED -> START(hy4)`.
-
-The harness failure therefore became a real process-loss witness; the worker did
-not invent a completion or acknowledge the source batch.
-
-A clean isolated rerun on `live-birch-124-v3` used the same exact runner commit
-with only the outer shell watchdog raised to 300 seconds. Fresh model catalogs
-showed every admitted route at zero prompt/completion price. The source-cycle
-finished `ACKNOWLEDGED` after four physical model calls:
+The accepted isolated run on `live-birch-124-v3` used exact runner commit
+`4c020d85bf5000666403169ddd4f64a8f77be40f` with a 300-second outer shell
+bound. Fresh model catalogs showed every admitted route at zero
+prompt/completion price. The source-cycle finished `ACKNOWLEDGED` after four
+physical model calls:
 
 | Route | HTTP / finish | Reported tokens | Worker disposition |
 | --- | --- | ---: | --- |
@@ -103,7 +96,7 @@ finished `ACKNOWLEDGED` after four physical model calls:
 
 Every observed provider response reported cost `0`. Independent Neon readback
 confirmed one durable completion, two validated model perspectives, nine
-proposal records, and a final source receipt
+proposal records, and final source receipt
 `sha256:ed35fa0e1e00ce4c48d611634a6d08e1bf5be6626006c68610a71c8a78d4e2bf`.
 Exact replay returned `ALREADY_ACKNOWLEDGED` with zero model calls and the same
 receipt.
@@ -116,24 +109,32 @@ conflates the scheduler/planner change with the parallelism increase and one
 inference assumes stable provider limits despite the fixture saying they were
 not checked.
 
-A separate read-only critique consumed the two completed perspectives. The
-first Particle/OpenRouter attempt at a 4096-token output cap returned HTTP 200
-with `finish=length`, so the critique parser correctly rejected the truncated
-JSON. After a TDD change limited to the critique harness, exact commit
-`b702c6869b0eefd9e2fcde8e94fc2feca279fbec` raised the critique output bound
-to 8192. The next single call returned `finish=stop`, zero reported cost, and a
-validated `DERIVED_ONLY` critique. It records agreement on the observations and
-causal uncertainty, a disagreement between competing scheduler/parallelism
-hypotheses, and leaves the strength of the parallelism claim unresolved while
-requesting matched-load tests, provider-limit logs and request-size data.
+A separate read-only critique consumed the two completed perspectives. Exact
+raw-capture runner commit
+`7ea5e6652c177f42d5177c5623a673d7abcac5f5` made two explicitly bounded
+Particle/OpenRouter calls over the identical critique input. The 4096-token
+control returned HTTP 200 with `finish=length`, 4088 prompt tokens and 4096
+completion tokens; its retained raw model text is truncated and the production
+critique parser rejects it as `CRITIQUE_JSON_INVALID`. The 8192-token call
+returned HTTP 200 with `finish=stop`, 4088 prompt tokens and 2993 completion
+tokens; replaying the production parser over the retained raw text reconstructs
+the retained `DERIVED_ONLY` critique exactly. Both calls reported cost `0`, used
+one model call each, and made no canonical or ledger writes.
 
-`verify-heldout-live.mjs` is network-free. It checks file hashes, the watchdog
-partial journal, the successful live run, independent Neon readback, exact
-proposal provenance through the canonical journal schemas, zero-call replay,
-the truncated critique control and the successful critique references. The
-canonical test suite imports this verifier. The evidence export deliberately
-stores `jsonb` proposal and journal bodies as text where key ordering matters;
-schema-normalized application readback remains the identity authority.
+The successful critique records agreement on the observed before/after counts
+and causal uncertainty, plus disagreement between scheduler-alone and
+parallelism hypotheses. It requests matched-load comparisons, provider-limit
+logs, and request-size measurements rather than adjudicating a winner.
+
+`verify-heldout-live.mjs` is network-free. It checks retained file hashes,
+reconstructs the canonical source plan from the frozen fixture, replays the
+durable pool journal, reconstructs the complete work completion (checkpoint,
+observed providers, records and projection fingerprint), compares that
+reconstruction to the independent Neon export, verifies zero-call replay, and
+replays the production critique parser over both retained raw model outputs.
+The canonical test suite imports this verifier. `jsonb` bodies are retained as
+text where ordering matters and are normalized through the same application
+schemas before identity checks.
 
 This acceptance proves the bounded synthetic source -> real models -> durable
 Postgres completion -> source acknowledgement -> zero-call replay composition.

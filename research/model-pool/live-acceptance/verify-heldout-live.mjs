@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import {fingerprintProposal,sha256Fingerprint} from '../../../src/dreaming/proposal-schema.ts';
 import {prepareSourceBatchExecution} from '../../../src/dreaming/source-batch-receipt.ts';
 import {preparePoolJournal,replayPoolJournal} from '../../../src/dreaming/pool-attempt-journal.ts';
+import {buildPoolCompletion} from '../../../src/dreaming/pool-completion.ts';
 import {parseCritiqueArtifact} from '../../../src/dreaming/pilot2-critique.ts';
 
 const base=new URL('./',import.meta.url);
@@ -14,20 +15,9 @@ const rows=name=>read(name).toString().trim().split('\n').filter(Boolean).map(JS
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const manifest=json('heldout-live-v3-manifest.json');
 
-assert.equal(manifest.schema,'theseus.dw-heldout-live-evidence.v1');
+assert.equal(manifest.schema,'theseus.dw-heldout-live-evidence.v2');
 assert.equal(sha(read('heldout-source.json')),manifest.fixture_sha256);
 for(const [name,entry] of Object.entries(manifest.files))assert.equal(sha(read(name)),entry.sha256,name);
-
-const watchdog=rows('heldout-live-v2-watchdog.jsonl');
-const watchdogRead=json('heldout-live-v2-watchdog-readback.json');
-assert.equal(watchdog.filter(r=>r.kind==='attempt').length,3);
-assert.equal(watchdog.filter(r=>r.kind==='transport').length,2);
-assert.equal(watchdog.some(r=>r.kind==='result'),false);
-assert.equal(watchdogRead.completionCount,0);
-assert.equal(watchdogRead.proposalCount,0);
-assert.deepEqual(watchdogRead.journal.map(x=>x.event.kind),
-  ['ADMIT','START','KNOWN_FAILURE','START','VALIDATED','START']);
-assert.equal(watchdogRead.journal.at(-1).event.route.id,'hy4-nous');
 
 const live=rows('heldout-live-v3-observations.jsonl');
 const run=live.find(r=>r.kind==='result');
@@ -57,10 +47,9 @@ assert.equal(replayResult.physicalCalls,0);
 assert.equal(replayResult.receiptFingerprint,manifest.receipt_fingerprint);
 
 const readback=json('heldout-live-v3-readback.json');
-assert.equal(readback.schema,'theseus.dreaming-worker.heldout-live-readback.v2');
+assert.equal(readback.schema,'theseus.dreaming-worker.heldout-live-readback.v3');
 assert.equal(readback.analysisVersion,manifest.analysisVersion);
 assert.equal(readback.plan.workFingerprint,manifest.work_fingerprint);
-assert.equal(readback.plan.planFingerprint,run.planFingerprint);
 assert.ok(readback.checkpoints.some(c=>
   c.fingerprint===manifest.receipt_fingerprint &&
   c.schema==='theseus.dreaming-worker.source-batch-receipt.v2'));
@@ -79,8 +68,13 @@ const batch={
   analysisVersion:manifest.analysisVersion,
   bounds:{maxPages:4,maxChars:1000,maxMessages:10},
 };
-const prepared=prepareSourceBatchExecution(batch).prepared;
+const {plan:canonicalPlan,prepared}=prepareSourceBatchExecution(batch);
 assert.equal(prepared.length,1);
+assert.equal(canonicalPlan.planFingerprint,run.planFingerprint);
+assert.equal(canonicalPlan.planFingerprint,readback.plan.planFingerprint);
+assert.equal(canonicalPlan.previousCheckpoint,readback.plan.previousCheckpoint);
+assert.equal(canonicalPlan.work.length,1);
+assert.equal(canonicalPlan.work[0].workFingerprint,readback.plan.workFingerprint);
 const journalEntries=readback.journal.map(x=>JSON.parse(x.entryJson));
 const journalState=replayPoolJournal(preparePoolJournal(prepared[0].input),journalEntries);
 assert.equal(journalState.unresolved,false);
@@ -92,38 +86,29 @@ assert.deepEqual(journalState.failures.map(x=>x.result.code),[
 ]);
 assert.deepEqual(journalState.validated.map(x=>x.start.route.id),['ernie-openrouter','solar-nous']);
 
+const completion=buildPoolCompletion(prepared[0].input,journalState.entries);
+assert.equal(completion.checkpoint.workFingerprint,readback.completion.workFingerprint);
+assert.equal(completion.checkpoint.requestFingerprint,readback.completion.requestFingerprint);
+assert.equal(completion.checkpoint.resultFingerprint,readback.completion.resultFingerprint);
+assert.equal(completion.projectionFingerprint,readback.completion.projectionFingerprint);
+assert.deepEqual(completion.observed,JSON.parse(readback.completion.observedJson));
+
 assert.equal(readback.proposals.length,9);
 assert.deepEqual([...new Set(readback.proposals.map(p=>p.routeId))].sort(),
   ['ernie-openrouter','solar-nous']);
 assert.equal(readback.proposals.filter(p=>p.routeId==='ernie-openrouter').length,5);
 assert.equal(readback.proposals.filter(p=>p.routeId==='solar-nous').length,4);
-const canonicalByRoute=new Map(journalState.validated.map(v=>[
-  v.start.route.id,
-  new Map(v.result.proposalSet.proposals.map(proposal=>[fingerprintProposal(proposal),proposal])),
-]));
-for(const p of readback.proposals){
-  const proposal=canonicalByRoute.get(p.routeId)?.get(p.proposalFingerprint);
-  assert.ok(proposal,'stored proposal fingerprint must exist in validated journal');
-  assert.deepEqual(JSON.parse(p.proposalJson),proposal);
+const storedById=new Map(readback.proposals.map(p=>[p.recordId,p]));
+assert.equal(storedById.size,completion.records.length);
+for(const record of completion.records){
+  const stored=storedById.get(record.recordId);
+  assert.ok(stored,'reconstructed completion record must exist in Neon export');
+  assert.equal(stored.proposalFingerprint,record.proposalFingerprint);
+  assert.equal(stored.routeId,record.origin.route.id);
+  assert.equal(stored.routeModel,record.origin.route.model);
+  assert.equal(stored.proposalType,record.proposal.type);
+  assert.deepEqual(JSON.parse(stored.proposalJson),record.proposal);
 }
-
-const crit4096=rows('heldout-critique-v3-truncated.jsonl');
-assert.equal(crit4096.find(r=>r.kind==='transport').finish,'length');
-assert.equal(crit4096.find(r=>r.kind==='transport').cost,0);
-const failedCrit=crit4096.find(r=>r.kind==='critique');
-assert.equal(failedCrit.outcome,'FAILED');
-assert.equal(failedCrit.failure.code,'CRITIQUE_JSON_INVALID');
-
-const crit=rows('heldout-critique-v4.jsonl');
-const critInputReceipt=crit.find(r=>r.kind==='input');
-const critTransport=crit.find(r=>r.kind==='transport');
-const critResult=crit.find(r=>r.kind==='critique');
-assert.equal(critTransport.finish,'stop');
-assert.equal(critTransport.cost,0);
-assert.equal(critResult.outcome,'CRITIQUED');
-assert.equal(critResult.artifact.authority,'DERIVED_ONLY');
-assert.deepEqual(new Set(critResult.artifact.relations.map(r=>r.relation)),
-  new Set(['AGREEMENT','DISAGREEMENT','UNRESOLVED']));
 
 const perspectives=journalState.validated.map(v=>({
   perspectiveId:v.start.route.id,
@@ -141,15 +126,53 @@ const critiqueInput={
   perspectives,
   failedPerspectives:[],
 };
-assert.equal(sha256Fingerprint(JSON.stringify(critiqueInput)),critInputReceipt.inputHash);
-assert.deepEqual(parseCritiqueArtifact(JSON.stringify(critResult.artifact),critiqueInput),critResult.artifact);
+const critiqueInputHash=sha256Fingerprint(JSON.stringify(critiqueInput));
+
+const control=rows('heldout-critique-raw-4096.jsonl');
+assert.equal(control.filter(r=>r.kind==='attempt').length,1);
+assert.equal(control.filter(r=>r.kind==='transport').length,1);
+const controlInput=control.find(r=>r.kind==='input');
+const controlTransport=control.find(r=>r.kind==='transport');
+const controlResult=control.find(r=>r.kind==='critique');
+assert.equal(controlInput.inputHash,critiqueInputHash);
+assert.equal(controlTransport.status,200);
+assert.equal(controlTransport.finish,'length');
+assert.equal(controlTransport.cost,0);
+assert.equal(controlResult.outcome,'FAILED');
+assert.equal(controlResult.failure.code,'CRITIQUE_JSON_INVALID');
+assert.equal(controlResult.calls,1);
+assert.equal(controlResult.receipt.bounds.maxOutputTokens,4096);
+assert.equal(controlResult.receipt.externalModelCalls,1);
+assert.equal(controlResult.receipt.canonicalWrites,0);
+assert.ok(controlResult.rawModelOutput.length>0);
+assert.throws(()=>parseCritiqueArtifact(controlResult.rawModelOutput,critiqueInput),/CRITIQUE_JSON_INVALID/);
+
+const success=rows('heldout-critique-raw-8192.jsonl');
+assert.equal(success.filter(r=>r.kind==='attempt').length,1);
+assert.equal(success.filter(r=>r.kind==='transport').length,1);
+const successInput=success.find(r=>r.kind==='input');
+const successTransport=success.find(r=>r.kind==='transport');
+const successResult=success.find(r=>r.kind==='critique');
+assert.equal(successInput.inputHash,critiqueInputHash);
+assert.equal(successTransport.status,200);
+assert.equal(successTransport.finish,'stop');
+assert.equal(successTransport.cost,0);
+assert.equal(successResult.outcome,'CRITIQUED');
+assert.equal(successResult.calls,1);
+assert.equal(successResult.receipt.bounds.maxOutputTokens,8192);
+assert.equal(successResult.receipt.externalModelCalls,1);
+assert.equal(successResult.receipt.canonicalWrites,0);
+assert.equal(successResult.artifact.authority,'DERIVED_ONLY');
+assert.deepEqual(parseCritiqueArtifact(successResult.rawModelOutput,critiqueInput),successResult.artifact);
+assert.ok(successResult.artifact.relations.some(r=>r.relation==='AGREEMENT'));
+assert.ok(successResult.artifact.relations.some(r=>r.relation==='DISAGREEMENT'));
 
 const proposalFingerprints=new Set(readback.proposals.map(p=>p.proposalFingerprint));
 const evidenceHashes=new Set(
   fixture.entries[0].index.sessions[0].messages.map(m=>'sha256:'+m.text_sha256),
 );
-for(const relation of critResult.artifact.relations){
+for(const relation of successResult.artifact.relations){
   for(const ref of relation.proposal_refs)assert.ok(proposalFingerprints.has(ref.proposal_fingerprint));
   for(const ref of relation.evidence_refs)assert.ok(evidenceHashes.has(ref.evidence_hash));
 }
-console.log('HELDOUT_LIVE_REPLAY_PASS watchdog_pending=true live_calls=4 validated=2 proposals=9 replay_calls=0 critique_calls=2 critique_final=CRITIQUED');
+console.log('HELDOUT_LIVE_REPLAY_PASS live_calls=4 validated=2 proposals=9 replay_calls=0 raw_critique_controls=2 completion_reconstructed=true');

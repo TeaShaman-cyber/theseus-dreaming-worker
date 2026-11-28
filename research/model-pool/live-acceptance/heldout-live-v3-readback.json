@@ -4,7 +4,7 @@
         "workFingerprint": "sha256:a47b66540529df5ecfc322bde084883d88beea93ddb91ecbd083291483b49138",
         "previousCheckpoint": "sha256:f4ae12de0c5e5abbdb9490b8f603ce63d3e3b707544be0363ab70ab9a71db3d1"
     },
-    "schema": "theseus.dreaming-worker.heldout-live-readback.v2",
+    "schema": "theseus.dreaming-worker.heldout-live-readback.v3",
     "journal": [
         {
             "ordinal": 0,
@@ -46,6 +46,7 @@
     "proposals": [
         {
             "routeId": "ernie-openrouter",
+            "recordId": "sha256:e27f0429f4b0f846c0497d83edb59bc0be8a368994968ba9aca97fa1805e5a98",
             "routeModel": "baidu/ernie-5.5-flash-preview:free",
             "proposalJson": "{\"type\": \"FACT\", \"claim\": \"The synthetic Birch fixture reports that the control run used the old scheduler with parallelism 1 and had 2 timeouts out of 40 operations; after the scheduler change and raising parallelism to 8, timeouts were 11 out of 40.\", \"source_refs\": [{\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m0\\\",\\\"user\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:2c4e1e386fb959a997e1b7c708a18492327d7859bd042adc4a2b84595f23ae76\"}, {\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m1\\\",\\\"assistant\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:5c3a0596ce8c4b088e2903dd2b8b5db396512e05ddf56cef65fd011bea76dc50\"}]}",
             "proposalType": "FACT",
@@ -53,6 +54,7 @@
         },
         {
             "routeId": "ernie-openrouter",
+            "recordId": "sha256:0e13231c7e95290c9d3beab7e4c5929fbafc31113d830827399cde06eb757fa2",
             "routeModel": "baidu/ernie-5.5-flash-preview:free",
             "proposalJson": "{\"type\": \"INFERENCE\", \"claim\": \"The reported timeout increase is confounded: the scheduler change and the parallelism increase from 1 to 8 occurred together, and no same-load comparison was performed, so the data do not isolate the scheduler change as the cause.\", \"assumptions\": [\"The three fixture messages accurately describe the runs.\", \"No unrecorded change in load, request-size distribution, or provider limits occurred.\"], \"source_refs\": [{\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m1\\\",\\\"assistant\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:5c3a0596ce8c4b088e2903dd2b8b5db396512e05ddf56cef65fd011bea76dc50\"}, {\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m2\\\",\\\"user\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:34889ce0d3eb0bf899e57ac947bc565f243f2483cd7bed7c0e788505c1dc9722\"}], \"uncertainty\": \"HIGH\"}",
             "proposalType": "INFERENCE",
@@ -60,6 +62,7 @@
         },
         {
             "routeId": "ernie-openrouter",
+            "recordId": "sha256:ee9f19f4e9b9b5f365d49f551a1de41eecc314eab937545c79e33baecd4fc010",
             "routeModel": "baidu/ernie-5.5-flash-preview:free",
             "proposalJson": "{\"type\": \"HYPOTHESIS\", \"claim\": \"The timeout increase is primarily attributable to raising parallelism from 1 to 8 rather than to the scheduler change.\", \"falsifier\": \"In a controlled test holding request load, size distribution, and provider limits fixed, keeping parallelism at 1 and changing only the scheduler does not raise the timeout rate above the old-scheduler baseline, while raising parallelism to 8 under the old scheduler reproduces a comparable timeout increase.\", \"source_refs\": [{\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m1\\\",\\\"assistant\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:5c3a0596ce8c4b088e2903dd2b8b5db396512e05ddf56cef65fd011bea76dc50\"}, {\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m2\\\",\\\"user\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:34889ce0d3eb0bf899e57ac947bc565f243f2483cd7bed7c0e788505c1dc9722\"}], \"uncertainty\": \"HIGH\", \"why_plausible\": \"The fixture changed scheduler and parallelism simultaneously, and the post-change run had more timeouts; the absence of same-load and provider-limit checks makes parallelism a plausible driver.\", \"required_evidence\": [\"Same-load A/B runs with old and new scheduler at parallelism 1.\", \"Same-load A/B runs with old and new scheduler at parallelism 8.\", \"Provider rate-limit and timeout logs.\", \"Request-size distribution measurements.\"], \"competing_explanations\": [\"Scheduler change alone causes more timeouts.\", \"Provider limits or throttling changed.\", \"Request-size distribution shifted.\", \"Load differed between runs.\"]}",
             "proposalType": "HYPOTHESIS",
@@ -67,6 +70,7 @@
         },
         {
             "routeId": "ernie-openrouter",
+            "recordId": "sha256:fa8bb2a7c7595fe1887d73edf2358aff0b7caea7f13c82ba51f00e94ca3a18a9",
             "routeModel": "baidu/ernie-5.5-flash-preview:free",
             "proposalJson": "{\"type\": \"HYPOTHESIS\", \"claim\": \"The scheduler change alone causes the higher timeout rate, independent of parallelism.\", \"falsifier\": \"With load, request-size distribution, and provider limits held fixed, changing only the scheduler while keeping parallelism at 1 does not change the timeout rate relative to the old scheduler.\", \"source_refs\": [{\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m1\\\",\\\"assistant\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:5c3a0596ce8c4b088e2903dd2b8b5db396512e05ddf56cef65fd011bea76dc50\"}, {\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m2\\\",\\\"user\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:34889ce0d3eb0bf899e57ac947bc565f243f2483cd7bed7c0e788505c1dc9722\"}], \"uncertainty\": \"HIGH\", \"why_plausible\": \"The timeout increase was observed after the scheduler change, and scheduler behavior can affect queueing and timeouts.\", \"required_evidence\": [\"Controlled scheduler-only comparison at fixed parallelism and load.\", \"Repeated runs to estimate variance.\", \"Provider limit and request-size controls.\"], \"competing_explanations\": [\"Parallelism increase is the main driver.\", \"Provider throttling.\", \"Request-size mix change.\", \"Uncontrolled load.\"]}",
             "proposalType": "HYPOTHESIS",
@@ -74,6 +78,7 @@
         },
         {
             "routeId": "ernie-openrouter",
+            "recordId": "sha256:dd7ea8a54879163109d44606aa2f5611ad562feff4cd0b577d2c3a3df63eae6a",
             "routeModel": "baidu/ernie-5.5-flash-preview:free",
             "proposalJson": "{\"type\": \"UNKNOWN\", \"claim\": \"Whether the scheduler change caused the timeout increase is unknown from the provided evidence.\", \"source_refs\": [{\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m2\\\",\\\"user\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:34889ce0d3eb0bf899e57ac947bc565f243f2483cd7bed7c0e788505c1dc9722\"}], \"why_unknown\": \"No same-load comparison was performed, and provider limits and request-size distributions were not checked; scheduler change and parallelism increase are confounded.\", \"required_evidence\": [\"Controlled same-load comparison isolating scheduler from parallelism.\", \"Provider limit logs.\", \"Request-size distribution data.\"]}",
             "proposalType": "UNKNOWN",
@@ -81,6 +86,7 @@
         },
         {
             "routeId": "solar-nous",
+            "recordId": "sha256:c923171d970e0f215889dcc0da84b6f74c4102d42bd357138f7707392f65e00c",
             "routeModel": "upstage/solar-mini4:free",
             "proposalJson": "{\"type\": \"FACT\", \"claim\": \"In the held-out synthetic Birch control experiment, switching the planner from the old single-request configuration to a 8-parallel-request configuration changed observed timeouts from 2/40 to 11/40.\", \"source_refs\": [{\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m0\\\",\\\"user\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:2c4e1e386fb959a997e1b7c708a18492327d7859bd042adc4a2b84595f23ae76\"}, {\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m1\\\",\\\"assistant\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:5c3a0596ce8c4b088e2903dd2b8b5db396512e05ddf56cef65fd011bea76dc50\"}]}",
             "proposalType": "FACT",
@@ -88,6 +94,7 @@
         },
         {
             "routeId": "solar-nous",
+            "recordId": "sha256:de7969474bb33f3d77d73386e44d531a9a8794cbe1ec726571ed092211eaa0d7",
             "routeModel": "upstage/solar-mini4:free",
             "proposalJson": "{\"type\": \"INFERENCE\", \"claim\": \"The increase in timeouts is associated with the planner/parallelism change, but the causal mechanism is not proven because the experiment did not control for request load, provider limits, or request size distribution.\", \"assumptions\": [\"The observed timeout counts are accurate measurements from the synthetic control experiment.\", \"The only planned change between the two runs was the planner and the parallelism level.\", \"No other operational or environmental factors changed between the runs.\", \"Provider-side rate limits, quotas, or capacity throttles remained constant across both runs.\"], \"source_refs\": [{\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m1\\\",\\\"assistant\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:5c3a0596ce8c4b088e2903dd2b8b5db396512e05ddf56cef65fd011bea76dc50\"}, {\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m2\\\",\\\"user\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:34889ce0d3eb0bf899e57ac947bc565f243f2483cd7bed7c0e788505c1dc9722\"}], \"uncertainty\": \"MEDIUM\"}",
             "proposalType": "INFERENCE",
@@ -95,6 +102,7 @@
         },
         {
             "routeId": "solar-nous",
+            "recordId": "sha256:9d4be84efee31322b29342fa59e6fd07add4a8c40a2665706436386192dbef28",
             "routeModel": "upstage/solar-mini4:free",
             "proposalJson": "{\"type\": \"HYPOTHESIS\", \"claim\": \"Raising parallelism from 1 to 8 increases the observed timeout count from 2/40 to 11/40 in the Birch control experiment.\", \"falsifier\": \"A same-load controlled comparison in which the same traffic distribution, provider limits, and request sizes are held constant while the planner and parallelism are varied should show no increase in timeouts when parallelism is raised.\", \"source_refs\": [{\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m0\\\",\\\"user\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:2c4e1e386fb959a997e1b7c708a18492327d7859bd042adc4a2b84595f23ae76\"}, {\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m1\\\",\\\"assistant\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:5c3a0596ce8c4b088e2903dd2b8b5db396512e05ddf56cef65fd011bea76dc50\"}], \"uncertainty\": \"MEDIUM\", \"why_plausible\": \"The timeline shows that the timeout count increased from 2/40 to 11/40 immediately after the planner/parallelism change; however, this association does not establish causation because no same-load comparison or control of provider limits was performed.\", \"required_evidence\": [\"A controlled run comparing the old single-request planner and the 8-parallel planner at identical request sizes, identical load, and identical provider limits.\", \"A measurement that confirms the provider did not apply different rate limits or throttles between the two runs.\", \"Distribution logs or request-size summaries showing that request magnitudes were comparable across runs.\", \"Raw timeout counts and timestamps for each run to verify that only the planned change differed.\"], \"competing_explanations\": [\"The higher timeout count is caused by provider-side rate limiting or capacity throttling that coincided with the planner change.\", \"The higher timeout count is caused by larger or more bursty request sizes after parallelism was increased.\", \"The higher timeout count is a sampling artifact due to an unrepresentative subset of requests in one of the runs.\", \"The timeout increase is due to measurement error, such as inconsistent logging, delayed reporting, or different timeout thresholds between runs.\"]}",
             "proposalType": "HYPOTHESIS",
@@ -102,6 +110,7 @@
         },
         {
             "routeId": "solar-nous",
+            "recordId": "sha256:1449facb3b26dc26f8c9c4222ffb09b604d512f902a75ca4a9d0e3c72a663c69",
             "routeModel": "upstage/solar-mini4:free",
             "proposalJson": "{\"type\": \"UNKNOWN\", \"claim\": \"The root cause of the timeout increase in the held-out Birch experiment cannot be established from the provided evidence.\", \"source_refs\": [{\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m1\\\",\\\"assistant\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:5c3a0596ce8c4b088e2903dd2b8b5db396512e05ddf56cef65fd011bea76dc50\"}, {\"source_ref\": \"ss-message-v1:[\\\"synthetic:chatgpt\\\",\\\"chatgpt\\\",\\\"birch-heldout-124\\\",\\\"m2\\\",\\\"user\\\",\\\"dialogue\\\"]\", \"evidence_hash\": \"sha256:34889ce0d3eb0bf899e57ac947bc565f243f2483cd7bed7c0e788505c1dc9722\"}], \"why_unknown\": \"The evidence documents only before/after window summaries and states that identical-load comparisons and provider-limit checks were not performed. Without isolating the planner change from other variables, the causal effect of parallelism on timeouts remains unknown.\", \"required_evidence\": [\"A controlled experiment with matched request loads and identical provider limits.\", \"Observed timeout counts for each configuration.\", \"Request-size and traffic-distribution summaries.\", \"Provider quota, rate-limit, and capacity telemetry for both runs.\", \"A pre-registered analysis plan that defines the primary causal contrast.\"]}",
             "proposalType": "UNKNOWN",
@@ -109,6 +118,7 @@
         }
     ],
     "completion": {
+        "observedJson": "[{\"model\": \"baidu/ernie-5.5-flash-preview:free\", \"provider\": \"Baidu\", \"finishReason\": \"stop\", \"perspectiveId\": \"sha256:a47b66540529df5ecfc322bde084883d88beea93ddb91ecbd083291483b49138:pass-1\"}, {\"model\": \"upstage/solar-mini4:free\", \"provider\": \"nous\", \"finishReason\": \"stop\", \"perspectiveId\": \"sha256:a47b66540529df5ecfc322bde084883d88beea93ddb91ecbd083291483b49138:pass-2\"}]",
         "workFingerprint": "sha256:a47b66540529df5ecfc322bde084883d88beea93ddb91ecbd083291483b49138",
         "resultFingerprint": "sha256:26322dbbce150acc4da0b50777888f9d451107726c262d5c3315953b59f99951",
         "requestFingerprint": "sha256:e02518c2f3ab2474d76d9b8dc1b7aa548398b3156f8e8b41b7582cd9e721ccdd",
