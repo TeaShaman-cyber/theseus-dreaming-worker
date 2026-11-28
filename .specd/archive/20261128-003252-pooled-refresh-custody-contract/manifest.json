@@ -1,0 +1,256 @@
+{
+  "name": "pooled-refresh-custody-contract",
+  "createdAt": "2026-11-28T00:32:52.047Z",
+  "description": "Completed pooled reuse with explicit linked verification tasks (#120)",
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "specIds": [
+    "default:intake/session-search-boundary",
+    "default:ledger/postgres-storage"
+  ],
+  "specDependsOn": {
+    "default:intake/session-search-boundary": [
+      "default:worker/core-contract"
+    ],
+    "default:ledger/postgres-storage": [
+      "default:ledger/append-only-proposals",
+      "default:ledger/neon-persistence",
+      "default:intake/session-search-boundary"
+    ]
+  },
+  "artifacts": [
+    {
+      "type": "proposal",
+      "optional": false,
+      "requires": [],
+      "state": "complete",
+      "files": [
+        {
+          "key": "proposal",
+          "filename": "proposal.md",
+          "state": "complete",
+          "validatedHash": "sha256:b9249278de9e51e51580d5fb70d5df6130109acf9831b16b1eba7224560ac042"
+        }
+      ]
+    },
+    {
+      "type": "specs",
+      "optional": false,
+      "requires": [
+        "proposal"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:intake/session-search-boundary",
+          "filename": "deltas/default/intake/session-search-boundary/spec.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:44e002506dbcece4efd5bf14cf925f04218517a9ddc665484fffdefb90276fcf"
+        },
+        {
+          "key": "default:ledger/postgres-storage",
+          "filename": "deltas/default/ledger/postgres-storage/spec.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:12394fa3dc364079edd0bacc63ff6ea2dcf057f4a6084981fe0c3cd888826d67"
+        }
+      ]
+    },
+    {
+      "type": "verify",
+      "optional": false,
+      "requires": [
+        "specs"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:intake/session-search-boundary",
+          "filename": "deltas/default/intake/session-search-boundary/verify.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:550d304d24c77dd04f4141f22027d6b709b2d2e2f76ef88054d5c7f010021cad"
+        },
+        {
+          "key": "default:ledger/postgres-storage",
+          "filename": "deltas/default/ledger/postgres-storage/verify.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:f6ae97f1a7f73a8235f6e6c890bdeb5aa65b7ba51b62ed29839ae29abfda93e0"
+        }
+      ]
+    },
+    {
+      "type": "design",
+      "optional": false,
+      "requires": [
+        "proposal",
+        "specs",
+        "verify"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "design",
+          "filename": "design.md",
+          "state": "complete",
+          "validatedHash": "sha256:d0a2ce9a3c8cad696869fd8576865ff2ad246e3c61f6d60eec28d820af4db210"
+        }
+      ]
+    },
+    {
+      "type": "tasks",
+      "optional": false,
+      "requires": [
+        "specs",
+        "design"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "tasks",
+          "filename": "tasks.md",
+          "state": "complete",
+          "validatedHash": "sha256:c1e86421150508a2d2fb5960a44c103c3fd6ea8a9a1647c4ede5e67321fc9e0a"
+        }
+      ]
+    }
+  ],
+  "history": [
+    {
+      "type": "created",
+      "at": "2026-11-28T00:32:52.047Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "specIds": [
+        "default:intake/session-search-boundary",
+        "default:ledger/postgres-storage"
+      ],
+      "schemaName": "schema-std",
+      "schemaVersion": 1
+    },
+    {
+      "type": "artifacts-synced",
+      "at": "2026-11-28T00:32:52.088Z",
+      "by": {
+        "name": "specd",
+        "email": "system@getspecd.dev"
+      },
+      "typesAdded": [
+        "proposal",
+        "specs",
+        "verify",
+        "design",
+        "tasks"
+      ],
+      "typesRemoved": [],
+      "filesAdded": [
+        {
+          "type": "proposal",
+          "key": "proposal"
+        },
+        {
+          "type": "specs",
+          "key": "default:intake/session-search-boundary"
+        },
+        {
+          "type": "specs",
+          "key": "default:ledger/postgres-storage"
+        },
+        {
+          "type": "verify",
+          "key": "default:intake/session-search-boundary"
+        },
+        {
+          "type": "verify",
+          "key": "default:ledger/postgres-storage"
+        },
+        {
+          "type": "design",
+          "key": "design"
+        },
+        {
+          "type": "tasks",
+          "key": "tasks"
+        }
+      ],
+      "filesRemoved": []
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T00:32:52.735Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "drafting",
+      "to": "designing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T00:32:55.840Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "designing",
+      "to": "ready"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T00:32:56.286Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "ready",
+      "to": "implementing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T00:32:56.731Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "implementing",
+      "to": "verifying"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T00:32:57.201Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "verifying",
+      "to": "done"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T00:32:57.697Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "done",
+      "to": "archivable"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T00:32:58.143Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "archivable",
+      "to": "archiving"
+    }
+  ],
+  "archivedAt": "2026-11-28T00:32:58.338Z",
+  "archivedBy": {
+    "name": "Semyon Poklad",
+    "email": "pokladsemen@gmail.com"
+  }
+}
