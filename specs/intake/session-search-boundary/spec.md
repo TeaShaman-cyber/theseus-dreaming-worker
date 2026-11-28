@@ -108,6 +108,10 @@ The explicit pooled cycle MUST validate and snapshot its execution policy before
 
 An explicit diagnostic MAY observe an existing synthetic batch using its exact supplied witness, verified source tip, staged plan and per-work journal and completion readers. It MUST reject non-synthetic scope before storage access, distinguish missing state, unresolved attempts and failed or inconsistent readback, and omit evidence bodies, proposal bodies and owner tokens. Independent reads MUST NOT be represented as an atomic snapshot, source completeness, authorization to resume, or proof of source custody merely from matching work identity. The diagnostic MUST NOT initialize, stage, reserve, acknowledge, invoke inference or retry work.
 
+### Requirement: Explicit synthetic custody-only acknowledgement
+
+A trusted synthetic caller MAY explicitly acknowledge an independently verified rederived handoff with changed append-only accepted membership, exact observed catalog, zero selected and zero removed sessions, and exact existing predecessor membership and analysis intent. A dedicated no-work receipt MUST preserve the handoff and reason, and use existing append-only transaction and exact readback. Any staged plan under that predecessor blocks this path; no pending work is discarded. Ordinary empty cycle, unavailable data, unchanged membership, unresolved removal and non-synthetic scope MUST NOT initiate this acknowledgement. No inference, work completion, source completeness or new access authority follows.
+
 ### Requirement: Checkpoint advances only after bounded success
 
 The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.

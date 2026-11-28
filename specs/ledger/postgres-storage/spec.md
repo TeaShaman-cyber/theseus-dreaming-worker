@@ -64,6 +64,10 @@ The synthetic source store MUST initialize a root only explicitly from a trusted
 
 Source checkpoints MUST be append-only with one root and at most one successor per predecessor and chain. A missing or conflicting predecessor, incomplete work, corrupt storage or unresolved removal MUST NOT advance the chain. An ambiguous write MUST be resolved by independent exact readback or remain UNKNOWN. Acknowledgement MUST NOT invoke inference, enable real history access or imply source completeness.
 
+### Requirement: Explicit synthetic custody-only acknowledgement
+
+A trusted synthetic caller MAY explicitly acknowledge an independently verified rederived handoff with changed append-only accepted membership, exact observed catalog, zero selected and zero removed sessions, and exact existing predecessor membership and analysis intent. A dedicated no-work receipt MUST preserve the handoff and reason, and use existing append-only transaction and exact readback. Any staged plan under that predecessor blocks this path; no pending work is discarded. Ordinary empty cycle, unavailable data, unchanged membership, unresolved removal and non-synthetic scope MUST NOT initiate this acknowledgement. No inference, work completion, source completeness or new access authority follows.
+
 ### Requirement: Pending source plan custody
 
 The synthetic source store MUST support explicitly staging an immutable plan derived from the exact verified selected work under the existing predecessor and analysis intent. A plan MUST retain the complete handoff, original packet and request identities, work identities and source witnesses, but no evidence bodies. Staging MUST NOT advance the acknowledged source checkpoint or invoke inference.

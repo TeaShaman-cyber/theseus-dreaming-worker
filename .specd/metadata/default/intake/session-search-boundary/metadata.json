@@ -93,6 +93,12 @@
       ]
     },
     {
+      "requirement": "Explicit synthetic custody-only acknowledgement",
+      "rules": [
+        "A trusted synthetic caller MAY explicitly acknowledge an independently verified rederived handoff with changed append-only accepted membership, exact observed catalog, zero selected and zero removed sessions, and exact existing predecessor membership and analysis intent. A dedicated no-work receipt MUST preserve the handoff and reason, and use existing append-only transaction and exact readback. Any staged plan under that predecessor blocks this path; no pending work is discarded. Ordinary empty cycle, unavailable data, unchanged membership, unresolved removal and non-synthetic scope MUST NOT initiate this acknowledgement. No inference, work completion, source completeness or new access authority follows."
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "rules": [
         "The worker checkpoint MUST NOT advance over evidence that was not successfully admitted and processed according to the current analysis contract.\n\nA timestamp alone is insufficient as the durable checkpoint.\n\nThe checkpoint SHOULD bind accepted-source identity/fingerprint, analysis-contract version, and analysis scope."
@@ -427,6 +433,20 @@
       ]
     },
     {
+      "requirement": "Explicit synthetic custody-only acknowledgement",
+      "name": "Verified recapture without semantic changes",
+      "given": [
+        "a rederived synthetic handoff with new accepted artifacts but no changed or removed sessions and exact trusted catalog"
+      ],
+      "when": [
+        "explicitly acknowledged under its existing predecessor"
+      ],
+      "then": [
+        "membership advances with a distinct no-work receipt and zero inference",
+        "AND replay is idempotent, a competing child conflicts, pending staged plans and invalid handoffs block advancement"
+      ]
+    },
+    {
       "requirement": "Checkpoint advances only after bounded success",
       "name": "Evidence is read but provider analysis fails",
       "given": [
@@ -524,8 +544,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:e286c490068b8bf57b46c7f01143c2835600f70afc7daad007e4bc8087de7c99",
-    "verify.md": "sha256:481fcf96e2cb78bc032209e3b87fd510ac884cad9f3ed9bfb0a3e946caa13c2a"
+    "spec.md": "sha256:52729f40e70ac018179c6fad31bb1d176552e2da2fd20d00281b4925c86a0640",
+    "verify.md": "sha256:f4cdf7aef4eb5eadd889cfade436b091df5fd548fd1b1b87ae69de422477e943"
   },
   "generatedBy": "core"
 }

@@ -178,6 +178,15 @@
 - **AND** the report omits source and proposal bodies and owner tokens, and confers no resume authority
 - **AND** no writes or inference follow
 
+### Requirement: Explicit synthetic custody-only acknowledgement
+
+#### Scenario: Verified recapture without semantic changes
+
+- **GIVEN** a rederived synthetic handoff with new accepted artifacts but no changed or removed sessions and exact trusted catalog
+- **WHEN** explicitly acknowledged under its existing predecessor
+- **THEN** membership advances with a distinct no-work receipt and zero inference
+- **AND** replay is idempotent, a competing child conflicts, pending staged plans and invalid handoffs block advancement
+
 ### Requirement: Checkpoint advances only after bounded success
 
 #### Scenario: Evidence is read but provider analysis fails
