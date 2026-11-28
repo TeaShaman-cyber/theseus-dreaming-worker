@@ -1,0 +1,12 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Same-plan pooled source admission$'
+  content: |
+    ### Requirement: Read-only completed pooled reuse
+
+    The same-plan admission rule forbids adoption or mutation of a differently bound reservation or journal. It does not forbid read-only reuse of an already committed completion from another verified source witness. Such reuse MUST verify the exact current staged plan and original source origin, replay the original journal against reconstructed original request identity and compare the exact committed completion. It MUST NOT create an origin, mutate the journal, dispatch inference, adopt unfinished custody, or advance source progress.

@@ -1,3 +1,4 @@
+import { inspectSourceCycle } from '../../tools/agent/inspect-source-cycle.mjs';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeSync } from 'node:fs';
@@ -64,10 +65,9 @@ if (process.argv[2] === 'child') {
     assert.equal(root.status, 'ACKNOWLEDGED');
     input.previousCheckpoint = root.receipt.receiptFingerprint;
     const { indexes: _indexes, ...base } = input;
-    const { prepared } = prepareSourceBatchExecution({
-      ...base, entries: fixture.entries.map(e => ({ sessionId: e.session_id, index: e.index, pages: e.pages })),
-    });
-    return { input, root: root.receipt, prepared };
+    const batch = { ...base, entries: fixture.entries.map(e => ({ sessionId: e.session_id, index: e.index, pages: e.pages })) };
+    const { prepared } = prepareSourceBatchExecution(batch);
+    return { input, root: root.receipt, prepared, batch };
   }
   function run(input, mode, budget, rotation = 0, expectedExit = 0) {
     const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url), 'child'], {
@@ -104,6 +104,11 @@ if (process.argv[2] === 'child') {
     assert.ok(c.records.every(r => r.authority === 'DERIVED_ONLY' && r.proposal.type === 'HYPOTHESIS'));
   }
   assert.deepEqual(await store.readTip(positive.input), positive.root);
+  const beforeAck = await inspectSourceCycle(positive.batch, { source: store, journal, work: completions });
+  assert.equal(beforeAck.tip.status, 'PARENT');
+  assert.equal(beforeAck.plan.status, 'MATCHED');
+  assert.deepEqual(beforeAck.work.map(w => w.status), ['POOL_COMPLETION_MATCHED', 'POOL_COMPLETION_MATCHED']);
+  assert.deepEqual(await store.readTip(positive.input), positive.root);
   const recovered = run(positive.input, 'normal', 0);
   assert.equal(recovered.final.result.status, 'ACKNOWLEDGED');
   assert.equal(recovered.final.result.attemptedPasses, 0);
@@ -111,6 +116,9 @@ if (process.argv[2] === 'child') {
   const receipt = recovered.final.result.run.receipt;
   assert.deepEqual(await store.readTip(positive.input), receipt);
   assert.equal(receipt.work.length, 2);
+  const afterAck = await inspectSourceCycle(positive.batch, { source: store, journal, work: completions });
+  assert.equal(afterAck.tip.status, 'MATCHED_ACK');
+  assert.equal(afterAck.tip.fingerprint, receipt.receiptFingerprint);
   const replay = run(positive.input, 'normal', 0);
   assert.equal(replay.final.result.status, 'ALREADY_ACKNOWLEDGED');
   assert.deepEqual(replay.final.result.run.receipt, receipt);
@@ -125,6 +133,13 @@ if (process.argv[2] === 'child') {
   assert.equal(state.unresolved, true);
   assert.equal(await completions.readCompletion(negative.prepared[0].workFingerprint), null);
   assert.deepEqual(await store.readTip(negative.input), negative.root);
+  const observed = await inspectSourceCycle(negative.batch, { source: store, journal, work: completions });
+  assert.equal(observed.tip.status, 'PARENT');
+  assert.equal(observed.plan.status, 'MATCHED');
+  assert.deepEqual(observed.work.map(w => w.status), ['BLOCKED_UNKNOWN', 'NOT_ADMITTED']);
+  assert.equal(observed.work[0].pendingAttemptId, state.pending.attemptId);
+  assert.equal(observed.resumeAuthorized, false);
+  assert.deepEqual((await journal.read(negative.prepared[0].input)).state, state);
   const blocked = run(negative.input, 'normal', 4);
   assert.equal(blocked.final.result.status, 'WORK_UNRESOLVED');
   assert.equal(blocked.final.result.run.work[0].decision, 'BLOCKED_UNKNOWN');
@@ -133,5 +148,6 @@ if (process.argv[2] === 'child') {
   assert.deepEqual((await journal.read(negative.prepared[0].input)).state, state);
   assert.equal((await journal.read(negative.prepared[1].input)).status, 'ABSENT');
   assert.deepEqual(await store.readTip(negative.input), negative.root);
+  console.log('SOURCE_INSPECTION_PG_PASS before_ack=2_completions after_ack=matched pending_unknown=visible no_write=true');
   console.log('SOURCE_PROCESS_LOSS_PG_PASS completed=2 synthetic_calls=4 recovery_calls=0 replay_calls=0 pending_unknown_blocked=true external_calls=0');
 }

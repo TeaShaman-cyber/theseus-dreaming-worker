@@ -114,6 +114,16 @@
 - **THEN** the validated perspective is not repeated and all callbacks remain bounded
 - **AND** the source checkpoint advances only after all work is verified; exact replay needs no model call
 
+### Requirement: Completed pooled work reuse across source witnesses
+
+#### Scenario: Refresh after completed pooled work
+
+- **GIVEN** committed pooled work and a newly staged equivalent synthetic witness with changed generation
+- **WHEN** the current cycle resumes
+- **THEN** the original journal and completion match and the work is reused without inference
+- **AND** the original plan linkage remains intact
+- **AND** incomplete or inconsistent alternative custody is rejected
+
 ### Requirement: Bounded synthetic source acquisition
 
 #### Scenario: Exact pinned read
@@ -157,6 +167,16 @@
 - **WHEN** the same cycle resumes with a new finite invocation budget
 - **THEN** only remaining calls execute, known shared wait is respected and acknowledgement follows verified completion
 - **AND** exact completed replay consumes zero inference
+
+### Requirement: Read-only synthetic cycle inspection
+
+#### Scenario: Observe without dispatch
+
+- **GIVEN** an exact synthetic batch witness and existing durable work
+- **WHEN** the diagnostic reads the tip, plan, journal and completion
+- **THEN** missing, unresolved, completed and failed or inconsistent observations remain distinguishable
+- **AND** the report omits source and proposal bodies and owner tokens, and confers no resume authority
+- **AND** no writes or inference follow
 
 ### Requirement: Explicit synthetic custody-only acknowledgement
 

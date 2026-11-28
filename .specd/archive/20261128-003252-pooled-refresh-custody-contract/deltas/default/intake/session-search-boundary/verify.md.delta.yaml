@@ -1,0 +1,18 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Pooled batch orchestration preserves source boundary$'
+  content: |
+    ### Requirement: Completed pooled work reuse across source witnesses
+
+    #### Scenario: Refresh after completed pooled work
+
+    - **GIVEN** committed pooled work and a newly staged equivalent synthetic witness with changed generation
+    - **WHEN** the current cycle resumes
+    - **THEN** the original journal and completion match and the work is reused without inference
+    - **AND** the original plan linkage remains intact
+    - **AND** incomplete or inconsistent alternative custody is rejected

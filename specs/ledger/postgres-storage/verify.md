@@ -219,6 +219,15 @@
 - **AND** the original plan remains immutable and the source checkpoint does not advance until every selected work completes
 - **AND** exact completed replay uses zero inference
 
+### Requirement: Read-only completed pooled reuse
+
+#### Scenario: Alternative completed witness
+
+- **GIVEN** committed pooled work and a staged equivalent alternative witness
+- **WHEN** the original plan, request and journal are independently verified
+- **THEN** the exact completion is reused without inference or custody mutation
+- **AND** unstaged, unbound, incomplete or corrupt alternative custody remains blocked
+
 ### Requirement: Same-plan finite provider cooldown
 
 #### Scenario: Known wait across selected work
