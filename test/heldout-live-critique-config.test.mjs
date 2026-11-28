@@ -4,5 +4,5 @@ import {heldoutCritiqueRoute} from '../research/model-pool/live-acceptance/run-h
 
 test('heldout critique uses a new zero-price model family',()=>{
   const r=heldoutCritiqueRoute();
-  assert.deepEqual(r,{id:'particle-critique',provider:'openrouter',model:'particle-ai/particle-1:free',modelFamily:'particle1',baseURL:'https://openrouter.int.exe.xyz/api/v1',maxOutputTokens:4096,timeoutMs:60000});
+  assert.deepEqual(r,{id:'particle-critique',provider:'openrouter',model:'particle-ai/particle-1:free',modelFamily:'particle1',baseURL:'https://openrouter.int.exe.xyz/api/v1',maxOutputTokens:8192,timeoutMs:60000});
 });

@@ -14,7 +14,7 @@ const ANALYSIS_VERSION='live-birch-124-v2';
 export const heldoutCritiqueRoute=()=>({
   id:'particle-critique',provider:'openrouter',model:'particle-ai/particle-1:free',
   modelFamily:'particle1',baseURL:'https://openrouter.int.exe.xyz/api/v1',
-  maxOutputTokens:4096,timeoutMs:60000,
+  maxOutputTokens:8192,timeoutMs:60000,
 });
 
 export async function runHeldoutCritique({connectionString,logFile='/tmp/dw124-birch-critique-v3.jsonl'}){
