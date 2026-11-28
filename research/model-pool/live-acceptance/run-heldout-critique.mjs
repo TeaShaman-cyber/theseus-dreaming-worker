@@ -11,13 +11,18 @@ import {runLiveCritique} from '../../../src/dreaming/pilot2-critique-live.ts';
 const TASK='Held-out synthetic Birch hypothesis.';
 const ANALYSIS_VERSION='live-birch-124-v2';
 
-export const heldoutCritiqueRoute=()=>({
+export const heldoutCritiqueRoute=(maxOutputTokens=8192)=>({
   id:'particle-critique',provider:'openrouter',model:'particle-ai/particle-1:free',
   modelFamily:'particle1',baseURL:'https://openrouter.int.exe.xyz/api/v1',
-  maxOutputTokens:8192,timeoutMs:60000,
+  maxOutputTokens,timeoutMs:60000,
 });
 
-export async function runHeldoutCritique({connectionString,logFile='/tmp/dw124-birch-critique-v3.jsonl'}){
+export function critiqueEvidenceRecord(result,calls){
+  return {outcome:result.outcome,artifact:result.artifact,rawModelOutput:result.rawModelOutput??null,
+    failure:result.failure??null,receipt:result.receipt,calls};
+}
+
+export async function runHeldoutCritique({connectionString,logFile='/tmp/dw124-birch-critique-v3.jsonl',maxOutputTokens=8192}){
   assert.ok(connectionString,'LEDGER_DATABASE_URL required');
   const fixture=JSON.parse(readFileSync(new URL('heldout-source.json',import.meta.url)));
   const source=createPostgresSourceBatchStore({connectionString});
@@ -47,7 +52,7 @@ export async function runHeldoutCritique({connectionString,logFile='/tmp/dw124-b
     })),
     failedPerspectives:[],
   };
-  const route=heldoutCritiqueRoute();
+  const route=heldoutCritiqueRoute(maxOutputTokens);
   const catalog=await fetch(route.baseURL+'/models',{signal:AbortSignal.timeout(10000)});
   assert.ok(catalog.ok);
   const model=(await catalog.json()).data.find(m=>m.id===route.model);
@@ -83,8 +88,7 @@ export async function runHeldoutCritique({connectionString,logFile='/tmp/dw124-b
   };
   try{
     const result=await runLiveCritique(input,route);
-    record('critique',{outcome:result.outcome,artifact:result.artifact,failure:result.failure??null,
-      receipt:result.receipt,calls});
+    record('critique',critiqueEvidenceRecord(result,calls));
     assert.equal(calls,1);
     return result;
   }finally{globalThis.fetch=actual;}
