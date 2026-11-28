@@ -1,0 +1,224 @@
+{
+  "name": "hyperdrive-canary-build-pin",
+  "createdAt": "2026-11-28T15:02:23.685Z",
+  "description": "Pin existing esbuild for reproducible synthetic preview; preserve runtime semantics (#23)",
+  "schema": {
+    "name": "schema-std",
+    "version": 1
+  },
+  "specIds": [
+    "default:ledger/postgres-storage"
+  ],
+  "artifacts": [
+    {
+      "type": "proposal",
+      "optional": false,
+      "requires": [],
+      "state": "complete",
+      "files": [
+        {
+          "key": "proposal",
+          "filename": "proposal.md",
+          "state": "complete",
+          "validatedHash": "sha256:991a8f1846fa424e0729bbb2401469c144324e77493b1c4ce521459e9465d555"
+        }
+      ]
+    },
+    {
+      "type": "specs",
+      "optional": false,
+      "requires": [
+        "proposal"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:ledger/postgres-storage",
+          "filename": "deltas/default/ledger/postgres-storage/spec.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:e63bd74f1b7e4050472e2025c43049c20e55977ced4b644e40f6653562800f07"
+        }
+      ]
+    },
+    {
+      "type": "verify",
+      "optional": false,
+      "requires": [
+        "specs"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "default:ledger/postgres-storage",
+          "filename": "deltas/default/ledger/postgres-storage/verify.md.delta.yaml",
+          "state": "complete",
+          "validatedHash": "sha256:e63bd74f1b7e4050472e2025c43049c20e55977ced4b644e40f6653562800f07"
+        }
+      ]
+    },
+    {
+      "type": "design",
+      "optional": false,
+      "requires": [
+        "proposal",
+        "specs",
+        "verify"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "design",
+          "filename": "design.md",
+          "state": "complete",
+          "validatedHash": "sha256:7e280e345d21a0ec3fe69d600cda19989a762633e01e474e82e67f6314cf87d2"
+        }
+      ]
+    },
+    {
+      "type": "tasks",
+      "optional": false,
+      "requires": [
+        "specs",
+        "design"
+      ],
+      "state": "complete",
+      "files": [
+        {
+          "key": "tasks",
+          "filename": "tasks.md",
+          "state": "complete",
+          "validatedHash": "sha256:9a15c27c590162e2d89a37f82a76b7cc170d6282db8fd96600a551502e3116c6"
+        }
+      ]
+    }
+  ],
+  "history": [
+    {
+      "type": "created",
+      "at": "2026-11-28T15:02:23.685Z",
+      "by": {
+        "name": "",
+        "email": ""
+      },
+      "specIds": [
+        "default:ledger/postgres-storage"
+      ],
+      "schemaName": "schema-std",
+      "schemaVersion": 1
+    },
+    {
+      "type": "artifacts-synced",
+      "at": "2026-11-28T15:02:23.710Z",
+      "by": {
+        "name": "specd",
+        "email": "system@getspecd.dev"
+      },
+      "typesAdded": [
+        "proposal",
+        "specs",
+        "verify",
+        "design",
+        "tasks"
+      ],
+      "typesRemoved": [],
+      "filesAdded": [
+        {
+          "type": "proposal",
+          "key": "proposal"
+        },
+        {
+          "type": "specs",
+          "key": "default:ledger/postgres-storage"
+        },
+        {
+          "type": "verify",
+          "key": "default:ledger/postgres-storage"
+        },
+        {
+          "type": "design",
+          "key": "design"
+        },
+        {
+          "type": "tasks",
+          "key": "tasks"
+        }
+      ],
+      "filesRemoved": []
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T15:34:01.841Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "drafting",
+      "to": "designing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T15:34:55.933Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "designing",
+      "to": "ready"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T15:34:56.425Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "ready",
+      "to": "implementing"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T15:34:57.018Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "implementing",
+      "to": "verifying"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T15:34:57.610Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "verifying",
+      "to": "done"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T15:34:58.141Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "done",
+      "to": "archivable"
+    },
+    {
+      "type": "transitioned",
+      "at": "2026-11-28T15:34:58.675Z",
+      "by": {
+        "name": "Semyon Poklad",
+        "email": "pokladsemen@gmail.com"
+      },
+      "from": "archivable",
+      "to": "archiving"
+    }
+  ],
+  "archivedAt": "2026-11-28T15:34:58.823Z",
+  "archivedBy": {
+    "name": "Semyon Poklad",
+    "email": "pokladsemen@gmail.com"
+  }
+}
