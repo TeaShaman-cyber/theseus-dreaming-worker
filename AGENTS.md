@@ -6,6 +6,15 @@ Do not silently broaden the worker beyond that contract. If a requested change c
 
 Session Search is an evidence/currentness dependency, never hypothesis authority. Mastra/Studio/Agent Builder are development interfaces, not canonical state or production authority.
 
+## Advisory code readability
+
+Prefer linear control flow over nested conditionals when it makes invariants
+and the normal path easier to follow. Use early return/continue where they
+clarify the flow; keep else when mutually exclusive alternatives read better.
+Do not eliminate else mechanically or refactor solely to lower a metric.
+Preserve behavior and verify it with existing tests and risk-proportional QA.
+CRAP and cognitive complexity are advisory signals, not acceptance gates.
+
 ## SpecD change workflow
 
 Before substantial semantic, architecture or inference-stage work, use the pinned
