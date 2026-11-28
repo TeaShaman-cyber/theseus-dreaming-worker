@@ -1,0 +1,30 @@
+{
+  "analysisVersion": "live-birch-124-v5",
+  "files": {
+    "heldout-live-v5-observations.jsonl": {
+      "bytes": 2603,
+      "sha256": "d83b19f76803f5f0b72b1ce5fed40932b402fb1cdad2e3c666b2b3fb2489ba51"
+    },
+    "heldout-live-v5-readback.json": {
+      "bytes": 53094,
+      "sha256": "94dfcc7530a2fb1f5e1c9e013bd373eeed755acb9dce0d5016887e5f0f60cfe9"
+    },
+    "heldout-live-v5-receipt.json": {
+      "bytes": 1093,
+      "sha256": "1f84cb633af3840267dddda776b95c111e0a07f57891261a0b2eb7f3c5b6c8cb"
+    },
+    "heldout-live-v5-replay.jsonl": {
+      "bytes": 772,
+      "sha256": "387f10c85b91cffd1fbe6c1e2a3c5c30d22ed3d60d27c55d35f0cbdc48f754db"
+    },
+    "heldout-source.json": {
+      "bytes": 13349,
+      "sha256": "a933a58167902c34dfa36c150bb37d3836fdafe494901829f0fc026767e0de39"
+    },
+    "run-heldout-live.mjs": {
+      "bytes": 7387,
+      "sha256": "5f59b3cccb80871c1f613d0eabd4946d06d251faafbacc78ee1ccdb20181cabd"
+    }
+  },
+  "schema": "theseus.dreaming-worker.heldout-live-evidence.v5"
+}
