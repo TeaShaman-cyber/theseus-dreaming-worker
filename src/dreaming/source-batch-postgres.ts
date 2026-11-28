@@ -5,6 +5,7 @@ import { prepareSourceBatchExecution, prepareSourceBatchPlan, prepareSourceBatch
 import { readVerifiedCompletion, runDurablePilot2 } from './durable-pilot2.ts';
 import type { Pilot2Route } from './pilot2-runner.ts';
 import { runPooledDurablePilot2 } from './pooled-durable-pilot2.ts';
+import { preparePoolJournal } from './pool-attempt-journal.ts';
 import { createPostgresPoolJournalStore, createPostgresPooledCompletionStore, createPostgresWorkStore, type LedgerPgClient, type LedgerPgClientFactory } from './proposal-ledger-postgres.ts';
 
 type Intent = Pick<BatchInput, 'candidate' | 'expected' | 'task' | 'analysisVersion'>;
@@ -252,6 +253,77 @@ export function createPostgresSourceBatchStore(options: {
       if (!selected) throw Error('SOURCE_EXECUTION_SELECTION');
       const expected = plan.work.find(work => work.workFingerprint === selected.workFingerprint);
       if (!expected) throw Error('SOURCE_EXECUTION_WORK');
+      // A changed serving witness may reuse committed pooled work, but it
+      // must not adopt a partial journal or rewrite its original packet.
+      // Read the original context and completion without acquiring custody.
+      try {
+        const reused = await withClient(async client => {
+          // Cheap identity probe only; avoid loading full completion rows
+          // for new, partial or ordinary same-plan work.
+          const alternative = await client.query(
+            `SELECT 1 FROM dw_ledger.source_work_origins o
+             JOIN dw_ledger.work_completions c USING (work_fingerprint)
+             WHERE o.work_fingerprint=$1 AND o.chain_id=$2
+               AND (o.previous_checkpoint<>$3 OR o.plan_fingerprint<>$4)`,
+            [selected.workFingerprint,chain,plan.previousCheckpoint,plan.planFingerprint],
+          );
+          if (!alternative.rows.length) return null;
+          if (alternative.rows.length !== 1) throw Error('SOURCE_POOL_ORIGIN_MISMATCH');
+          // Committed rows are append-only. A single read-only snapshot
+          // binds the predecessor, both plans, journal and completion.
+          await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+          try {
+            const scopedOptions = {
+              connectionString: options.connectionString,
+              clientFactory: () => ({
+                connect: async () => undefined, end: async () => undefined,
+                query: <Row = Record<string, unknown>>(sql: string, values?: unknown[]) => client.query<Row>(sql, values),
+              }),
+            };
+            const completion = await readVerifiedCompletion(createPostgresWorkStore(scopedOptions), selected.workFingerprint);
+            if (!completion) throw Error('SOURCE_POOL_COMPLETION_REQUIRED');
+            const original = await readOrigin(client, chain, selected.workFingerprint);
+            if (original.pointer.previousCheckpoint === plan.previousCheckpoint
+              && original.pointer.planFingerprint === plan.planFingerprint) throw Error('SOURCE_POOL_ORIGIN_MISMATCH');
+            const parent = await readParent(client, chain, plan.previousCheckpoint);
+            if (!parent || await readChild(client, chain, plan.previousCheckpoint)
+              || !await readPlan(client, chain, parent, plan.planFingerprint)) {
+              throw Error('SOURCE_EXECUTION_PLAN_REQUIRED');
+            }
+            const originalInput = {
+              ...selected.input, request: {
+                ...selected.input.request, packet: {
+                  ...selected.input.request.packet, packetId: original.work.packetId,
+                },
+              },
+            };
+            const ctx = preparePoolJournal(originalInput);
+            if (ctx.workFingerprint !== original.work.workFingerprint
+              || ctx.requestFingerprint !== original.work.requestFingerprint
+              || ctx.evidenceFingerprint !== original.work.evidenceFingerprint
+              || completion.checkpoint.requestFingerprint !== original.work.requestFingerprint) {
+              throw Error('SOURCE_POOL_ORIGINAL_REQUEST_MISMATCH');
+            }
+            const observed = await createPostgresPoolJournalStore(scopedOptions).read(originalInput);
+            if (observed.status !== 'JOURNAL' || !observed.completionExists) throw Error('SOURCE_POOL_ORIGINAL_JOURNAL_REQUIRED');
+            // Reuse the existing exact journal/completion comparison, not a
+            // synthesized success status. This branch can never admit or write.
+            const deny = async () => { throw Error('SOURCE_POOL_REUSE_READ_ONLY'); };
+            const result = await runPooledDurablePilot2(originalInput, policy, {
+              read: async () => observed, admit: deny, append: deny,
+            }, { readCompletion: async () => completion, complete: deny });
+            await client.query('COMMIT');
+            return result;
+          } catch (error) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original failure */ }
+            throw error;
+          }
+        });
+        if (reused) return reused;
+      } catch {
+        return { decision: 'STORAGE_UNKNOWN' as const, workFingerprint: selected.workFingerprint,
+          attemptedPasses: 0, nextRotation: policy.rotation, completion: null, wakeAtMs: null };
+      }
       const clock = policy.clock;
       const journal = createPostgresPoolJournalStore(options, {
         cooldowns: {
