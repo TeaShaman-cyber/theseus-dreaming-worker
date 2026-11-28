@@ -1,0 +1,36 @@
+{
+  "schema": "theseus.dw-live-acceptance-evidence.v1",
+  "source_commit": "76f70cd8964c5ca8194e9e024a3cdeccc8e6616c",
+  "files": {
+    "observations.jsonl": {
+      "raw_sha256": "eece225fe6fe111ea9a367468612af7b511b0c7f642875b9e3fde9d627536617",
+      "retained_sha256": "e13ddbd6d3f39ae6dfabc21f926a654f48a0c07f7ce511f5b0d9e8930ac405dd",
+      "transform": "JSON reserialization; provider requestId omitted"
+    },
+    "continuation.jsonl": {
+      "raw_sha256": "ebd353b8e1b6b202b6f270ab40853cfbedba8b08603cb004e2be7e79ec4ba390",
+      "retained_sha256": "366fa5ce29f5d65f5dbb81ce0e9924861b2261d62b141ff76e3a65e7a76f2043",
+      "transform": "JSON reserialization; provider requestId omitted"
+    },
+    "critique.jsonl": {
+      "raw_sha256": "7191aa869281496d9b6ddfa280c3d2c5bcd07dc3a393af94844af29460655f5c",
+      "retained_sha256": "7191aa869281496d9b6ddfa280c3d2c5bcd07dc3a393af94844af29460655f5c",
+      "transform": "JSON reserialization; provider requestId omitted"
+    },
+    "executed-run.mjs.txt": {
+      "raw_sha256": "c6d006cbe5e4950a1239476afb60a3d966247a3707cf15eaa01aa83dac42032a",
+      "retained_sha256": "c6d006cbe5e4950a1239476afb60a3d966247a3707cf15eaa01aa83dac42032a",
+      "transform": "none"
+    },
+    "executed-continue.mjs.txt": {
+      "raw_sha256": "5379ff80603e80582e59918c995e1ccba99d9bc7e0abe9129606149a1d1fa590",
+      "retained_sha256": "5379ff80603e80582e59918c995e1ccba99d9bc7e0abe9129606149a1d1fa590",
+      "transform": "none"
+    },
+    "executed-critique.mjs.txt": {
+      "raw_sha256": "315d44eecaeec7d7fb212b76789da7da532ce508ae8fbd6c7b46cb58cc5ce409",
+      "retained_sha256": "315d44eecaeec7d7fb212b76789da7da532ce508ae8fbd6c7b46cb58cc5ce409",
+      "transform": "none"
+    }
+  }
+}
