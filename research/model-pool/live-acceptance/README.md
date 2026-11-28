@@ -54,3 +54,101 @@ Frozen semantic criteria for the future experiment: preserve the observed
 change 1 to 8; give an explicit rival explanation and a controlled falsifier
 (e.g. matched workloads at both concurrency levels under each scheduler);
 do not assert that a causal effect or deployment state was independently proved.
+
+### Reproducible offline Birch preflight
+
+Run `node research/model-pool/live-acceptance/preflight-heldout.mjs` from the
+repository using the pinned Node runtime. The script validates the frozen
+fixture SHA-256, then invokes the actual bounded source acquisition and work
+planning pipeline over the recorded synthetic pages. It prints only metadata
+and the derived work fingerprint. The predecessor is explicitly a preflight
+placeholder, not a stored checkpoint. It neither initializes storage nor
+dispatches inference. The normal QA suite includes the positive test and
+rejection of changed fixture bytes in `test/heldout-source-preflight.test.mjs`.
+A passing result is `PREFLIGHT_ONLY`, not live inference or deployment evidence.
+
+## Held-out Birch v3 precursor evidence (2026-11-28)
+
+The earlier host-blocked attempt above remains historical evidence only. A later
+versioned runner completed the same frozen synthetic Birch source-cycle through
+the real Dreaming Worker pooled source runner, Postgres store and provider
+adapter on an isolated Neon branch. The source transport still replays the
+recorded, independently verified synthetic page; this is not live Session Search
+network serving and does not authorize private history.
+
+One earlier live attempt left a process-loss-shaped partial journal after the
+third dispatch. Its outer termination receipt was not retained in repository
+evidence, so that attempt is deliberately excluded from this acceptance bundle
+and is not used to attribute a watchdog cause.
+
+The historical isolated run on `live-birch-124-v3` used exact runner commit
+`4c020d85bf5000666403169ddd4f64a8f77be40f` with a 300-second outer shell
+bound. Fresh model catalogs showed every admitted route at zero
+prompt/completion price. The source-cycle finished `ACKNOWLEDGED` after four
+physical model calls:
+
+| Route | HTTP / finish | Reported tokens | Worker disposition |
+| --- | --- | ---: | --- |
+| Step 3.7 Flash / Nous | 200 / length | 5571 | known `OUTPUT_BUDGET_EXHAUSTED` |
+| ERNIE 5.5 Flash / OpenRouter | 200 / stop | 5293 | validated |
+| HY4 Flash / Nous | 200 / length | 5550 | known `OUTPUT_BUDGET_EXHAUSTED` |
+| Solar Mini4 / Nous | 200 / stop | 3274 | validated |
+
+Every observed provider response reported cost `0`. The retained v3 Neon export
+confirms the work identity, journal, completion summary, nine proposal identities,
+and a final checkpoint fingerprint; exact replay recorded zero model calls. The
+export did **not** retain the full source-receipt body or complete ordered proposal
+rows, so v3 is precursor/semantic evidence, not the durable source-ack acceptance
+authority. Those missing fields are not reconstructed after the fact.
+
+The held-out semantic result is useful but remains derived evidence. ERNIE
+explicitly identifies the scheduler/parallelism confound, retains high
+uncertainty, and asks for matched-load controls. Solar also rejects causal
+attribution and requests controlled evidence, but its wording sometimes
+conflates the scheduler/planner change with the parallelism increase and one
+inference assumes stable provider limits despite the fixture saying they were
+not checked.
+
+A separate read-only critique consumed the two completed perspectives. Exact
+raw-capture runner commit
+`7ea5e6652c177f42d5177c5623a673d7abcac5f5` made two explicitly bounded
+Particle/OpenRouter calls over the identical critique input. The 4096-token
+control returned HTTP 200 with `finish=length`, 4088 prompt tokens and 4096
+completion tokens; its retained raw model text is truncated and the production
+critique parser rejects it as `CRITIQUE_JSON_INVALID`. The 8192-token call
+returned HTTP 200 with `finish=stop`, 4088 prompt tokens and 2993 completion
+tokens; replaying the production parser over the retained raw text reconstructs
+the retained `DERIVED_ONLY` critique exactly. Both calls reported cost `0`, used
+one model call each, and made no canonical or ledger writes.
+
+The successful critique records agreement on the observed before/after counts
+and causal uncertainty, plus disagreement between scheduler-alone and
+parallelism hypotheses. It requests matched-load comparisons, provider-limit
+logs, and request-size measurements rather than adjudicating a winner.
+
+`verify-heldout-live.mjs` is network-free and verifies the retained v3 subset:
+file hashes, canonical plan identity, storage journal ordinals and replay, the
+reconstructable completion fields, zero-call replay, and both raw critique parser
+controls. It deliberately does not promote the missing v3 source-receipt payload
+or omitted proposal columns into facts. Durable-state replay evidence is established
+by the v5 bundle below and `verify-heldout-live-v5.mjs`.
+
+### Held-out Birch live source-cycle and durable replay (v5)
+
+The reproducible live runner is run-heldout-live.mjs. It remains synthetic-source only, but it executes the actual bounded source-cycle, provider adapter, pooled journal, PostgreSQL completion store and source acknowledgement.
+
+Observed v5 on 2026-11-28 against an isolated Neon branch:
+
+- frozen fixture SHA256 a933a58167902c34dfa36c150bb37d3836fdafe494901829f0fc026767e0de39;
+- source fixture read exactly once;
+- current Nous catalog proved zero pricing for all three configured routes;
+- Solar Mini4: HTTP 200 / stop, 3308 total reported tokens, cost 0;
+- Step 3.7 Flash: HTTP 200 / stop, 6047 total reported tokens, cost 0;
+- pooled completion committed after exactly two physical model calls;
+- work fingerprint sha256:7efe2207871f3d1a84a04013ec0ea829f0e036dba876d67d4b9bf9c085ae0c75;
+- completion projection sha256:9d9ef9e310aa9757ca3d30779d36822c2fe82b83a8e65d328bb04fdb894d592a;
+- source receipt sha256:0fb3e1c0c5bdf17f2466ed9b52836c4c3549a076f58061dd15e1248a4f17fb14;
+- independent Neon readback found five journal events (ADMIT, Solar START, VALIDATED, Step START, VALIDATED), one completion with two observed records, and nine DERIVED_ONLY proposals spanning FACT, INFERENCE, HYPOTHESIS and UNKNOWN;
+- exact replay returned ALREADY_ACKNOWLEDGED, zero physical model calls and the same source receipt.
+
+The preceding v2-v4 attempts are retained in issue #124 as failure evidence: an unresolved HY4 attempt (fail-closed), an OpenRouter 429, and a bounded Nous/BotHub run where Solar succeeded but BotHub routes were rate-limited. They are not rewritten as successes. The v5 bundle retains the raw run/replay logs plus full Neon source receipts, plan, journal ordinals, completion, membership, proposal records and origins under a hash manifest. `verify-heldout-live-v5.mjs` reconstructs the canonical plan and pool completion, verifies every ordered durable proposal field and recomputes source receipt fingerprints. The live v5 run observed real model calls and durable acknowledgement on exe.dev + Neon. Offline verification establishes the durable journal-to-checkpoint composition, not raw-provider-text-to-parser equivalence: the original provider message contents were not retained. Do not synthesize raw responses from accepted proposals or rerun inference to claim historical equivalence. Full raw-response custody is a separate unverified acceptance dimension. No private-history ingestion or production release is authorized.

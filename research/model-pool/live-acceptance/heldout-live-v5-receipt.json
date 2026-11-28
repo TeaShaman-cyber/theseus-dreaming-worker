@@ -1,0 +1,19 @@
+{
+  "schema": "theseus.dreaming-worker.heldout-live-receipt.v1",
+  "observed_at": "2026-11-28T13:53:18Z",
+  "fixture_sha256": "a933a58167902c34dfa36c150bb37d3836fdafe494901829f0fc026767e0de39",
+  "analysis_version": "live-birch-124-v5",
+  "status": "ACKNOWLEDGED",
+  "physical_model_calls": 2,
+  "routes": [
+    {"id": "solar-nous", "model": "upstage/solar-mini4:free", "http": 200, "finish": "stop", "total_tokens": 3308, "reported_cost": 0},
+    {"id": "step-nous", "model": "stepfun/step-3.7-flash:free", "http": 200, "finish": "stop", "total_tokens": 6047, "reported_cost": 0}
+  ],
+  "work_fingerprint": "sha256:7efe2207871f3d1a84a04013ec0ea829f0e036dba876d67d4b9bf9c085ae0c75",
+  "projection_fingerprint": "sha256:9d9ef9e310aa9757ca3d30779d36822c2fe82b83a8e65d328bb04fdb894d592a",
+  "source_receipt_fingerprint": "sha256:0fb3e1c0c5bdf17f2466ed9b52836c4c3549a076f58061dd15e1248a4f17fb14",
+  "proposal_count": 9,
+  "proposal_types": ["FACT", "HYPOTHESIS", "INFERENCE", "UNKNOWN"],
+  "authority": ["DERIVED_ONLY"],
+  "replay": {"status": "ALREADY_ACKNOWLEDGED", "physical_model_calls": 0}
+}

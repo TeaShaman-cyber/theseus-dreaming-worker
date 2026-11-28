@@ -1,0 +1,4 @@
+{"kind":"catalog","at":"2026-11-28T13:53:11.862Z","route":"solar-nous","model":"upstage/solar-mini4:free","tariffEvidence":"catalog-zero-pricing"}
+{"kind":"catalog","at":"2026-11-28T13:53:12.187Z","route":"step-nous","model":"stepfun/step-3.7-flash:free","tariffEvidence":"catalog-zero-pricing"}
+{"kind":"catalog","at":"2026-11-28T13:53:12.502Z","route":"hy4-nous","model":"tencent/hy4-flash:free","tariffEvidence":"catalog-zero-pricing"}
+{"kind":"result","at":"2026-11-28T13:53:18.989Z","status":"ALREADY_ACKNOWLEDGED","attemptedPasses":0,"physicalCalls":0,"fixtureReads":1,"work":[],"receiptFingerprint":"sha256:0fb3e1c0c5bdf17f2466ed9b52836c4c3549a076f58061dd15e1248a4f17fb14","tipFingerprint":"sha256:0fb3e1c0c5bdf17f2466ed9b52836c4c3549a076f58061dd15e1248a4f17fb14"}
