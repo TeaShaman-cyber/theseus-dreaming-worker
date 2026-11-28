@@ -1,7 +1,7 @@
 {
-  "name": "pooled-refresh-verified-custody",
-  "createdAt": "2026-11-28T00:23:38.657Z",
-  "description": "Completed pooled reuse, linked intake and storage contract (#120)",
+  "name": "pooled-refresh-custody-contract",
+  "createdAt": "2026-11-28T00:32:52.047Z",
+  "description": "Completed pooled reuse with explicit linked verification tasks (#120)",
   "schema": {
     "name": "schema-std",
     "version": 1
@@ -110,7 +110,7 @@
           "key": "tasks",
           "filename": "tasks.md",
           "state": "complete",
-          "validatedHash": "sha256:ef87a6421af7976f8daa60c4d5bd589df448840bc8abc0738060ab9fa238475c"
+          "validatedHash": "sha256:c1e86421150508a2d2fb5960a44c103c3fd6ea8a9a1647c4ede5e67321fc9e0a"
         }
       ]
     }
@@ -118,7 +118,7 @@
   "history": [
     {
       "type": "created",
-      "at": "2026-11-28T00:23:38.657Z",
+      "at": "2026-11-28T00:32:52.047Z",
       "by": {
         "name": "Semyon Poklad",
         "email": "pokladsemen@gmail.com"
@@ -132,7 +132,7 @@
     },
     {
       "type": "artifacts-synced",
-      "at": "2026-11-28T00:23:38.693Z",
+      "at": "2026-11-28T00:32:52.088Z",
       "by": {
         "name": "specd",
         "email": "system@getspecd.dev"
@@ -179,7 +179,7 @@
     },
     {
       "type": "transitioned",
-      "at": "2026-11-28T00:23:39.220Z",
+      "at": "2026-11-28T00:32:52.735Z",
       "by": {
         "name": "Semyon Poklad",
         "email": "pokladsemen@gmail.com"
@@ -189,7 +189,7 @@
     },
     {
       "type": "transitioned",
-      "at": "2026-11-28T00:23:42.442Z",
+      "at": "2026-11-28T00:32:55.840Z",
       "by": {
         "name": "Semyon Poklad",
         "email": "pokladsemen@gmail.com"
@@ -199,7 +199,7 @@
     },
     {
       "type": "transitioned",
-      "at": "2026-11-28T00:23:43.194Z",
+      "at": "2026-11-28T00:32:56.286Z",
       "by": {
         "name": "Semyon Poklad",
         "email": "pokladsemen@gmail.com"
@@ -209,7 +209,7 @@
     },
     {
       "type": "transitioned",
-      "at": "2026-11-28T00:23:43.571Z",
+      "at": "2026-11-28T00:32:56.731Z",
       "by": {
         "name": "Semyon Poklad",
         "email": "pokladsemen@gmail.com"
@@ -219,7 +219,7 @@
     },
     {
       "type": "transitioned",
-      "at": "2026-11-28T00:23:44.029Z",
+      "at": "2026-11-28T00:32:57.201Z",
       "by": {
         "name": "Semyon Poklad",
         "email": "pokladsemen@gmail.com"
@@ -229,7 +229,7 @@
     },
     {
       "type": "transitioned",
-      "at": "2026-11-28T00:23:44.433Z",
+      "at": "2026-11-28T00:32:57.697Z",
       "by": {
         "name": "Semyon Poklad",
         "email": "pokladsemen@gmail.com"
@@ -239,7 +239,7 @@
     },
     {
       "type": "transitioned",
-      "at": "2026-11-28T00:23:44.768Z",
+      "at": "2026-11-28T00:32:58.143Z",
       "by": {
         "name": "Semyon Poklad",
         "email": "pokladsemen@gmail.com"
@@ -248,7 +248,7 @@
       "to": "archiving"
     }
   ],
-  "archivedAt": "2026-11-28T00:23:44.893Z",
+  "archivedAt": "2026-11-28T00:32:58.338Z",
   "archivedBy": {
     "name": "Semyon Poklad",
     "email": "pokladsemen@gmail.com"
