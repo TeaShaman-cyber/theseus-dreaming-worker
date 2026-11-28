@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
+import {decodeSourceHandoff} from '../../../src/dreaming/source-handoff.ts';
 import {prepareSourceBatchExecution,sourceReceiptFingerprint} from '../../../src/dreaming/source-batch-receipt.ts';
 import {preparePoolJournal,replayPoolJournal} from '../../../src/dreaming/pool-attempt-journal.ts';
 import {buildPoolCompletion} from '../../../src/dreaming/pool-completion.ts';
@@ -21,6 +22,9 @@ const observed=rows('heldout-live-v5-observations.jsonl');
 const replay=rows('heldout-live-v5-replay.jsonl');
 const readback=json('heldout-live-v5-readback.json');
 const summary=json('heldout-live-v5-receipt.json');
+verifyDurableV5({manifest,fixture,observed,replay,readback,summary});
+
+export function verifyDurableV5({manifest,fixture,observed,replay,readback,summary}){
 assert.equal(readback.schema,'theseus.dreaming-worker.heldout-live-readback.v5');
 assert.equal(readback.analysisVersion,manifest.analysisVersion);
 assert.equal(summary.analysis_version,manifest.analysisVersion);
@@ -52,9 +56,19 @@ for(const checkpoint of readback.checkpoints){
   const {receiptFingerprint,...payload}=checkpoint.receipt;
   assert.equal(sourceReceiptFingerprint(payload),receiptFingerprint);
 }
-assert.equal(final.previous,root.fingerprint);
 assert.equal(final.receipt.schema,'theseus.dreaming-worker.source-batch-receipt.v2');
 
+const handoff=decodeSourceHandoff(fixture.candidate,fixture.expected);
+const task='Held-out synthetic Birch hypothesis.', analysisVersion='live-birch-124-v5';
+assert.equal(manifest.analysisVersion,analysisVersion);
+const rootPayload={schema:'theseus.dreaming-worker.source-root.v1',
+  provider:handoff.provider,scope:handoff.scope,task,analysisVersion,
+  membership:handoff.previous_membership,previousCheckpoint:null};
+assert.deepEqual(root.receipt,{...rootPayload,receiptFingerprint:sourceReceiptFingerprint(rootPayload)},'CANONICAL_ROOT');
+assert.equal(final.previous,root.fingerprint);
+const chain=sourceReceiptFingerprint(['source-chain-v1',handoff.provider,handoff.scope,task,analysisVersion]);
+for(const row of [...readback.checkpoints,readback.plan,...readback.origins])
+  assert.equal(row.chainId,chain,'CANONICAL_CHAIN');
 const batch={candidate:fixture.candidate,expected:fixture.expected,entries:fixture.entries,maxSessions:1,
   previousCheckpoint:root.fingerprint,task:'Held-out synthetic Birch hypothesis.',analysisVersion:manifest.analysisVersion,
   bounds:{maxPages:4,maxChars:1000,maxMessages:10}};
@@ -66,7 +80,11 @@ assert.equal(readback.plan.planFingerprint,plan.planFingerprint);
 assert.deepEqual(readback.plan.plan,plan);
 
 assert.equal(readback.journal.length,5);
-readback.journal.forEach((row,i)=>assert.equal(row.ordinal,i));
+assert.ok(typeof readback.completion.ownerToken==='string'&&readback.completion.ownerToken.length>0,'CUSTODY');
+readback.journal.forEach((row,i)=>{
+  assert.equal(row.ordinal,i);
+  assert.equal(row.ownerToken,readback.completion.ownerToken,'CUSTODY');
+});
 const journalState=replayPoolJournal(preparePoolJournal(prepared[0].input),readback.journal.map(x=>x.entry));
 assert.equal(journalState.unresolved,false);
 assert.deepEqual(journalState.entries.map(x=>x.event.kind),['ADMIT','START','VALIDATED','START','VALIDATED']);
@@ -115,9 +133,21 @@ assert.equal(sourceReceipt.origins[0].workFingerprint,completion.checkpoint.work
 assert.equal(sourceReceipt.origins[0].previousCheckpoint,root.fingerprint);
 assert.equal(sourceReceipt.origins[0].planFingerprint,plan.planFingerprint);
 
+const receiptPayload={
+  schema:'theseus.dreaming-worker.source-batch-receipt.v2',
+  previousCheckpoint:root.fingerprint,task,analysisVersion,handoff,
+  work:[{workFingerprint:completion.checkpoint.workFingerprint,
+    completionFingerprint:completion.projectionFingerprint,
+    originalPacketId:plan.work[0].packetId,currentWitness:plan.work[0].witness}],
+  checkpointAdvanced:false,currentPlanFingerprint:plan.planFingerprint,
+  origins:[{workFingerprint:completion.checkpoint.workFingerprint,
+    previousCheckpoint:root.fingerprint,planFingerprint:plan.planFingerprint}],
+};
+assert.deepEqual(sourceReceipt,{...receiptPayload,receiptFingerprint:sourceReceiptFingerprint(receiptPayload)},'CANONICAL_RECEIPT');
 assert.equal(result.receiptFingerprint,sourceReceipt.receiptFingerprint);
 assert.equal(result.tipFingerprint,sourceReceipt.receiptFingerprint);
 assert.equal(replayResult.receiptFingerprint,sourceReceipt.receiptFingerprint);
+assert.equal(replayResult.tipFingerprint,sourceReceipt.receiptFingerprint,'REPLAY_TIP');
 assert.equal(summary.status,'ACKNOWLEDGED'); assert.equal(summary.physical_model_calls,2);
 assert.equal(summary.work_fingerprint,completion.checkpoint.workFingerprint);
 assert.equal(summary.projection_fingerprint,completion.projectionFingerprint);
@@ -127,4 +157,6 @@ assert.deepEqual(summary.proposal_types,[...new Set(completion.records.map(x=>x.
 assert.deepEqual(summary.authority,[...new Set(completion.records.map(x=>x.authority))].sort());
 assert.equal(summary.replay.status,'ALREADY_ACKNOWLEDGED'); assert.equal(summary.replay.physical_model_calls,0);
 
-console.log('HELDOUT_LIVE_V5_ACCEPTANCE_PASS calls=2 validated=2 proposals=9 source_receipt=reconstructed replay_calls=0');
+console.log('HELDOUT_LIVE_V5_DURABLE_REPLAY_PASS calls=2 validated=2 proposals=9 source_receipt=reconstructed replay_calls=0 raw_provider_text=NOT_RETAINED');
+
+}

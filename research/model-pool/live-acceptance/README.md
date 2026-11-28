@@ -130,10 +130,10 @@ logs, and request-size measurements rather than adjudicating a winner.
 file hashes, canonical plan identity, storage journal ordinals and replay, the
 reconstructable completion fields, zero-call replay, and both raw critique parser
 controls. It deliberately does not promote the missing v3 source-receipt payload
-or omitted proposal columns into facts. Full durable acceptance is established
+or omitted proposal columns into facts. Durable-state replay evidence is established
 by the v5 bundle below and `verify-heldout-live-v5.mjs`.
 
-### Held-out Birch live source-cycle acceptance (v5)
+### Held-out Birch live source-cycle and durable replay (v5)
 
 The reproducible live runner is run-heldout-live.mjs. It remains synthetic-source only, but it executes the actual bounded source-cycle, provider adapter, pooled journal, PostgreSQL completion store and source acknowledgement.
 
@@ -151,4 +151,4 @@ Observed v5 on 2026-11-28 against an isolated Neon branch:
 - independent Neon readback found five journal events (ADMIT, Solar START, VALIDATED, Step START, VALIDATED), one completion with two observed records, and nine DERIVED_ONLY proposals spanning FACT, INFERENCE, HYPOTHESIS and UNKNOWN;
 - exact replay returned ALREADY_ACKNOWLEDGED, zero physical model calls and the same source receipt.
 
-The preceding v2-v4 attempts are retained in issue #124 as failure evidence: an unresolved HY4 attempt (fail-closed), an OpenRouter 429, and a bounded Nous/BotHub run where Solar succeeded but BotHub routes were rate-limited. They are not rewritten as successes. The v5 bundle retains the raw run/replay logs plus full Neon source receipts, plan, journal ordinals, completion, membership, proposal records and origins under a hash manifest. `verify-heldout-live-v5.mjs` reconstructs the canonical plan and pool completion, verifies every ordered durable proposal field and recomputes source receipt fingerprints. The v5 result establishes the full synthetic-source/model/ledger/checkpoint composition on exe.dev + Neon; it does not authorize private-history ingestion or production release.
+The preceding v2-v4 attempts are retained in issue #124 as failure evidence: an unresolved HY4 attempt (fail-closed), an OpenRouter 429, and a bounded Nous/BotHub run where Solar succeeded but BotHub routes were rate-limited. They are not rewritten as successes. The v5 bundle retains the raw run/replay logs plus full Neon source receipts, plan, journal ordinals, completion, membership, proposal records and origins under a hash manifest. `verify-heldout-live-v5.mjs` reconstructs the canonical plan and pool completion, verifies every ordered durable proposal field and recomputes source receipt fingerprints. The live v5 run observed real model calls and durable acknowledgement on exe.dev + Neon. Offline verification establishes the durable journal-to-checkpoint composition, not raw-provider-text-to-parser equivalence: the original provider message contents were not retained. Do not synthesize raw responses from accepted proposals or rerun inference to claim historical equivalence. Full raw-response custody is a separate unverified acceptance dimension. No private-history ingestion or production release is authorized.
