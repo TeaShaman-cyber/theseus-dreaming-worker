@@ -140,3 +140,23 @@ This acceptance proves the bounded synthetic source -> real models -> durable
 Postgres completion -> source acknowledgement -> zero-call replay composition.
 It does not prove live Session Search transport, production deployment, or
 semantic truth.
+
+### Held-out Birch live source-cycle acceptance (v5)
+
+The reproducible live runner is run-heldout-live.mjs. It remains synthetic-source only, but it executes the actual bounded source-cycle, provider adapter, pooled journal, PostgreSQL completion store and source acknowledgement.
+
+Observed v5 on 2026-11-28 against an isolated Neon branch:
+
+- frozen fixture SHA256 a933a58167902c34dfa36c150bb37d3836fdafe494901829f0fc026767e0de39;
+- source fixture read exactly once;
+- current Nous catalog proved zero pricing for all three configured routes;
+- Solar Mini4: HTTP 200 / stop, 3308 total reported tokens, cost 0;
+- Step 3.7 Flash: HTTP 200 / stop, 6047 total reported tokens, cost 0;
+- pooled completion committed after exactly two physical model calls;
+- work fingerprint sha256:7efe2207871f3d1a84a04013ec0ea829f0e036dba876d67d4b9bf9c085ae0c75;
+- completion projection sha256:9d9ef9e310aa9757ca3d30779d36822c2fe82b83a8e65d328bb04fdb894d592a;
+- source receipt sha256:0fb3e1c0c5bdf17f2466ed9b52836c4c3549a076f58061dd15e1248a4f17fb14;
+- independent Neon readback found five journal events (ADMIT, Solar START, VALIDATED, Step START, VALIDATED), one completion with two observed records, and nine DERIVED_ONLY proposals spanning FACT, INFERENCE, HYPOTHESIS and UNKNOWN;
+- exact replay returned ALREADY_ACKNOWLEDGED, zero physical model calls and the same source receipt.
+
+The preceding v2-v4 attempts are retained in issue #124 as failure evidence: an unresolved HY4 attempt (fail-closed), an OpenRouter 429, and a bounded Nous/BotHub run where Solar succeeded but BotHub routes were rate-limited. They are not rewritten as successes. The v5 result establishes the full synthetic-source/model/ledger/checkpoint composition on exe.dev + Neon; it does not authorize private-history ingestion or production release.
