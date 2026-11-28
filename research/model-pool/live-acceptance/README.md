@@ -152,3 +152,36 @@ Observed v5 on 2026-11-28 against an isolated Neon branch:
 - exact replay returned ALREADY_ACKNOWLEDGED, zero physical model calls and the same source receipt.
 
 The preceding v2-v4 attempts are retained in issue #124 as failure evidence: an unresolved HY4 attempt (fail-closed), an OpenRouter 429, and a bounded Nous/BotHub run where Solar succeeded but BotHub routes were rate-limited. They are not rewritten as successes. The v5 bundle retains the raw run/replay logs plus full Neon source receipts, plan, journal ordinals, completion, membership, proposal records and origins under a hash manifest. `verify-heldout-live-v5.mjs` reconstructs the canonical plan and pool completion, verifies every ordered durable proposal field and recomputes source receipt fingerprints. The live v5 run observed real model calls and durable acknowledgement on exe.dev + Neon. Offline verification establishes the durable journal-to-checkpoint composition, not raw-provider-text-to-parser equivalence: the original provider message contents were not retained. Do not synthesize raw responses from accepted proposals or rerun inference to claim historical equivalence. Full raw-response custody is a separate unverified acceptance dimension. No private-history ingestion or production release is authorized.
+
+### Birch v6 raw-final custody witness (2026-11-28)
+
+This is a new bounded experiment, not a reconstruction of v5. The QA-only
+capture wrapper writes the exact adapter-returned final message text,
+its SHA-256 and request/evidence identities before the proposal parser
+can consume it. The synthetic-only Node runner writes and fsyncs its
+evidence log, refuses an existing output path and requires a loopback
+disposable database named dreaming_worker_contract. No production binding,
+private input or new credential is used.
+
+On accepted base 62b5fe07, with disposable PostgreSQL 17 and fresh zero-price
+Nous catalog, Solar returned HTTP200/stop, 2706 tokens, reported cost 0.
+Step returned HTTP200/length, 9667 total tokens (8192 output), reported cost 0.
+The two-call budget ended with BUDGET_EXHAUSTED. Independent SQL exported
+the staged plan, root, origin and five journal rows, with one validated
+perspective (three proposals), one known OUTPUT_BUDGET_EXHAUSTED failure,
+no completion, no committed proposal rows and no checkpoint advance.
+The disposable database is gone. No restart/replay of v6 inference occurred.
+
+Run the network-free verifier:
+
+    node research/model-pool/live-acceptance/verify-heldout-raw.mjs
+
+The hash manifest binds the actual retained observation and SQL readback
+to the executed QA scripts and frozen fixture. The verifier rebuilds the
+root, plan and journal, then passes the exact retained Solar final text
+through the production Pilot1 parser and checks its proposal set and receipt
+against the validated event. This proves raw-final-to-journal equivalence
+for one real successful perspective, not full two-perspective raw custody,
+nor capture of rejected/truncated wire response bodies. The helper is a
+synthetic acceptance tool, not a new operational retention or logging policy.
+The v5 historical proof remains unchanged.
