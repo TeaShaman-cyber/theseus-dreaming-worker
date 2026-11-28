@@ -3,6 +3,19 @@ import { createPostgresSourceBatchStore } from '../../src/dreaming/source-batch-
 import { runPooledSourceCycle } from '../../src/dreaming/source-cycle.ts';
 import fixture from '../../test/fixtures/source-reader.json' with { type: 'json' };
 const limits={maxRequests:20,maxPageBytes:8000,maxTotalBytes:100000,timeoutMs:1000,pageMessages:2,pageChars:3};
+export function fixturePage(request){
+    const entry=fixture.entries.find(e=>e.session_id===request.session_id);
+    if(!entry||request.generation_id!==entry.index.generation_id||request.shard_id!==entry.index.shard_id)throw Error('FIXTURE_MISMATCH');
+    let i=0;
+    if(request.cursor!==undefined){
+      if(typeof request.cursor!=='string'||!request.cursor)throw Error('FIXTURE_CURSOR');
+      const prior=entry.pages.findIndex(p=>p.next_cursor===request.cursor);
+      if(prior<0)throw Error('FIXTURE_CURSOR');
+      i=prior+1;
+    }
+    if(i<0||i>=entry.pages.length)throw Error('FIXTURE_CURSOR');
+    return entry.pages[i];
+}
 export default {async fetch(req,env){
   if(req.method!=='POST'||typeof env.CANARY_KEY!=='string'||env.CANARY_KEY.length<32||req.headers.get('x-canary-key')!==env.CANARY_KEY||!/^hyperdrive-synthetic-[0-9a-f]{32}$/.test(env.CANARY_ID??''))return new Response(null,{status:404});
   const mode=new URL(req.url).pathname;
@@ -28,11 +41,8 @@ export default {async fetch(req,env){
     return {provider:'canary-provider-'+id,model:'canary-model-'+id,finishReason:'stop',text:JSON.stringify({schema:'theseus.dreaming-worker.proposals.v1',proposals:[{type:'HYPOTHESIS',claim:'Synthetic Hyperdrive hypothesis '+id,why_plausible:'Synthetic evidence.',falsifier:'A conflicting synthetic observation.',required_evidence:['Independent observation.'],competing_explanations:['Synthetic alternative.'],uncertainty:'LOW',source_refs:request.packet.evidence.map(e=>({source_ref:e.sourceRef,evidence_hash:e.evidenceHash}))}]})};
   }}));
   const result=await runPooledSourceCycle(input,{limits,store,policy:{routes,taskClass:'analysis',maxAttempts:4,maxInvocations:mode==='/replay'?0:2,rotation:0,cooldowns:[],clock:()=>100},transport:async request=>{
-    const entry=fixture.entries.find(e=>e.session_id===request.session_id);
-    if(!entry||request.generation_id!==entry.index.generation_id||request.shard_id!==entry.index.shard_id)throw Error('FIXTURE_MISMATCH');
-    const i=request.cursor?entry.pages.findIndex(p=>p.next_cursor===request.cursor)+1:0;
-    if(i<0||i>=entry.pages.length)throw Error('FIXTURE_CURSOR');
-    pages++;return Response.json(entry.pages[i]);
+    const page=fixturePage(request);
+    pages++;return Response.json(page);
   }});
   const tip=await store.readTip(input);
   return Response.json({status:result.status,attemptedPasses:result.attemptedPasses,calls,pages,root:root.receipt.receiptFingerprint,tip:tip?.receiptFingerprint,receipt:result.run?.receipt?.receiptFingerprint??null,work:result.run?.work??[],canaryId:env.CANARY_ID});
