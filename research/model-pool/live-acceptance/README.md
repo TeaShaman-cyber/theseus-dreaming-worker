@@ -33,3 +33,24 @@ No production model ranking or semantic acceptance follows. Mechanical acceptanc
 The three executed scripts are retained as exact .mjs.txt evidence (runtime-local paths, no API keys), not automatic launchers. Logs are JSON-reserialized with provider request IDs omitted; manifest preserves original and retained digests. Actual run commands used isolated loopback PostgreSQL with the accepted migration and runtime role. A new live run requires explicit bounded admission and fresh catalog/entitlement evidence. This test used the actual pooled worker; a live external-model end-to-end Cloudflare/source transport composition remains unverified.
 
 Issue #124 records the actual provider and database witnesses.
+
+## Prepared held-out source-cycle test
+
+`generate-live-source.py` uses the pinned actual Session Search producer
+3b7b5360050cc2ecdcb60f485a657f2b763751e4 to generate the synthetic Birch
+conversation, verify source bundles and create a handoff containing one selected
+session. The saved fixture SHA256 is
+a933a58167902c34dfa36c150bb37d3836fdafe494901829f0fc026767e0de39.
+Catalog readback is simulated; no live source completeness claim.
+
+Offline Dreaming Worker admission passed with one work. The planned real-model
+source cycle against dedicated Neon was blocked by the host before runner
+creation; independent Neon readback found zero checkpoints under
+live-birch-124-v1. This is a prepared fixture, not a second measured semantic
+sample, and no alternate route was attempted to bypass the host refusal.
+
+Frozen semantic criteria for the future experiment: preserve the observed
+2/40 to 11/40 change; distinguish the scheduler from simultaneous concurrency
+change 1 to 8; give an explicit rival explanation and a controlled falsifier
+(e.g. matched workloads at both concurrency levels under each scheduler);
+do not assert that a causal effect or deployment state was independently proved.
