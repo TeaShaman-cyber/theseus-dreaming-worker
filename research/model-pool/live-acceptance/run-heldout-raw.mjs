@@ -1,0 +1,154 @@
+// New raw-custody experiment, not a reconstruction of v5.
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {appendFileSync,readFileSync,writeFileSync,openSync,fsyncSync,closeSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+import {runPooledSourceCycle} from '../../../src/dreaming/source-cycle.ts';
+import {createPostgresSourceBatchStore} from '../../../src/dreaming/source-batch-postgres.ts';
+import {createOpenAIChatInference} from '../../../src/dreaming/openai-provider-adapter.ts';
+
+import {captureInference} from './raw-custody.mjs';
+const FIXTURE_SHA='a933a58167902c34dfa36c150bb37d3836fdafe494901829f0fc026767e0de39';
+const TASK='Held-out synthetic Birch hypothesis.';
+const ANALYSIS_VERSION='live-birch-124-v6-raw';
+const ROUTES=[
+  ['solar-nous','nous','upstage/solar-mini4:free','solar4','https://nous.int.exe.xyz/v1',8192],
+  ['step-nous','nous','stepfun/step-3.7-flash:free','step3','https://nous.int.exe.xyz/v1',8192],
+].map(([id,provider,model,modelFamily,baseURL,maxOutputTokens])=>({id,provider,model,modelFamily,baseURL,maxOutputTokens}));
+
+export function buildHeldoutLiveConfig(nowMs=Date.now()){
+  return {
+    task:TASK,
+    analysisVersion:ANALYSIS_VERSION,
+    policy:{
+      routes:ROUTES.map(({baseURL,maxOutputTokens,...r})=>({...r,admission:'FREE_RESEARCH',qualifiedTasks:['analysis'],catalog:'PRESENT',catalogValidUntilMs:nowMs+300000})),
+      taskClass:'analysis',maxAttempts:2,maxInvocations:2,rotation:0,cooldowns:[],
+    },
+  };
+}
+
+function compactEvidence(e){
+  return {
+    configuredProvider:e.configuredProvider,configuredModel:e.configuredModel,
+    observedProvider:e.observedProvider??null,observedModel:e.observedModel??null,
+    status:e.status??null,providerState:e.providerState,usageState:e.usageState,
+    usage:e.usage??null,outcome:e.outcome,usableArtifact:e.usableArtifact,
+    failureCode:e.failureCode??null,retryAfterMs:e.retryAfterMs??null,latencyMs:e.latencyMs,
+  };
+}
+
+export async function runHeldoutLive(connectionString,logFile){
+  assert.ok(connectionString);
+  const target=new URL(connectionString);
+  assert.equal(target.hostname,'127.0.0.1');
+  assert.equal(target.pathname,'/dreaming_worker_contract');
+  assert.ok(logFile,'explicit new log path required');
+  const fixtureBytes=readFileSync(new URL('heldout-source.json',import.meta.url));
+  assert.equal(createHash('sha256').update(fixtureBytes).digest('hex'),FIXTURE_SHA);
+  const fixture=JSON.parse(fixtureBytes);
+  assert.equal(fixture.candidate.scope,'synthetic:chatgpt');
+  assert.equal(fixture.serving,'verified_bundle_rows_simulated_pages');
+  assert.equal(fixture.entries.length,1);
+
+  writeFileSync(logFile,'',{flag:'wx',mode:0o600});
+  const record=(kind,payload)=>{
+    const row={kind,at:new Date().toISOString(),...payload};
+    const fd=openSync(logFile,'a');
+    try{appendFileSync(fd,JSON.stringify(row)+'\n');fsyncSync(fd);}finally{closeSync(fd);}
+    if(kind!=='raw-final')console.log(JSON.stringify(row));
+  };
+
+  for(const route of ROUTES){
+    const response=await fetch(route.baseURL+'/models',{signal:AbortSignal.timeout(10000)});
+    assert.ok(response.ok);
+    const item=(await response.json()).data.find(m=>m.id===route.model);
+    assert.ok(item,'missing catalog item '+route.id);
+    assert.ok(item.pricing&&Object.keys(item.pricing).length>0);
+    assert.ok(['prompt','completion'].every(k=>item.pricing[k]===0||item.pricing[k]==='0'));
+    assert.ok(Object.values(item.pricing).every(v=>v===0||v==='0'));
+    record('catalog',{route:route.id,model:route.model,tariffEvidence:'catalog-zero-pricing'});
+  }
+
+  const configured=buildHeldoutLiveConfig(Date.now());
+  const allowed=new Map(ROUTES.map(r=>[r.model,r]));
+  let physicalCalls=0;
+  const nativeFetch=globalThis.fetch;
+  globalThis.fetch=async(url,opts={})=>{
+    if(!String(url).endsWith('/chat/completions')) return nativeFetch(url,opts);
+    const body=JSON.parse(String(opts.body));
+    const route=allowed.get(body.model);
+    assert.ok(route&&String(url)===route.baseURL+'/chat/completions');
+    assert.equal(body.max_tokens,route.maxOutputTokens);
+    physicalCalls++;
+    assert.ok(physicalCalls<=2);
+    const request=route.provider==='nous'
+      ?{...opts,body:JSON.stringify({...body,tags:['user=theseus-review']})}:opts;
+    record('attempt',{n:physicalCalls,route:route.id,model:route.model});
+    const response=await nativeFetch(url,request);
+    const raw=await response.clone().json().catch(()=>({}));
+    const cost=raw.usage?.cost??raw.cost??null;
+    record('transport',{route:route.id,status:response.status,model:raw.model??null,provider:raw.provider??null,
+      finish:raw.choices?.[0]?.finish_reason??null,cost,
+      usage:raw.usage?{prompt_tokens:raw.usage.prompt_tokens??null,completion_tokens:raw.usage.completion_tokens??null,total_tokens:raw.usage.total_tokens??null}:null});
+    if(cost!==null&&Number(cost)!==0) throw Error('NONZERO_COST');
+    return response;
+  };
+
+  try{
+    const routes=ROUTES.map(route=>({
+      id:route.id,provider:route.provider,model:route.model,modelFamily:route.modelFamily,
+      admission:'FREE_RESEARCH',qualifiedTasks:['analysis'],catalog:'PRESENT',
+      catalogValidUntilMs:Date.now()+300000,
+      infer:captureInference(route.id,createOpenAIChatInference({
+        baseURL:route.baseURL,configuredProvider:route.provider,configuredModel:route.model,
+        configuredModelFamily:route.modelFamily,maxOutputTokens:route.maxOutputTokens,timeoutMs:60000,
+        responseFormat:'json_object',onEvidence:e=>record('adapter',{route:route.id,...compactEvidence(e)}),
+      }),row=>record('raw-final',row)),
+    }));
+
+    const store=createPostgresSourceBatchStore({connectionString});
+    const root=await store.initialize({candidate:fixture.candidate,expected:fixture.expected,task:TASK,analysisVersion:ANALYSIS_VERSION});
+    assert.ok(root.status==='ACKNOWLEDGED'||root.status==='ALREADY_ACKNOWLEDGED');
+    assert.ok(root.receipt);
+
+    const entry=fixture.entries[0];
+    const input={
+      candidate:fixture.candidate,expected:fixture.expected,
+      indexes:[{sessionId:entry.sessionId,index:entry.index}],
+      previousCheckpoint:root.receipt.receiptFingerprint,
+      task:TASK,analysisVersion:ANALYSIS_VERSION,maxSessions:1,
+      bounds:{maxPages:4,maxChars:1000,maxMessages:10},
+    };
+
+    let fixtureReads=0;
+    const transport=async request=>{
+      fixtureReads++;
+      assert.equal(fixtureReads,1);
+      assert.equal(request.session_id,entry.sessionId);
+      assert.equal(request.shard_id,entry.index.shard_id);
+      assert.equal(request.generation_id,entry.index.generation_id);
+      assert.equal(request.cursor,undefined);
+      return Response.json(entry.pages[0]);
+    };
+
+    const result=await runPooledSourceCycle(input,{
+      limits:{maxRequests:4,maxPageBytes:12000,maxTotalBytes:24000,timeoutMs:1000,pageMessages:10,pageChars:1000},
+      transport,store,policy:{...configured.policy,routes,clock:Date.now},
+    });
+    const tip=await store.readTip(input);
+    record('result',{
+      status:result.status,attemptedPasses:result.attemptedPasses,physicalCalls,fixtureReads,
+      work:result.run?.work?.map(w=>({workFingerprint:w.workFingerprint,decision:w.decision,attemptedPasses:w.attemptedPasses,wakeAtMs:w.wakeAtMs}))??[],
+      receiptFingerprint:result.run?.receipt?.receiptFingerprint??null,
+      tipFingerprint:tip?.receiptFingerprint??null,
+    });
+    return {result,tip,physicalCalls,fixtureReads};
+  } finally {
+    globalThis.fetch=nativeFetch;
+  }
+}
+
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
+  const out=await runHeldoutLive(process.env.LEDGER_DATABASE_URL,process.argv[2]);
+  if(out.result.status!=='ACKNOWLEDGED'&&out.result.status!=='ALREADY_ACKNOWLEDGED') process.exitCode=2;
+}

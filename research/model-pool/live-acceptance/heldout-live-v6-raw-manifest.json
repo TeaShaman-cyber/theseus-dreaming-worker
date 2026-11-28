@@ -1,0 +1,28 @@
+{
+  "analysisVersion": "live-birch-124-v6-raw",
+  "executionBase": "62b5fe07fc8193c782be635ae26dc5a3a16dd30a",
+  "files": {
+    "heldout-live-v6-raw-observations.jsonl": {
+      "bytes": 7236,
+      "sha256": "4e8392a7933317aaa0afe39ffdf18edabafafc720d40a58229ee696d5768bb26"
+    },
+    "heldout-live-v6-raw-readback.json": {
+      "bytes": 18494,
+      "sha256": "417b19d5a4207f4eaa5a95a47144f29386a4464045acf546d2c81ed6453ac2dd"
+    },
+    "heldout-source.json": {
+      "bytes": 13349,
+      "sha256": "a933a58167902c34dfa36c150bb37d3836fdafe494901829f0fc026767e0de39"
+    },
+    "raw-custody.mjs": {
+      "bytes": 2247,
+      "sha256": "95dbb97ae3b75a5674b48b2b9c1e9d416a8ebb5e3e24194cb1b0a76640d2a9e2"
+    },
+    "run-heldout-raw.mjs": {
+      "bytes": 7792,
+      "sha256": "2a20a11565089d52fd1b5a6cd387345460d23e2614cbafbf14e545676a613c98"
+    }
+  },
+  "schema": "theseus.dw-heldout-raw-custody.v1",
+  "status": "PARTIAL_RAW_TO_JOURNAL"
+}
