@@ -1,0 +1,12 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Explicit pooled synthetic source cycle$'
+  content: |
+    ### Requirement: Read-only synthetic cycle inspection
+
+    An explicit diagnostic MAY observe an existing synthetic batch using its exact supplied witness, verified source tip, staged plan and per-work journal and completion readers. It MUST reject non-synthetic scope before storage access, distinguish missing state, unresolved attempts and failed or inconsistent readback, and omit evidence bodies, proposal bodies and owner tokens. Independent reads MUST NOT be represented as an atomic snapshot, source completeness, authorization to resume, or proof of source custody merely from matching work identity. The diagnostic MUST NOT initialize, stage, reserve, acknowledge, invoke inference or retry work.

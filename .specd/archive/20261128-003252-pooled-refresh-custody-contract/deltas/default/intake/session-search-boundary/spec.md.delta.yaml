@@ -1,0 +1,12 @@
+- op: added
+  position:
+    parent:
+      type: section
+      matches: '^Requirements$'
+    after:
+      type: section
+      matches: '^Requirement: Pooled batch orchestration preserves source boundary$'
+  content: |
+    ### Requirement: Completed pooled work reuse across source witnesses
+
+    A staged equivalent synthetic source witness MAY reuse already committed work only after verified original source-plan linkage and readback of the original completion. For pooled work, the original journal MUST replay against the original packet and request identity reconstructed from the current verified equivalent evidence and reproduce the committed completion. Reuse MUST consume zero inference and retain the original origin. Incomplete, unknown, inconsistent or unbound work MUST NOT be adopted from another plan. Current plan and predecessor validation remain mandatory.

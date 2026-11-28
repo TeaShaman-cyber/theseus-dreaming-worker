@@ -59,6 +59,12 @@
       ]
     },
     {
+      "requirement": "Explicit synthetic custody-only acknowledgement",
+      "rules": [
+        "A trusted synthetic caller MAY explicitly acknowledge an independently verified rederived handoff with changed append-only accepted membership, exact observed catalog, zero selected and zero removed sessions, and exact existing predecessor membership and analysis intent. A dedicated no-work receipt MUST preserve the handoff and reason, and use existing append-only transaction and exact readback. Any staged plan under that predecessor blocks this path; no pending work is discarded. Ordinary empty cycle, unavailable data, unchanged membership, unresolved removal and non-synthetic scope MUST NOT initiate this acknowledgement. No inference, work completion, source completeness or new access authority follows."
+      ]
+    },
+    {
       "requirement": "Pending source plan custody",
       "rules": [
         "The synthetic source store MUST support explicitly staging an immutable plan derived from the exact verified selected work under the existing predecessor and analysis intent. A plan MUST retain the complete handoff, original packet and request identities, work identities and source witnesses, but no evidence bodies. Staging MUST NOT advance the acknowledged source checkpoint or invoke inference.\n\nThe plan MUST be bound to the existing source chain and predecessor, use the existing ledger transaction lock, and be independently read back. Exact repeats MUST be idempotent. Distinct rederived witnesses MAY coexist for the same predecessor while it remains the tip; an acknowledged predecessor MUST NOT admit new plans. Restart lookup MUST validate stored digest and binding and MUST distinguish unavailable/corrupt storage from no plans. A plan alone is not permission to execute or replay stale evidence."
@@ -74,6 +80,12 @@
       "requirement": "Same-plan pooled source admission",
       "rules": [
         "Explicit synthetic pooled selected work MUST derive its exact input from the verified staged plan. New reservation, initial journal entry and immutable source origin MUST commit atomically under the existing ledger lock. Existing work MUST have the same exact original plan and work identity; unbound or differently bound work MUST NOT be adopted. Journal mutations MUST require the exact staged plan and unadvanced predecessor. Readback MUST verify original plan custody; exact completed replay MUST use zero inference. The pooled executor MUST NOT advance source progress. Existing acknowledgement MUST verify all selected completions and original origins. Cross-plan partial recovery and cross-work cooldown persistence remain outside this increment."
+      ]
+    },
+    {
+      "requirement": "Read-only completed pooled reuse",
+      "rules": [
+        "The same-plan admission rule forbids adoption or mutation of a differently bound reservation or journal. It does not forbid read-only reuse of an already committed completion from another verified source witness. Such reuse MUST verify the exact current staged plan and original source origin, replay the original journal against reconstructed original request identity and compare the exact committed completion. It MUST NOT create an origin, mutate the journal, dispatch inference, adopt unfinished custody, or advance source progress."
       ]
     },
     {
@@ -373,6 +385,20 @@
       ]
     },
     {
+      "requirement": "Explicit synthetic custody-only acknowledgement",
+      "name": "Verified recapture without semantic changes",
+      "given": [
+        "a rederived synthetic handoff with new accepted artifacts but no changed or removed sessions and exact trusted catalog"
+      ],
+      "when": [
+        "explicitly acknowledged under its existing predecessor"
+      ],
+      "then": [
+        "membership advances with a distinct no-work receipt and zero inference",
+        "AND replay is idempotent, a competing child conflicts, pending staged plans and invalid handoffs block advancement"
+      ]
+    },
+    {
       "requirement": "Pending source plan custody",
       "name": "Recovered pending witness",
       "given": [
@@ -449,6 +475,20 @@
       ]
     },
     {
+      "requirement": "Read-only completed pooled reuse",
+      "name": "Alternative completed witness",
+      "given": [
+        "committed pooled work and a staged equivalent alternative witness"
+      ],
+      "when": [
+        "the original plan, request and journal are independently verified"
+      ],
+      "then": [
+        "the exact completion is reused without inference or custody mutation",
+        "AND unstaged, unbound, incomplete or corrupt alternative custody remains blocked"
+      ]
+    },
+    {
       "requirement": "Same-plan finite provider cooldown",
       "name": "Known wait across selected work",
       "given": [
@@ -520,8 +560,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:b3e02b3b3b67629bf02f4efece09f704e54eaa4e38a332f0ad6dab1155b143e2",
-    "verify.md": "sha256:c5d694f529435e5c408ca4846e2142cd05e6f1e4a55e6e70ceb9f5034a413aa0"
+    "spec.md": "sha256:73664a3829d858ef21717ddcb1b85a38f79172832a8721333607cffca92d448c",
+    "verify.md": "sha256:9d76b879a4ca2784ce4f219b5f96cbd3bbbdc3750eda37b3e3a5372929d6e1a8"
   },
   "generatedBy": "core"
 }

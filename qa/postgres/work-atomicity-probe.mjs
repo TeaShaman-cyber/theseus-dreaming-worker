@@ -824,7 +824,34 @@ try {
     assert.equal(filled.attemptedPasses,1);
     assert.deepEqual(pooledCalls,['a','b','c']);
     assert.deepEqual((await journal.read(firstWork.input)).state.validated[0],frozenPool);
+    // Completed alternative witness may read the original custody; it cannot
+    // transfer a partial journal or accept an unstaged current plan.
+    const unregisteredWitness=structuredClone(otherWitness);
+    unregisteredWitness.entries[0].index.sessions[0].messages[0].sources.at(-1).member_name='synthetic-unstaged-witness';
+    const deniedReuse=await restartPool.runSelectedPooled(unregisteredWitness,firstSession,policy);
+    assert.equal(deniedReuse.decision,'STORAGE_UNKNOWN');
+    assert.equal(deniedReuse.attemptedPasses,0);
+    const alternateReuse=await restartPool.runSelectedPooled(otherWitness,firstSession,{...policy,maxInvocations:0});
+    assert.equal(alternateReuse.decision,'ALREADY_PROCESSED');
+    assert.equal(alternateReuse.attemptedPasses,0);
+    assert.deepEqual(alternateReuse.completion,filled.completion);
+    const corruptJournalRead=createPostgresSourceBatchStore({connectionString,clientFactory:url=>{
+      const c=new Client({connectionString:url});
+      return {connect:()=>c.connect(),end:()=>c.end(),async query(sql,params){
+        const result=await c.query(sql,params);
+        if(sql.includes('SELECT r.owner_token, j.ordinal, j.entry')&&result.rows[0]?.entry){
+          result.rows[0].entry.entryFingerprint='sha256:'+'0'.repeat(64);
+        }
+        return result;
+      }};
+    }});
+    const corruptReuse=await corruptJournalRead.runSelectedPooled(otherWitness,firstSession,policy);
+    assert.equal(corruptReuse.decision,'STORAGE_UNKNOWN');
+    assert.equal(corruptReuse.attemptedPasses,0);
+    assert.deepEqual(pooledCalls,['a','b','c']);
+    assert.deepEqual(await restartPool.readTip(pooledInput),pooledRoot.receipt);
     assert.equal((await restartPool.acknowledge(pooledInput)).status,'PENDING');
+    console.log('SOURCE_POOLED_ALTERNATE_COMPLETION_PASS completed_reused=true unstaged_blocked=true corrupt_journal_blocked=true partial_takeover_blocked=true calls=0');
     const waitingSecond=await restartPool.runSelectedPooled(pooledInput,secondSession,{...policy,routes:[pooledRoute('a'),pooledRoute('b')]});
     assert.equal(waitingSecond.decision,'DEFERRED');
     assert.equal(waitingSecond.wakeAtMs,5100);
@@ -844,6 +871,21 @@ try {
     assert.equal(replayPool.decision,'ALREADY_PROCESSED');
     assert.equal(replayPool.attemptedPasses,0);
     assert.deepEqual(replayPool.completion,filled.completion);
+    const staleAlternative=await restartPool.runSelectedPooled(otherWitness,firstSession,{...policy,maxInvocations:0});
+    assert.equal(staleAlternative.decision,'STORAGE_UNKNOWN');
+    assert.equal(staleAlternative.attemptedPasses,0);
+    let fullCompletionReads=0;
+    const countedReplay=createPostgresSourceBatchStore({connectionString,clientFactory:url=>{
+      const c=new Client({connectionString:url});
+      return {connect:()=>c.connect(),end:()=>c.end(),async query(sql,params){
+        if(sql.includes('LEFT JOIN dw_ledger.work_membership m'))fullCompletionReads++;
+        return c.query(sql,params);
+      }};
+    }});
+    const samePlan=await countedReplay.runSelectedPooled(pooledInput,firstSession,{...policy,maxInvocations:0});
+    assert.equal(samePlan.decision,'ALREADY_PROCESSED');
+    assert.equal(fullCompletionReads,1);
+    console.log('SOURCE_POOLED_REUSE_READ_COST_PASS same_plan_full_reads=1 stale_alternative=blocked');
     assert.equal((await restartPool.acknowledge(pooledInput)).status,'ALREADY_ACKNOWLEDGED');
     const unbound={...pooledInput,analysisVersion:'source-pooled-unbound-v1'};
     const unboundRoot=await restartPool.initialize(unbound);

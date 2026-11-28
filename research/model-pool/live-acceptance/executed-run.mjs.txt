@@ -1,0 +1,73 @@
+import assert from 'node:assert/strict';
+import {readFileSync,appendFileSync,writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {createOpenAIChatInference} from '/home/exedev/worktrees/dw-cycle-inspection/src/dreaming/openai-provider-adapter.ts';
+import {runPooledDurablePilot2} from '/home/exedev/worktrees/dw-cycle-inspection/src/dreaming/pooled-durable-pilot2.ts';
+import {createPostgresPoolJournalStore,createPostgresPooledCompletionStore,createPostgresWorkStore} from '/home/exedev/worktrees/dw-cycle-inspection/src/dreaming/proposal-ledger-postgres.ts';
+import {readVerifiedCompletion} from '/home/exedev/worktrees/dw-cycle-inspection/src/dreaming/durable-pilot2.ts';
+import {fingerprintProposal,sha256Fingerprint} from '/home/exedev/worktrees/dw-cycle-inspection/src/dreaming/proposal-schema.ts';
+import {runLiveCritique} from '/home/exedev/worktrees/dw-cycle-inspection/src/dreaming/pilot2-critique-live.ts';
+const file='/tmp/dw124-live/observations.jsonl';
+writeFileSync(file,'',{flag:'wx',mode:0o600});
+const record=(kind,x)=>{const s=JSON.stringify({kind,...x});appendFileSync(file,s+'\n');console.log(s);};
+const bytes=readFileSync('research/model-pool/quality/cases.json');
+assert.equal(createHash('sha256').update(bytes).digest('hex'),'f328422d67be4f318ee1398fc8f9da183d5ac97994a78721fa9d3f6616dcc84f');
+const c=JSON.parse(bytes).cases.find(c=>c.id==='signal');
+assert.equal(c.request.scope,'SYNTHETIC_FIXTURE');
+for(const e of c.request.packet.evidence){assert.ok(e.sourceRef.startsWith('synthetic:signal:'));assert.equal(sha256Fingerprint(e.text),e.evidenceHash);}
+const input={request:c.request,acceptedSourceFingerprint:sha256Fingerprint(JSON.stringify(c.request.packet.evidence)),analysisVersion:'live-pool-124-v1'};
+const routes=[
+{id:'solar',provider:'nous',model:'upstage/solar-mini4:free',modelFamily:'solar',baseURL:'https://nous.int.exe.xyz/v1'},
+{id:'gemma',provider:'openrouter',model:'google/gemma-4-26b-a4b-it:free',modelFamily:'gemma4',baseURL:'https://openrouter.int.exe.xyz/api/v1'},
+{id:'step',provider:'nous',model:'stepfun/step-3.7-flash:free',modelFamily:'step3',baseURL:'https://nous.int.exe.xyz/v1'},
+{id:'ernie',provider:'openrouter',model:'baidu/ernie-5.5-flash-preview:free',modelFamily:'ernie5',baseURL:'https://openrouter.int.exe.xyz/api/v1'}];
+for(const r of routes){
+ const response=await fetch(r.baseURL+'/models',{signal:AbortSignal.timeout(10000)});
+ assert.ok(response.ok);
+ const item=(await response.json()).data.find(m=>m.id===r.model);
+ assert.ok(item?.pricing&&Object.keys(item.pricing).length&&Object.values(item.pricing).every(v=>v===0||v==='0'));
+ record('catalog',{route:r.id,model:r.model,pricing:item.pricing});
+}
+let attempts=0, stop=false;
+const actual=globalThis.fetch;
+globalThis.fetch=async(url,opts)=>{
+ const r=routes.find(r=>String(url)===r.baseURL+'/chat/completions'&&JSON.parse(opts.body).model===r.model);
+ assert.ok(r&&!stop&&attempts<5,'LIVE_BUDGET_OR_ROUTE_REJECTED');
+ const body=JSON.parse(opts.body);
+ assert.equal(body.max_tokens,4096);
+ attempts++;
+ record('attempt',{attempts,route:r.id,wireHash:sha256Fingerprint(opts.body)});
+ const response=await actual(url,r.provider==='nous'?{...opts,body:JSON.stringify({...body,tags:['user=theseus-review']})}:opts);
+ const raw=await response.clone().json().catch(()=>({}));
+ const cost=raw.usage?.cost??raw.cost??null;
+ record('transport',{route:r.id,status:response.status,model:raw.model??null,provider:raw.provider??null,finish:raw.choices?.[0]?.finish_reason??null,cost,usage:raw.usage?{prompt_tokens:raw.usage.prompt_tokens,completion_tokens:raw.usage.completion_tokens,total_tokens:raw.usage.total_tokens}:null});
+ if(cost!==null&&Number(cost)!==0){stop=true;throw Error('NONZERO_COST');}
+ return response;
+};
+const policy={routes:routes.map(r=>({id:r.id,provider:r.provider,model:r.model,modelFamily:r.modelFamily,admission:'FREE_RESEARCH',qualifiedTasks:['analysis'],catalog:'PRESENT',catalogValidUntilMs:Date.now()+300000,infer:createOpenAIChatInference({baseURL:r.baseURL,configuredProvider:r.provider,configuredModel:r.model,configuredModelFamily:r.modelFamily,maxOutputTokens:4096,timeoutMs:60000,responseFormat:'json_object',onEvidence:e=>record('adapter',{route:r.id,evidence:e})})})),taskClass:'analysis',maxAttempts:4,maxInvocations:4,rotation:0,cooldowns:[],clock:Date.now};
+const opts={connectionString:process.env.LEDGER_DATABASE_URL};
+const journal=createPostgresPoolJournalStore(opts);
+const store=createPostgresPooledCompletionStore(opts,input);
+const result=await runPooledDurablePilot2(input,policy,journal,store);
+record('result',{decision:result.decision,attemptedPasses:result.attemptedPasses,workFingerprint:result.workFingerprint});
+const state=await journal.read(input);
+if(state.status==='JOURNAL'){
+ record('journal',{status:state.status,completionExists:state.completionExists,entries:state.state.entries});
+}
+if(result.decision==='COMMITTED'){
+ const checked=await readVerifiedCompletion(createPostgresWorkStore(opts),result.workFingerprint);
+ assert.deepEqual(checked,result.completion);
+ record('completion',{completion:checked});
+ const replay=await runPooledDurablePilot2(input,{...policy,maxInvocations:0},createPostgresPoolJournalStore(opts),createPostgresPooledCompletionStore(opts,input));
+ assert.equal(replay.decision,'ALREADY_PROCESSED');assert.equal(replay.attemptedPasses,0);assert.deepEqual(replay.completion,checked);
+ record('replay',{decision:replay.decision,attemptedPasses:0});
+ const validated=state.state.validated;
+ const used=new Set(validated.map(v=>v.start.route.modelFamily));
+ const third=routes.find(r=>!used.has(r.modelFamily)&&!state.state.attempts.some(a=>a.route.id===r.id));
+ if(third&&!stop){
+  const critiqueInput={schema:'theseus.dreaming-worker.critique-input.v1',pilot2Outcome:'COMPLETE',packetId:input.request.packet.packetId,evidenceFingerprint:validated[0].result.receipt.evidenceFingerprint,requestFingerprint:validated[0].result.receipt.requestFingerprint,perspectives:validated.map(v=>({perspectiveId:v.start.route.id,route:v.start.route,proposals:v.result.proposalSet.proposals.map(proposal=>({proposalFingerprint:fingerprintProposal(proposal),proposal}))})),failedPerspectives:[]};
+  const critique=await runLiveCritique(critiqueInput,{...third,maxOutputTokens:4096,timeoutMs:60000});
+  record('critique',{critique});
+ }
+}
+record('end',{attempts,stop});

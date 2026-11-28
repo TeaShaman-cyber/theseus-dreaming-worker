@@ -163,6 +163,15 @@
 - **THEN** the chain does not advance incorrectly
 - **AND** ambiguous commit is resolved only by exact readback
 
+### Requirement: Explicit synthetic custody-only acknowledgement
+
+#### Scenario: Verified recapture without semantic changes
+
+- **GIVEN** a rederived synthetic handoff with new accepted artifacts but no changed or removed sessions and exact trusted catalog
+- **WHEN** explicitly acknowledged under its existing predecessor
+- **THEN** membership advances with a distinct no-work receipt and zero inference
+- **AND** replay is idempotent, a competing child conflicts, pending staged plans and invalid handoffs block advancement
+
 ### Requirement: Pending source plan custody
 
 #### Scenario: Recovered pending witness
@@ -209,6 +218,15 @@
 - **THEN** only the missing slot is executed
 - **AND** the original plan remains immutable and the source checkpoint does not advance until every selected work completes
 - **AND** exact completed replay uses zero inference
+
+### Requirement: Read-only completed pooled reuse
+
+#### Scenario: Alternative completed witness
+
+- **GIVEN** committed pooled work and a staged equivalent alternative witness
+- **WHEN** the original plan, request and journal are independently verified
+- **THEN** the exact completion is reused without inference or custody mutation
+- **AND** unstaged, unbound, incomplete or corrupt alternative custody remains blocked
 
 ### Requirement: Same-plan finite provider cooldown
 

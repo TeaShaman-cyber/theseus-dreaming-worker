@@ -5,6 +5,7 @@ import { prepareSourceBatchExecution, prepareSourceBatchPlan, prepareSourceBatch
 import { readVerifiedCompletion, runDurablePilot2 } from './durable-pilot2.ts';
 import type { Pilot2Route } from './pilot2-runner.ts';
 import { runPooledDurablePilot2 } from './pooled-durable-pilot2.ts';
+import { preparePoolJournal } from './pool-attempt-journal.ts';
 import { createPostgresPoolJournalStore, createPostgresPooledCompletionStore, createPostgresWorkStore, type LedgerPgClient, type LedgerPgClientFactory } from './proposal-ledger-postgres.ts';
 
 type Intent = Pick<BatchInput, 'candidate' | 'expected' | 'task' | 'analysisVersion'>;
@@ -36,7 +37,24 @@ type BoundReceipt = Omit<Receipt, 'schema'> & {
   currentPlanFingerprint: string;
   origins: OriginPointer[];
 };
-type Stored = Root | Receipt | BoundReceipt;
+type NoWorkReceipt = {
+  schema: 'theseus.dreaming-worker.source-no-work-receipt.v1';
+  previousCheckpoint: string;
+  task: string;
+  analysisVersion: string;
+  handoff: ReturnType<typeof decodeSourceHandoff>;
+  reason: 'VERIFIED_EMPTY_SESSION_DELTA';
+  attemptedPasses: 0;
+  receiptFingerprint: string;
+};
+type Stored = Root | Receipt | BoundReceipt | NoWorkReceipt;
+
+function requireEmptyDelta(handoff: ReturnType<typeof decodeSourceHandoff>) {
+  if (!handoff.scope.startsWith('synthetic:') || handoff.selected.length || handoff.removed.length
+    || handoff.previous_membership.snapshot_sha256 === handoff.current_membership.snapshot_sha256) {
+    throw Error('SOURCE_NO_WORK_DELTA');
+  }
+}
 type Plan = ReturnType<typeof prepareSourceBatchPlan>;
 type PlanRow = { plan_fingerprint: string; plan: unknown };
 type PlanResult =
@@ -77,7 +95,7 @@ type Row = { checkpoint_fingerprint: string; previous_checkpoint: string | null;
 
 function checkRow(row: Row, chain: string): Stored {
   const envelope = z.object({
-    schema: z.enum(['theseus.dreaming-worker.source-root.v1', 'theseus.dreaming-worker.source-batch-receipt.v1', 'theseus.dreaming-worker.source-batch-receipt.v2']),
+    schema: z.enum(['theseus.dreaming-worker.source-root.v1', 'theseus.dreaming-worker.source-batch-receipt.v1', 'theseus.dreaming-worker.source-batch-receipt.v2', 'theseus.dreaming-worker.source-no-work-receipt.v1']),
     task: text, analysisVersion: text, receiptFingerprint: fingerprint,
     previousCheckpoint: fingerprint.nullable(),
   }).passthrough().parse(row.receipt);
@@ -89,6 +107,25 @@ function checkRow(row: Row, chain: string): Stored {
   if (sourceReceiptFingerprint(['source-chain-v1', provider, scope, payload.task, payload.analysisVersion]) !== chain
     || (payload.schema === 'theseus.dreaming-worker.source-root.v1') !== (payload.previousCheckpoint === null)) {
     throw Error('SOURCE_STORE_CHAIN');
+  }
+  if (payload.schema === 'theseus.dreaming-worker.source-no-work-receipt.v1') {
+    const noWork = z.object({
+      schema: z.literal('theseus.dreaming-worker.source-no-work-receipt.v1'),
+      previousCheckpoint: fingerprint, task: text, analysisVersion: text,
+      handoff: z.object({
+        provider: text, scope: text,
+        previous_membership: z.object({ snapshot_sha256: z.string() }).passthrough(),
+        catalog: z.array(z.object({ provider: text, shard_id: text, generation_id: z.string() }).strict()),
+      }).passthrough(),
+      reason: z.literal('VERIFIED_EMPTY_SESSION_DELTA'), attemptedPasses: z.literal(0),
+      receiptFingerprint: fingerprint,
+    }).strict().parse(row.receipt);
+    const handoff = decodeSourceHandoff(noWork.handoff, {
+      provider: noWork.handoff.provider, scope: noWork.handoff.scope,
+      previousSnapshotSha256: noWork.handoff.previous_membership.snapshot_sha256,
+      catalog: noWork.handoff.catalog.map(r => ({ ...r, state: 'READY' as const })),
+    });
+    requireEmptyDelta(handoff);
   }
   // The full digest detects inconsistent storage; the producer is trusted,
   // not authenticated by this hash. New writes always derive from the builder.
@@ -252,6 +289,77 @@ export function createPostgresSourceBatchStore(options: {
       if (!selected) throw Error('SOURCE_EXECUTION_SELECTION');
       const expected = plan.work.find(work => work.workFingerprint === selected.workFingerprint);
       if (!expected) throw Error('SOURCE_EXECUTION_WORK');
+      // A changed serving witness may reuse committed pooled work, but it
+      // must not adopt a partial journal or rewrite its original packet.
+      // Read the original context and completion without acquiring custody.
+      try {
+        const reused = await withClient(async client => {
+          // Cheap identity probe only; avoid loading full completion rows
+          // for new, partial or ordinary same-plan work.
+          const alternative = await client.query(
+            `SELECT 1 FROM dw_ledger.source_work_origins o
+             JOIN dw_ledger.work_completions c USING (work_fingerprint)
+             WHERE o.work_fingerprint=$1 AND o.chain_id=$2
+               AND (o.previous_checkpoint<>$3 OR o.plan_fingerprint<>$4)`,
+            [selected.workFingerprint,chain,plan.previousCheckpoint,plan.planFingerprint],
+          );
+          if (!alternative.rows.length) return null;
+          if (alternative.rows.length !== 1) throw Error('SOURCE_POOL_ORIGIN_MISMATCH');
+          // Committed rows are append-only. A single read-only snapshot
+          // binds the predecessor, both plans, journal and completion.
+          await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+          try {
+            const scopedOptions = {
+              connectionString: options.connectionString,
+              clientFactory: () => ({
+                connect: async () => undefined, end: async () => undefined,
+                query: <Row = Record<string, unknown>>(sql: string, values?: unknown[]) => client.query<Row>(sql, values),
+              }),
+            };
+            const completion = await readVerifiedCompletion(createPostgresWorkStore(scopedOptions), selected.workFingerprint);
+            if (!completion) throw Error('SOURCE_POOL_COMPLETION_REQUIRED');
+            const original = await readOrigin(client, chain, selected.workFingerprint);
+            if (original.pointer.previousCheckpoint === plan.previousCheckpoint
+              && original.pointer.planFingerprint === plan.planFingerprint) throw Error('SOURCE_POOL_ORIGIN_MISMATCH');
+            const parent = await readParent(client, chain, plan.previousCheckpoint);
+            if (!parent || await readChild(client, chain, plan.previousCheckpoint)
+              || !await readPlan(client, chain, parent, plan.planFingerprint)) {
+              throw Error('SOURCE_EXECUTION_PLAN_REQUIRED');
+            }
+            const originalInput = {
+              ...selected.input, request: {
+                ...selected.input.request, packet: {
+                  ...selected.input.request.packet, packetId: original.work.packetId,
+                },
+              },
+            };
+            const ctx = preparePoolJournal(originalInput);
+            if (ctx.workFingerprint !== original.work.workFingerprint
+              || ctx.requestFingerprint !== original.work.requestFingerprint
+              || ctx.evidenceFingerprint !== original.work.evidenceFingerprint
+              || completion.checkpoint.requestFingerprint !== original.work.requestFingerprint) {
+              throw Error('SOURCE_POOL_ORIGINAL_REQUEST_MISMATCH');
+            }
+            const observed = await createPostgresPoolJournalStore(scopedOptions).read(originalInput);
+            if (observed.status !== 'JOURNAL' || !observed.completionExists) throw Error('SOURCE_POOL_ORIGINAL_JOURNAL_REQUIRED');
+            // Reuse the existing exact journal/completion comparison, not a
+            // synthesized success status. This branch can never admit or write.
+            const deny = async () => { throw Error('SOURCE_POOL_REUSE_READ_ONLY'); };
+            const result = await runPooledDurablePilot2(originalInput, policy, {
+              read: async () => observed, admit: deny, append: deny,
+            }, { readCompletion: async () => completion, complete: deny });
+            await client.query('COMMIT');
+            return result;
+          } catch (error) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original failure */ }
+            throw error;
+          }
+        });
+        if (reused) return reused;
+      } catch {
+        return { decision: 'STORAGE_UNKNOWN' as const, workFingerprint: selected.workFingerprint,
+          attemptedPasses: 0, nextRotation: policy.rotation, completion: null, wakeAtMs: null };
+      }
       const clock = policy.clock;
       const journal = createPostgresPoolJournalStore(options, {
         cooldowns: {
@@ -384,6 +492,35 @@ export function createPostgresSourceBatchStore(options: {
     async initialize(raw: Intent): Promise<Result> {
       const { chain, root } = context(structuredClone(raw));
       return append(chain, null, async () => root);
+    },
+    /** Explicit trusted synthetic no-work disposition, never inferred from
+     * an empty retrieval. Existing handoff custody remains caller-owned. */
+    async acknowledgeNoWork(raw: Intent & { previousCheckpoint: string }): Promise<Result> {
+      const input = structuredClone(raw);
+      const { chain, handoff } = context(input);
+      requireEmptyDelta(handoff);
+      const previous = fingerprint.parse(input.previousCheckpoint);
+      return append(chain, previous, async client => {
+        const parent = await readParent(client, chain, previous);
+        if (!parent || sourceReceiptFingerprint(parentMembership(parent)) !== sourceReceiptFingerprint(handoff.previous_membership)) {
+          return 'CONFLICT';
+        }
+        // A durable child is terminal. Let append compare exact identity
+        // before considering any historical (append-only) plan as pending.
+        if (!await readChild(client, chain, previous)) {
+          const pending = await client.query(
+            'SELECT 1 FROM dw_ledger.source_plans WHERE chain_id=$1 AND previous_checkpoint=$2 LIMIT 1',
+            [chain, previous],
+          );
+          if (pending.rows.length) return 'PENDING';
+        }
+        const payload = {
+          schema: 'theseus.dreaming-worker.source-no-work-receipt.v1' as const,
+          previousCheckpoint: previous, task: input.task, analysisVersion: input.analysisVersion,
+          handoff, reason: 'VERIFIED_EMPTY_SESSION_DELTA' as const, attemptedPasses: 0 as const,
+        };
+        return { ...payload, receiptFingerprint: sourceReceiptFingerprint(payload) };
+      });
     },
     async acknowledge(raw: BatchInput): Promise<Result> {
       const input = structuredClone(raw);

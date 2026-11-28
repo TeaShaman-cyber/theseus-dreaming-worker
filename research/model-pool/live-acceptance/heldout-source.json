@@ -1,0 +1,293 @@
+{
+  "producer_commit": "3b7b5360050cc2ecdcb60f485a657f2b763751e4",
+  "serving": "verified_bundle_rows_simulated_pages",
+  "candidate": {
+    "schema": "theseus.session-search-recovery-handoff-candidate.v1",
+    "status": "HANDOFF_CANDIDATE",
+    "provider": "chatgpt",
+    "scope": "synthetic:chatgpt",
+    "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+    "delta_contract": "theseus.session-search-rederived-session-delta.v1",
+    "baseline_verification": "rederived_under_current_contract",
+    "previous_membership": {
+      "schema": "theseus.session-search-accepted-membership.v1",
+      "scope": "synthetic:chatgpt",
+      "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+      "verification_level": "projection_consistency",
+      "members": [
+        {
+          "artifact_sha256": "438bea94856f7d3274ca401af76b68f48af440447bc0607244c3ff5ad7f23b3e",
+          "ledger_sha256": "c9c77671a4b97ba3cde19e7014453ca9cb2d9ff7e58a9f11d9c09ac13ba238ef"
+        },
+        {
+          "artifact_sha256": "640033dd977f5e0b28ad856610ba165618a119348592427494e66cac6230eb6e",
+          "ledger_sha256": "3dd4bf10eae22daca604ba3f1857ae990f11c8986e32c92291e866efccab1549"
+        },
+        {
+          "artifact_sha256": "7982ae321a30dea0ee765793f229f7e8b3fe7934cd01cf4d457cc93bb8f470b3",
+          "ledger_sha256": "7a453f6c327d42040c2572ecca5c9b9c0cf1cecf12d9ce704f4c1bfa4af5c8ab"
+        },
+        {
+          "artifact_sha256": "afca9c79a366887f5b03b42c00710207a46d66c1eaa1e7935e59dcc2a30a1f9c",
+          "ledger_sha256": "37932e4b079cef284fc680f262cc8997a6b4a5426f2f5b1046ad9dbda81887cb"
+        },
+        {
+          "artifact_sha256": "cf6aa41d35b91341689b974fa185041fb46a9f615c6dedcc8e360d620ebe20f1",
+          "ledger_sha256": "373e799909e7bffed7f4ac08a77b9573a6e9240b40f6954078fac75e28957c40"
+        },
+        {
+          "artifact_sha256": "cf70a98c3c834dc2fca0185a80fbd30e95012cfd2311c0606c2f092f43f60fc5",
+          "ledger_sha256": "f9b798543125eb5960f21de53f63e808d6f939236863c524cd7a48eca5f1cccc"
+        },
+        {
+          "artifact_sha256": "f8c9ddc49e8720cedbb6b45bf971f71b63e9368a52f5909d416205ee3c797575",
+          "ledger_sha256": "065d75262d59ce3ab9aae7ecb9c91d20e83804e16cdd16c62ae2bf0465a58c06"
+        }
+      ],
+      "accepted_set_sha256": "f3934d337cb414680a876db03666a9755bb54e9d8a77c05471d0be392beb7faf",
+      "snapshot_sha256": "a4c6144a240656f283d9fc95622812a166efd78b7bb63f8afb126005b5b0d15d"
+    },
+    "current_membership": {
+      "schema": "theseus.session-search-accepted-membership.v1",
+      "scope": "synthetic:chatgpt",
+      "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+      "verification_level": "projection_consistency",
+      "members": [
+        {
+          "artifact_sha256": "3990ceee371ba32f862a1b173ceecf43be8da767d3502fd9633c8f345ee9e16c",
+          "ledger_sha256": "1a3daf81e0b15e29a9b29afd5b0580f685afcf48779ded5bf60b957c60c3b352"
+        },
+        {
+          "artifact_sha256": "438bea94856f7d3274ca401af76b68f48af440447bc0607244c3ff5ad7f23b3e",
+          "ledger_sha256": "c9c77671a4b97ba3cde19e7014453ca9cb2d9ff7e58a9f11d9c09ac13ba238ef"
+        },
+        {
+          "artifact_sha256": "640033dd977f5e0b28ad856610ba165618a119348592427494e66cac6230eb6e",
+          "ledger_sha256": "3dd4bf10eae22daca604ba3f1857ae990f11c8986e32c92291e866efccab1549"
+        },
+        {
+          "artifact_sha256": "7982ae321a30dea0ee765793f229f7e8b3fe7934cd01cf4d457cc93bb8f470b3",
+          "ledger_sha256": "7a453f6c327d42040c2572ecca5c9b9c0cf1cecf12d9ce704f4c1bfa4af5c8ab"
+        },
+        {
+          "artifact_sha256": "afca9c79a366887f5b03b42c00710207a46d66c1eaa1e7935e59dcc2a30a1f9c",
+          "ledger_sha256": "37932e4b079cef284fc680f262cc8997a6b4a5426f2f5b1046ad9dbda81887cb"
+        },
+        {
+          "artifact_sha256": "cf6aa41d35b91341689b974fa185041fb46a9f615c6dedcc8e360d620ebe20f1",
+          "ledger_sha256": "373e799909e7bffed7f4ac08a77b9573a6e9240b40f6954078fac75e28957c40"
+        },
+        {
+          "artifact_sha256": "cf70a98c3c834dc2fca0185a80fbd30e95012cfd2311c0606c2f092f43f60fc5",
+          "ledger_sha256": "f9b798543125eb5960f21de53f63e808d6f939236863c524cd7a48eca5f1cccc"
+        },
+        {
+          "artifact_sha256": "f8c9ddc49e8720cedbb6b45bf971f71b63e9368a52f5909d416205ee3c797575",
+          "ledger_sha256": "065d75262d59ce3ab9aae7ecb9c91d20e83804e16cdd16c62ae2bf0465a58c06"
+        }
+      ],
+      "accepted_set_sha256": "0adc68a179bd4fc4be7738c62790a80ad9f9b57cfeff3049a1dd8ee5887f3cb1",
+      "snapshot_sha256": "f2fb64df7b37721e41f633f16306209da377257e575c8a8e8b61033fdd27feb4"
+    },
+    "promotion_receipt_sha256": "d57b4166437549a605a15be1d605557adcb1b4fbd778fbf66c0c7f1833bec5a5",
+    "catalog": [
+      {
+        "shard_id": "chatgpt-0001",
+        "provider": "chatgpt",
+        "generation_id": "641f319284a5e815e071326fa65bcc8f1b781dbdc481bb3838076dd3cec9b2e1"
+      },
+      {
+        "shard_id": "chatgpt-0002",
+        "provider": "chatgpt",
+        "generation_id": "d1b9b0a0640001068b26491e08dfea18b8036da55ea76f5fd37a505ee2e13367"
+      },
+      {
+        "shard_id": "chatgpt-0003",
+        "provider": "chatgpt",
+        "generation_id": "46c736bb7d00efa89796684ef2b05dba35d44b659aee49c8f348bb03abed86ba"
+      },
+      {
+        "shard_id": "xai-0001",
+        "provider": "xai",
+        "generation_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      }
+    ],
+    "selected": [
+      {
+        "session_id": "birch-heldout-124",
+        "shard_id": "chatgpt-0003",
+        "generation_id": "46c736bb7d00efa89796684ef2b05dba35d44b659aee49c8f348bb03abed86ba",
+        "source_manifest_sha256": "b11dcdc5927b655b07fc6f806bdbd8157a75aa0886ae7ab0c507e7ec6871a038",
+        "bundle_sha256": "a4e9fa6fabfc4dbb6d6145ed5696eb24aa21a8a0c7d006a86c612be5c5971bf7",
+        "change": "ADDED"
+      }
+    ],
+    "removed": [],
+    "checkpoint_advanced": false,
+    "candidate_sha256": "ebabe3c9bac206f0b4d51f14fcc25ac5aa221ae09b6c373344dfc392b0d7dbc3"
+  },
+  "expected": {
+    "provider": "chatgpt",
+    "scope": "synthetic:chatgpt",
+    "previousSnapshotSha256": "a4c6144a240656f283d9fc95622812a166efd78b7bb63f8afb126005b5b0d15d",
+    "catalog": [
+      {
+        "provider": "chatgpt",
+        "shard_id": "chatgpt-0001",
+        "generation_id": "641f319284a5e815e071326fa65bcc8f1b781dbdc481bb3838076dd3cec9b2e1",
+        "state": "READY"
+      },
+      {
+        "provider": "chatgpt",
+        "shard_id": "chatgpt-0002",
+        "generation_id": "d1b9b0a0640001068b26491e08dfea18b8036da55ea76f5fd37a505ee2e13367",
+        "state": "READY"
+      },
+      {
+        "provider": "chatgpt",
+        "shard_id": "chatgpt-0003",
+        "generation_id": "46c736bb7d00efa89796684ef2b05dba35d44b659aee49c8f348bb03abed86ba",
+        "state": "READY"
+      },
+      {
+        "provider": "xai",
+        "shard_id": "xai-0001",
+        "generation_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "state": "READY"
+      }
+    ]
+  },
+  "entries": [
+    {
+      "sessionId": "birch-heldout-124",
+      "index": {
+        "schema": "theseus.session-search-source-evidence-index.v1",
+        "provider": "chatgpt",
+        "shard_id": "chatgpt-0003",
+        "generation_id": "46c736bb7d00efa89796684ef2b05dba35d44b659aee49c8f348bb03abed86ba",
+        "source_manifest_sha256": "b11dcdc5927b655b07fc6f806bdbd8157a75aa0886ae7ab0c507e7ec6871a038",
+        "membership_snapshot_sha256": "f2fb64df7b37721e41f633f16306209da377257e575c8a8e8b61033fdd27feb4",
+        "currentness": "UNKNOWN_WITHOUT_SOURCE_WATERMARK",
+        "sessions": [
+          {
+            "session_id": "birch-heldout-124",
+            "title": "Synthetic Birch timeout observation",
+            "coverage_state": "PARTIAL_SESSION_SLICE",
+            "messages": [
+              {
+                "ordinal": 0,
+                "message_id": "m0",
+                "role": "user",
+                "search_class": "dialogue",
+                "create_time": 100.0,
+                "text_sha256": "2c4e1e386fb959a997e1b7c708a18492327d7859bd042adc4a2b84595f23ae76",
+                "canonical_message_sha256": "ba9fa8574e210db963eb1434b15c456d86dc44edcf00b53c56fabd965c15e332",
+                "sources": [
+                  {
+                    "artifact_sha256": "3990ceee371ba32f862a1b173ceecf43be8da767d3502fd9633c8f345ee9e16c",
+                    "member_name": "optional/conversation-chatgpt-birch-heldout-124-baba50b14e26.bin",
+                    "page_position": 0,
+                    "source_message_id": "m0",
+                    "source_object_sha256": "fb432c8c878ff136bbc283e0d3aa9e88b4bb5c129f79d8cfa10f1e24ec902fdf"
+                  }
+                ]
+              },
+              {
+                "ordinal": 1,
+                "message_id": "m1",
+                "role": "assistant",
+                "search_class": "dialogue",
+                "create_time": 101.0,
+                "text_sha256": "5c3a0596ce8c4b088e2903dd2b8b5db396512e05ddf56cef65fd011bea76dc50",
+                "canonical_message_sha256": "ac65b692cc6d925771d522e6fb014cffb7c71a0c0e1f95ebda0e7263366bebfd",
+                "sources": [
+                  {
+                    "artifact_sha256": "3990ceee371ba32f862a1b173ceecf43be8da767d3502fd9633c8f345ee9e16c",
+                    "member_name": "optional/conversation-chatgpt-birch-heldout-124-baba50b14e26.bin",
+                    "page_position": 1,
+                    "source_message_id": "m1",
+                    "source_object_sha256": "9f2d96965036d8389b6666def8502078bbe2f7515c098f86f48687ab524eeba8"
+                  }
+                ]
+              },
+              {
+                "ordinal": 2,
+                "message_id": "m2",
+                "role": "user",
+                "search_class": "dialogue",
+                "create_time": 102.0,
+                "text_sha256": "34889ce0d3eb0bf899e57ac947bc565f243f2483cd7bed7c0e788505c1dc9722",
+                "canonical_message_sha256": "ace9572f8e25b2024e6413d7ec3cf012afdbae7f8dc9c9b6ef675a4817082bed",
+                "sources": [
+                  {
+                    "artifact_sha256": "3990ceee371ba32f862a1b173ceecf43be8da767d3502fd9633c8f345ee9e16c",
+                    "member_name": "optional/conversation-chatgpt-birch-heldout-124-baba50b14e26.bin",
+                    "page_position": 2,
+                    "source_message_id": "m2",
+                    "source_object_sha256": "0ba46148bc1e19e25d7a80c7e38ca9015b31e7b831cac0fed26d5b7ee3c0422d"
+                  }
+                ]
+              }
+            ],
+            "content_sha256": "fe8343c1f3fdce80c8a020b23ca3c8cd2e670d48a21b9557fa8b86fe115eb6c9"
+          }
+        ]
+      },
+      "pages": [
+        {
+          "status": "OK",
+          "provider": "chatgpt",
+          "shard_id": "chatgpt-0003",
+          "generation_id": "46c736bb7d00efa89796684ef2b05dba35d44b659aee49c8f348bb03abed86ba",
+          "session_id": "birch-heldout-124",
+          "session_title": "Synthetic Birch timeout observation",
+          "session_coverage": "PARTIAL_SESSION_SLICE",
+          "generation_binding": "router_pinned_v1",
+          "messages": [
+            {
+              "ordinal": 0,
+              "message_id": "m0",
+              "role": "user",
+              "search_class": "dialogue",
+              "create_time": 100.0,
+              "text": "Вымышленная лаборатория Birch, контрольный опыт: старый планировщик, 1 параллельный запрос; 2 из 40 операций завершились таймаутом.",
+              "text_offset": 0,
+              "text_total_chars": 131,
+              "complete_message": true
+            },
+            {
+              "ordinal": 1,
+              "message_id": "m1",
+              "role": "assistant",
+              "search_class": "dialogue",
+              "create_time": 101.0,
+              "text": "После смены планировщика одновременно подняли параллелизм до 8. Таймаутов стало 11 из 40. Это наблюдение, не доказательство причины.",
+              "text_offset": 0,
+              "text_total_chars": 132,
+              "complete_message": true
+            },
+            {
+              "ordinal": 2,
+              "message_id": "m2",
+              "role": "user",
+              "search_class": "dialogue",
+              "create_time": 102.0,
+              "text": "Сравнения на одинаковой нагрузке нет; лимиты провайдера и распределение размеров запросов не проверялись. Предложи проверяемую гипотезу, альтернативу и способ опровержения. Не считай смену планировщика установленной причиной.",
+              "text_offset": 0,
+              "text_total_chars": 225,
+              "complete_message": true
+            }
+          ],
+          "has_more": false,
+          "next_position": null,
+          "next_cursor": null,
+          "coverage_complete": false,
+          "queried_shards": [
+            "chatgpt-0003"
+          ],
+          "unavailable_shards": []
+        }
+      ]
+    }
+  ]
+}

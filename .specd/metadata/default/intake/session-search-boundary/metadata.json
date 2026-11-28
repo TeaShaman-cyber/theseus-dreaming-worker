@@ -63,6 +63,12 @@
       ]
     },
     {
+      "requirement": "Completed pooled work reuse across source witnesses",
+      "rules": [
+        "A staged equivalent synthetic source witness MAY reuse already committed work only after verified original source-plan linkage and readback of the original completion. For pooled work, the original journal MUST replay against the original packet and request identity reconstructed from the current verified equivalent evidence and reproduce the committed completion. Reuse MUST consume zero inference and retain the original origin. Incomplete, unknown, inconsistent or unbound work MUST NOT be adopted from another plan. Current plan and predecessor validation remain mandatory."
+      ]
+    },
+    {
       "requirement": "Bounded synthetic source acquisition",
       "rules": [
         "The synthetic acquisition adapter MUST validate the exact selected set and source indexes before requesting pages. It MUST pin each read to the selected session, shard and generation, and only follow a nonrepeated cursor bound to that exact read position. It MUST bound request count, response bytes per page and in aggregate, character and message admission, and each request deadline. Failed, incomplete or inconsistent acquisition MUST NOT return a batch ready for analysis.\n\nThe adapter MUST use injected explicitly supplied transport; no default network credential, real history access or implicit fallback is permitted. Complete acquired pages MUST pass the existing verified batch admission. The adapter MUST NOT reserve work, invoke inference or advance checkpoints."
@@ -78,6 +84,18 @@
       "requirement": "Explicit pooled synthetic source cycle",
       "rules": [
         "The explicit pooled cycle MUST validate and snapshot its execution policy before bounded synthetic source acquisition. Invalid input, unresolved removal, no selected work or acquisition failure MUST NOT initiate ledger execution or inference. The cycle MUST delegate the exact acquired batch to the bounded pooled runner and preserve its observed invocation count and typed pending or unknown outcome. Exact completed replay MUST require zero inference. Existing fixed-pair composition remains available; neither path authorizes real source access or deployment."
+      ]
+    },
+    {
+      "requirement": "Read-only synthetic cycle inspection",
+      "rules": [
+        "An explicit diagnostic MAY observe an existing synthetic batch using its exact supplied witness, verified source tip, staged plan and per-work journal and completion readers. It MUST reject non-synthetic scope before storage access, distinguish missing state, unresolved attempts and failed or inconsistent readback, and omit evidence bodies, proposal bodies and owner tokens. Independent reads MUST NOT be represented as an atomic snapshot, source completeness, authorization to resume, or proof of source custody merely from matching work identity. The diagnostic MUST NOT initialize, stage, reserve, acknowledge, invoke inference or retry work."
+      ]
+    },
+    {
+      "requirement": "Explicit synthetic custody-only acknowledgement",
+      "rules": [
+        "A trusted synthetic caller MAY explicitly acknowledge an independently verified rederived handoff with changed append-only accepted membership, exact observed catalog, zero selected and zero removed sessions, and exact existing predecessor membership and analysis intent. A dedicated no-work receipt MUST preserve the handoff and reason, and use existing append-only transaction and exact readback. Any staged plan under that predecessor blocks this path; no pending work is discarded. Ordinary empty cycle, unavailable data, unchanged membership, unresolved removal and non-synthetic scope MUST NOT initiate this acknowledgement. No inference, work completion, source completeness or new access authority follows."
       ]
     },
     {
@@ -305,6 +323,21 @@
       ]
     },
     {
+      "requirement": "Completed pooled work reuse across source witnesses",
+      "name": "Refresh after completed pooled work",
+      "given": [
+        "committed pooled work and a newly staged equivalent synthetic witness with changed generation"
+      ],
+      "when": [
+        "the current cycle resumes"
+      ],
+      "then": [
+        "the original journal and completion match and the work is reused without inference",
+        "AND the original plan linkage remains intact",
+        "AND incomplete or inconsistent alternative custody is rejected"
+      ]
+    },
+    {
       "requirement": "Bounded synthetic source acquisition",
       "name": "Exact pinned read",
       "given": [
@@ -382,6 +415,35 @@
       "then": [
         "only remaining calls execute, known shared wait is respected and acknowledgement follows verified completion",
         "AND exact completed replay consumes zero inference"
+      ]
+    },
+    {
+      "requirement": "Read-only synthetic cycle inspection",
+      "name": "Observe without dispatch",
+      "given": [
+        "an exact synthetic batch witness and existing durable work"
+      ],
+      "when": [
+        "the diagnostic reads the tip, plan, journal and completion"
+      ],
+      "then": [
+        "missing, unresolved, completed and failed or inconsistent observations remain distinguishable",
+        "AND the report omits source and proposal bodies and owner tokens, and confers no resume authority",
+        "AND no writes or inference follow"
+      ]
+    },
+    {
+      "requirement": "Explicit synthetic custody-only acknowledgement",
+      "name": "Verified recapture without semantic changes",
+      "given": [
+        "a rederived synthetic handoff with new accepted artifacts but no changed or removed sessions and exact trusted catalog"
+      ],
+      "when": [
+        "explicitly acknowledged under its existing predecessor"
+      ],
+      "then": [
+        "membership advances with a distinct no-work receipt and zero inference",
+        "AND replay is idempotent, a competing child conflicts, pending staged plans and invalid handoffs block advancement"
       ]
     },
     {
@@ -482,8 +544,8 @@
     }
   ],
   "contentHashes": {
-    "spec.md": "sha256:f9e1c39927031eb424a97022babb6f0c864f3b24520eedd4de22ecba47d0e454",
-    "verify.md": "sha256:5a4360a73ff3a882c1182e6f0f17edd292672f1309eed89540bf91e932f6bb98"
+    "spec.md": "sha256:52729f40e70ac018179c6fad31bb1d176552e2da2fd20d00281b4925c86a0640",
+    "verify.md": "sha256:f4cdf7aef4eb5eadd889cfade436b091df5fd548fd1b1b87ae69de422477e943"
   },
   "generatedBy": "core"
 }

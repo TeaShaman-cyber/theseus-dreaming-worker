@@ -86,6 +86,10 @@ The run MUST stop on uncertain or incomplete work and MUST NOT acknowledge a par
 
 An explicitly selected pooled synthetic batch MUST preserve the exact validated source plan and the existing checkpoint acknowledgement boundary. It MUST pass the remaining invocation budget and rotation to each selected work once, retain known pending outcomes and stop on unknown custody. The existing fixed-pair entry point remains separate. A pooled batch MUST NOT grant real-source permission or advance a checkpoint without verified complete work.
 
+### Requirement: Completed pooled work reuse across source witnesses
+
+A staged equivalent synthetic source witness MAY reuse already committed work only after verified original source-plan linkage and readback of the original completion. For pooled work, the original journal MUST replay against the original packet and request identity reconstructed from the current verified equivalent evidence and reproduce the committed completion. Reuse MUST consume zero inference and retain the original origin. Incomplete, unknown, inconsistent or unbound work MUST NOT be adopted from another plan. Current plan and predecessor validation remain mandatory.
+
 ### Requirement: Bounded synthetic source acquisition
 
 The synthetic acquisition adapter MUST validate the exact selected set and source indexes before requesting pages. It MUST pin each read to the selected session, shard and generation, and only follow a nonrepeated cursor bound to that exact read position. It MUST bound request count, response bytes per page and in aggregate, character and message admission, and each request deadline. Failed, incomplete or inconsistent acquisition MUST NOT return a batch ready for analysis.
@@ -99,6 +103,14 @@ One explicit synthetic cycle MUST validate the trusted handoff and execution pol
 ### Requirement: Explicit pooled synthetic source cycle
 
 The explicit pooled cycle MUST validate and snapshot its execution policy before bounded synthetic source acquisition. Invalid input, unresolved removal, no selected work or acquisition failure MUST NOT initiate ledger execution or inference. The cycle MUST delegate the exact acquired batch to the bounded pooled runner and preserve its observed invocation count and typed pending or unknown outcome. Exact completed replay MUST require zero inference. Existing fixed-pair composition remains available; neither path authorizes real source access or deployment.
+
+### Requirement: Read-only synthetic cycle inspection
+
+An explicit diagnostic MAY observe an existing synthetic batch using its exact supplied witness, verified source tip, staged plan and per-work journal and completion readers. It MUST reject non-synthetic scope before storage access, distinguish missing state, unresolved attempts and failed or inconsistent readback, and omit evidence bodies, proposal bodies and owner tokens. Independent reads MUST NOT be represented as an atomic snapshot, source completeness, authorization to resume, or proof of source custody merely from matching work identity. The diagnostic MUST NOT initialize, stage, reserve, acknowledge, invoke inference or retry work.
+
+### Requirement: Explicit synthetic custody-only acknowledgement
+
+A trusted synthetic caller MAY explicitly acknowledge an independently verified rederived handoff with changed append-only accepted membership, exact observed catalog, zero selected and zero removed sessions, and exact existing predecessor membership and analysis intent. A dedicated no-work receipt MUST preserve the handoff and reason, and use existing append-only transaction and exact readback. Any staged plan under that predecessor blocks this path; no pending work is discarded. Ordinary empty cycle, unavailable data, unchanged membership, unresolved removal and non-synthetic scope MUST NOT initiate this acknowledgement. No inference, work completion, source completeness or new access authority follows.
 
 ### Requirement: Checkpoint advances only after bounded success
 
