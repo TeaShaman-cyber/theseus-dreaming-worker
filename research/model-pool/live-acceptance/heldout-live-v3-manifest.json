@@ -1,0 +1,44 @@
+{
+  "schema": "theseus.dw-heldout-live-evidence.v1",
+  "analysisVersion": "live-birch-124-v2",
+  "fixture_sha256": "a933a58167902c34dfa36c150bb37d3836fdafe494901829f0fc026767e0de39",
+  "producer_commit": "3b7b5360050cc2ecdcb60f485a657f2b763751e4",
+  "runner_commit": "4c020d85bf5000666403169ddd4f64a8f77be40f",
+  "critique_4096_commit": "6c3f27cab883cb6740d4ff6c73aed19a0c08df88",
+  "critique_8192_commit": "b702c6869b0eefd9e2fcde8e94fc2feca279fbec",
+  "watchdog_branch": {
+    "name": "live-birch-124-v2",
+    "id": "br-silent-night-bdn5r2nw",
+    "parent": "br-dark-unit-bd83ja3y"
+  },
+  "accepted_branch": {
+    "name": "live-birch-124-v3",
+    "id": "br-proud-snow-bd8v9iet",
+    "parent": "br-dark-unit-bd83ja3y"
+  },
+  "work_fingerprint": "sha256:a47b66540529df5ecfc322bde084883d88beea93ddb91ecbd083291483b49138",
+  "receipt_fingerprint": "sha256:ed35fa0e1e00ce4c48d611634a6d08e1bf5be6626006c68610a71c8a78d4e2bf",
+  "files": {
+    "heldout-live-v2-watchdog.jsonl": {
+      "sha256": "2062f11504c7cfc877218ba52834e6c2421a465ffcdc0f51b2d64c26192ba75f"
+    },
+    "heldout-live-v2-watchdog-readback.json": {
+      "sha256": "aa9b259aaf0d04dd5636ff476d136fff95adf30faf857ca49c2c6d97a8cf3f45"
+    },
+    "heldout-live-v3-observations.jsonl": {
+      "sha256": "a42b80427e4cd1fcad4ef0b40a680df7dc2e37190f8c046486f5d97ca73cde65"
+    },
+    "heldout-live-v3-replay.jsonl": {
+      "sha256": "ddb949e847ebaa6d318654918c27d93df05b07b87c911360d1737cd49e07b6c4"
+    },
+    "heldout-live-v3-readback.json": {
+      "sha256": "67c77db3fec95172fbeddcdac8952d1886f27bf8bb8674b11afad00f548d1182"
+    },
+    "heldout-critique-v3-truncated.jsonl": {
+      "sha256": "909c1fd1c321cebfe44fc8f1c87ebe35aed8aebda818a2ca92dbe8174ef9fc0a"
+    },
+    "heldout-critique-v4.jsonl": {
+      "sha256": "c3b6fc62a6c3159f1a13106f906720672ff60bf9b22ce564e039b643fb9155f8"
+    }
+  }
+}

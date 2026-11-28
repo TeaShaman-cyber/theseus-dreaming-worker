@@ -66,3 +66,76 @@ placeholder, not a stored checkpoint. It neither initializes storage nor
 dispatches inference. The normal QA suite includes the positive test and
 rejection of changed fixture bytes in `test/heldout-source-preflight.test.mjs`.
 A passing result is `PREFLIGHT_ONLY`, not live inference or deployment evidence.
+
+## Held-out Birch live acceptance (2026-11-28)
+
+The earlier host-blocked attempt above remains historical evidence only. A later
+versioned runner completed the same frozen synthetic Birch source-cycle through
+the real Dreaming Worker pooled source runner, Postgres store and provider
+adapter on isolated Neon branches. The source transport still replays the
+recorded, independently verified synthetic page; this is not live Session Search
+network serving and does not authorize private history.
+
+The first live attempt used exact runner commit
+`4c020d85bf5000666403169ddd4f64a8f77be40f` on isolated branch
+`live-birch-124-v2`. An outer shell watchdog of 90 seconds was too short for the
+bounded multi-model sequence. It terminated the process after the durable
+`START` for HY4 but before a terminal journal event. Independent Neon readback
+showed no completion or proposals and the exact durable prefix:
+
+`ADMIT -> START(step) -> KNOWN_FAILURE(output budget) -> START(ernie) ->
+VALIDATED -> START(hy4)`.
+
+The harness failure therefore became a real process-loss witness; the worker did
+not invent a completion or acknowledge the source batch.
+
+A clean isolated rerun on `live-birch-124-v3` used the same exact runner commit
+with only the outer shell watchdog raised to 300 seconds. Fresh model catalogs
+showed every admitted route at zero prompt/completion price. The source-cycle
+finished `ACKNOWLEDGED` after four physical model calls:
+
+| Route | HTTP / finish | Reported tokens | Worker disposition |
+| --- | --- | ---: | --- |
+| Step 3.7 Flash / Nous | 200 / length | 5571 | known `OUTPUT_BUDGET_EXHAUSTED` |
+| ERNIE 5.5 Flash / OpenRouter | 200 / stop | 5293 | validated |
+| HY4 Flash / Nous | 200 / length | 5550 | known `OUTPUT_BUDGET_EXHAUSTED` |
+| Solar Mini4 / Nous | 200 / stop | 3274 | validated |
+
+Every observed provider response reported cost `0`. Independent Neon readback
+confirmed one durable completion, two validated model perspectives, nine
+proposal records, and a final source receipt
+`sha256:ed35fa0e1e00ce4c48d611634a6d08e1bf5be6626006c68610a71c8a78d4e2bf`.
+Exact replay returned `ALREADY_ACKNOWLEDGED` with zero model calls and the same
+receipt.
+
+The held-out semantic result is useful but remains derived evidence. ERNIE
+explicitly identifies the scheduler/parallelism confound, retains high
+uncertainty, and asks for matched-load controls. Solar also rejects causal
+attribution and requests controlled evidence, but its wording sometimes
+conflates the scheduler/planner change with the parallelism increase and one
+inference assumes stable provider limits despite the fixture saying they were
+not checked.
+
+A separate read-only critique consumed the two completed perspectives. The
+first Particle/OpenRouter attempt at a 4096-token output cap returned HTTP 200
+with `finish=length`, so the critique parser correctly rejected the truncated
+JSON. After a TDD change limited to the critique harness, exact commit
+`b702c6869b0eefd9e2fcde8e94fc2feca279fbec` raised the critique output bound
+to 8192. The next single call returned `finish=stop`, zero reported cost, and a
+validated `DERIVED_ONLY` critique. It records agreement on the observations and
+causal uncertainty, a disagreement between competing scheduler/parallelism
+hypotheses, and leaves the strength of the parallelism claim unresolved while
+requesting matched-load tests, provider-limit logs and request-size data.
+
+`verify-heldout-live.mjs` is network-free. It checks file hashes, the watchdog
+partial journal, the successful live run, independent Neon readback, exact
+proposal provenance through the canonical journal schemas, zero-call replay,
+the truncated critique control and the successful critique references. The
+canonical test suite imports this verifier. The evidence export deliberately
+stores `jsonb` proposal and journal bodies as text where key ordering matters;
+schema-normalized application readback remains the identity authority.
+
+This acceptance proves the bounded synthetic source -> real models -> durable
+Postgres completion -> source acknowledgement -> zero-call replay composition.
+It does not prove live Session Search transport, production deployment, or
+semantic truth.
