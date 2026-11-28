@@ -1,0 +1,2 @@
+- op: no-op
+  description: Preserve bounded durable attempt journal behavior and verification.

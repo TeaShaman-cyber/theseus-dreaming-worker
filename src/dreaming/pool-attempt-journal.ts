@@ -96,6 +96,30 @@ export function makePoolJournalEntry(previous: PoolJournalEntry | null, event: P
 }
 
 const family = (r: Start['route']) => r.modelFamily.toLowerCase();
+type ValidatedAttempt = { start: Start; result: Validated };
+
+// START can only fill a vacant slot: the wire schema allows slots 0 and 1.
+function checkStart(event: Start, pending: Start | null, maxAttempts: number,
+  attempts: Start[], validated: ValidatedAttempt[]) {
+  if (pending || attempts.length >= maxAttempts || event.slot !== validated.length
+    || attempts.some(a => a.attemptId === event.attemptId || a.route.id === event.route.id
+      || (a.route.provider === event.route.provider && a.route.model === event.route.model))
+    || validated.some(v => family(v.start.route) === family(event.route))) {
+    throw Error('POOL_JOURNAL_START_REJECTED');
+  }
+}
+
+function checkValidated(context: Context, start: Start, event: Validated, validated: ValidatedAttempt[]) {
+  const r = event.receipt;
+  if (r.requestFingerprint !== context.requestFingerprint || r.evidenceFingerprint !== context.evidenceFingerprint
+    || r.packetId !== context.request.packet.packetId || r.model !== start.route.model
+    || validated.some(v => v.result.receipt.provider === r.provider && v.result.receipt.model === r.model)) {
+    throw Error('POOL_JOURNAL_VALIDATED_IDENTITY');
+  }
+  const proposals = parseProposalSet(JSON.stringify(event.proposalSet), context.request.packet).proposals;
+  if (new Set(proposals.map(fingerprintProposal)).size !== proposals.length) throw Error('POOL_JOURNAL_DUPLICATE_PROPOSAL');
+}
+
 export function replayPoolJournal(context: Context, raw: unknown[]) {
   if (!raw.length || raw.length > 401) throw Error('POOL_JOURNAL_LENGTH');
   const entries = raw.map(entry => entrySchema.parse(entry));
@@ -105,7 +129,7 @@ export function replayPoolJournal(context: Context, raw: unknown[]) {
     throw Error('POOL_JOURNAL_ADMISSION_MISMATCH');
   }
   const attempts: Start[] = [];
-  const validated: { start: Start; result: Validated }[] = [];
+  const validated: ValidatedAttempt[] = [];
   const failures: { start: Start; result: KnownFailure }[] = [];
   let pending: Start | null = null;
   let unknown = false;
@@ -116,24 +140,14 @@ export function replayPoolJournal(context: Context, raw: unknown[]) {
     const event = entry.event;
     if (unknown || event.kind === 'ADMIT') throw Error('POOL_JOURNAL_TERMINAL_OR_DUPLICATE_ADMISSION');
     if (event.kind === 'START') {
-      if (pending || validated.length === 2 || attempts.length >= first.maxAttempts || event.slot !== validated.length
-        || attempts.some(a => a.attemptId === event.attemptId || a.route.id === event.route.id
-          || (a.route.provider === event.route.provider && a.route.model === event.route.model))
-        || validated.some(v => family(v.start.route) === family(event.route))) throw Error('POOL_JOURNAL_START_REJECTED');
+      checkStart(event, pending, first.maxAttempts, attempts, validated);
       pending = event;
       attempts.push(event);
       continue;
     }
     if (!pending || pending.attemptId !== event.attemptId) throw Error('POOL_JOURNAL_OUTCOME_MISMATCH');
     if (event.kind === 'VALIDATED') {
-      const r = event.receipt;
-      if (r.requestFingerprint !== context.requestFingerprint || r.evidenceFingerprint !== context.evidenceFingerprint
-        || r.packetId !== context.request.packet.packetId || r.model !== pending.route.model
-        || validated.some(v => v.result.receipt.provider === r.provider && v.result.receipt.model === r.model)) {
-        throw Error('POOL_JOURNAL_VALIDATED_IDENTITY');
-      }
-      const proposals = parseProposalSet(JSON.stringify(event.proposalSet), context.request.packet).proposals;
-      if (new Set(proposals.map(fingerprintProposal)).size !== proposals.length) throw Error('POOL_JOURNAL_DUPLICATE_PROPOSAL');
+      checkValidated(context, pending, event, validated);
       validated.push({ start: pending, result: event });
     } else if (event.kind === 'KNOWN_FAILURE') {
       const c = event.cooldown;
