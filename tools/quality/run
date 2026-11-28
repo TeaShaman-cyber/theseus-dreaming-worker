@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+cd "$(git rev-parse --show-toplevel)"
+git diff --quiet HEAD --
+test -z "$(git ls-files --others --exclude-standard -- src test qa tools/quality)"
+head=$(git rev-parse HEAD)
+mode=${1:-unit}
+case "$mode" in unit|combined) ;; *) echo 'usage: tools/quality/run unit|combined' >&2; exit 2;; esac
+# Never reuse coverage from another checkout or a previous run.
+mkdir -p reports/quality
+out=$(mktemp -d "$PWD/reports/quality/${mode}.XXXXXX")
+echo "Quality artifacts: $out"
+test -x tools/quality/node_modules/.bin/c8
+case "$mode" in
+ unit) set -- node --test --test-concurrency=2 test/*.test.mjs ;;
+ combined)
+   # Existing heavy-postgres runner requires a disposable fixture DB.
+   test "${PGDATABASE:-}" = dreaming_worker_contract
+   test "${PGHOST:-}" = 127.0.0.1
+   set -- sh -c 'node --test --test-concurrency=2 test/*.test.mjs && ./tools/ci/heavy-postgres' ;;
+esac
+tools/quality/node_modules/.bin/c8 --all --include='src/**/*.ts' --exclude='**/*.d.ts' --reporter=json --reporter=text-summary --reports-dir="$out" --temp-directory="$out/v8" "$@"
+test "$(git rev-parse HEAD)" = "$head"
+git diff --quiet HEAD --
+test -z "$(git ls-files --others --exclude-standard -- src test qa tools/quality)"
+node tools/quality/report.mjs "$out/coverage-final.json" "$out/crap.json" "$mode"
+# Raw V8 logs are not needed for the uploaded report.
+rm -rf "$out/v8"
